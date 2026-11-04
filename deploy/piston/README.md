@@ -22,7 +22,7 @@ curl.exe -X POST http://127.0.0.1:2000/api/v2/packages `
 
 curl.exe -X POST http://127.0.0.1:2000/api/v2/packages `
   -H "Content-Type: application/json" `
-  -d '{\"language\":\"c++\",\"version\":\"10.2.0\"}'
+  -d '{\"language\":\"gcc\",\"version\":\"10.2.0\"}'
 ```
 
 检查运行时：
@@ -37,8 +37,12 @@ curl.exe http://127.0.0.1:2000/api/v2/runtimes
 
 ```powershell
 $env:PISTON_BASE_URL = "http://127.0.0.1:2000"
+$env:PISTON_API_PATH = "/api/v2"
 java -jar backend/codeagent/target/codeagent-0.0.1-SNAPSHOT.jar
 ```
+
+注意：公共 API 的路径前缀是 `/api/v2/piston`，自托管 Piston 是 `/api/v2`；必须同时设置
+`PISTON_API_PATH`，否则会调用到不存在的路径并得到 HTTP 404。
 
 `PistonRuntimeInitializer` 会打印实际版本；如果版本与配置不一致，会把内存中的版本
 更新为远端真实值并打印警告。判题和 Agent 的 `judge_code` 都复用这个地址。

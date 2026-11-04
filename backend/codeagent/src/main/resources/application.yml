@@ -51,6 +51,7 @@ jwt:
 # 版本号来自 GET /api/v2/piston/runtimes 的真实结果，启动时会再次校准并打印日志。
 piston:
   base-url: ${PISTON_BASE_URL:https://emkc.org}
+  api-path: ${PISTON_API_PATH:/api/v2/piston}
   connect-timeout-ms: 5000
   read-timeout-ms: 35000
   run-timeout-ms: 3000

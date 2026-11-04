@@ -24,8 +24,6 @@ import java.util.function.Supplier;
 @Component
 public class PistonClient {
 
-    private static final String RUNTIMES_PATH = "/api/v2/piston/runtimes";
-    private static final String EXECUTE_PATH = "/api/v2/piston/execute";
     private static final int MAX_ATTEMPTS = 2;
 
     private final PistonProperties properties;
@@ -57,7 +55,7 @@ public class PistonClient {
      */
     public List<PistonRuntime> fetchRuntimes() {
         return call(() -> restClient.get()
-                .uri(RUNTIMES_PATH)
+                .uri(properties.getApiPath() + "/runtimes")
                 .retrieve()
                 .body(new ParameterizedTypeReference<List<PistonRuntime>>() {
                 }));
@@ -85,7 +83,7 @@ public class PistonClient {
         request.put("compile_memory_limit", properties.getMemoryLimit());
         try {
             PistonExecuteResponse response = call(() -> restClient.post()
-                    .uri(EXECUTE_PATH)
+                    .uri(properties.getApiPath() + "/execute")
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(request)
                     .retrieve()

@@ -21,6 +21,9 @@ public class PistonProperties {
     /** Piston 服务根地址，公共 API 为 https://emkc.org。 */
     private String baseUrl = "https://emkc.org";
 
+    /** Piston v2 API 前缀；公共 API 为 /api/v2/piston，自托管为 /api/v2。 */
+    private String apiPath = "/api/v2/piston";
+
     /** 建立连接超时，单位毫秒。 */
     private int connectTimeoutMs = 5000;
 
