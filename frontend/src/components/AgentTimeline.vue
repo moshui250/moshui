@@ -1,0 +1,343 @@
+<script setup>
+import { computed, nextTick, ref, watch } from 'vue'
+import {
+  CircleCheck,
+  Loading,
+  MagicStick,
+  Warning
+} from '@element-plus/icons-vue'
+
+const props = defineProps({
+  events: {
+    type: Array,
+    default: () => []
+  },
+  answer: {
+    type: String,
+    default: ''
+  },
+  running: {
+    type: Boolean,
+    default: false
+  },
+  canReveal: {
+    type: Boolean,
+    default: false
+  },
+  error: {
+    type: String,
+    default: ''
+  }
+})
+
+defineEmits(['reveal'])
+
+const timelineRef = ref(null)
+
+const statusText = computed(() => {
+  if (props.error) return '调试失败'
+  if (props.running) return '思考中'
+  if (props.answer) return '已完成'
+  return '等待调试'
+})
+
+const statusType = computed(() => {
+  if (props.error) return 'danger'
+  if (props.running) return 'primary'
+  if (props.answer) return 'success'
+  return 'info'
+})
+
+function formatArgs(value) {
+  if (value == null || value === '') return ''
+  const text = typeof value === 'string' ? value : JSON.stringify(value)
+  return text.length > 140 ? `${text.slice(0, 140)}…` : text
+}
+
+function scrollToBottom() {
+  nextTick(() => {
+    if (timelineRef.value) {
+      timelineRef.value.scrollTop = timelineRef.value.scrollHeight
+    }
+  })
+}
+
+watch(() => [props.events.length, props.answer, props.error], scrollToBottom, { deep: true })
+</script>
+
+<template>
+  <section class="panel agent-panel">
+    <div class="agent-head">
+      <div>
+        <div class="panel-title">
+          <el-icon><MagicStick /></el-icon>
+          AI 调试
+        </div>
+        <div class="panel-subtitle">工具调用会实时显示在时间线上，回答只依据检索结果</div>
+      </div>
+      <el-tag :type="statusType" effect="light" round size="small">{{ statusText }}</el-tag>
+    </div>
+
+    <div ref="timelineRef" class="timeline">
+      <div v-if="!events.length && !answer && !error" class="timeline-empty">
+        提交失败后会自动触发调试，也可以点上方「AI 调试」。
+      </div>
+
+      <div v-for="(item, index) in events" :key="item.id || index" class="timeline-item" :class="`is-${item.type}`">
+        <div class="timeline-icon">
+          <el-icon v-if="item.type === 'thinking'" class="is-loading"><Loading /></el-icon>
+          <el-icon v-else-if="item.type === 'tool_call'" class="is-loading"><Loading /></el-icon>
+          <el-icon v-else-if="item.type === 'tool_result'"><CircleCheck /></el-icon>
+          <el-icon v-else><Warning /></el-icon>
+        </div>
+
+        <div class="timeline-body">
+          <template v-if="item.type === 'thinking'">
+            <p class="thinking-text">{{ item.message }}</p>
+          </template>
+
+          <template v-else-if="item.type === 'tool_call'">
+            <div class="tool-title">
+              <span class="tool-name">{{ item.name }}</span>
+              <span class="tool-state">执行中</span>
+            </div>
+            <p v-if="formatArgs(item.args)" class="tool-args">{{ formatArgs(item.args) }}</p>
+          </template>
+
+          <template v-else-if="item.type === 'tool_result'">
+            <div class="tool-title">
+              <span class="tool-name">{{ item.name }}</span>
+              <span class="tool-state is-done">完成</span>
+              <span v-if="item.latencyMs != null" class="tool-latency">{{ item.latencyMs }} ms</span>
+            </div>
+            <p v-if="formatArgs(item.args)" class="tool-args">{{ formatArgs(item.args) }}</p>
+            <p class="tool-summary">{{ item.summary || '工具执行完成' }}</p>
+          </template>
+
+          <template v-else-if="item.type === 'error'">
+            <p class="error-text">{{ item.message }}</p>
+          </template>
+        </div>
+      </div>
+
+      <div v-if="answer" class="answer-block">
+        <div class="answer-label">助教回答</div>
+        <pre class="answer-text">{{ answer }}<span v-if="running" class="caret">▍</span></pre>
+      </div>
+
+      <el-alert
+        v-if="error"
+        :title="error"
+        type="error"
+        :closable="false"
+        show-icon
+        class="agent-error"
+      />
+
+      <div v-if="canReveal && !running && !error" class="reveal-row">
+        <el-button type="primary" plain @click="$emit('reveal')">
+          看参考代码
+        </el-button>
+        <span>会再请求一次 SOLUTION，内容直接来自题库题解。</span>
+      </div>
+    </div>
+  </section>
+</template>
+
+<style scoped>
+.agent-panel {
+  overflow: hidden;
+}
+
+.agent-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 18px;
+  border-bottom: 1px solid #eef2f7;
+}
+
+.panel-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.panel-title .el-icon {
+  color: #6366f1;
+}
+
+.panel-subtitle {
+  margin-top: 4px;
+  color: #94a3b8;
+  font-size: 11.5px;
+}
+
+.timeline {
+  max-height: 430px;
+  padding: 14px 18px 18px;
+  overflow-y: auto;
+}
+
+.timeline-empty {
+  padding: 20px 0;
+  color: #94a3b8;
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.timeline-item {
+  display: flex;
+  gap: 9px;
+  padding: 5px 0;
+}
+
+.timeline-icon {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  margin-top: 1px;
+  border-radius: 50%;
+  background: #f1f5f9;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.timeline-item.is-tool_call .timeline-icon {
+  background: #eef2ff;
+  color: #6366f1;
+}
+
+.timeline-item.is-tool_result .timeline-icon {
+  background: #ecfdf5;
+  color: #10b981;
+}
+
+.timeline-item.is-error .timeline-icon {
+  background: #fef2f2;
+  color: #ef4444;
+}
+
+.timeline-body {
+  min-width: 0;
+  flex: 1;
+}
+
+.thinking-text {
+  margin: 2px 0;
+  color: #94a3b8;
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+.tool-title {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.tool-name {
+  color: #334155;
+  font-family: 'JetBrains Mono', Consolas, monospace;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.tool-state {
+  color: #94a3b8;
+  font-size: 10.5px;
+}
+
+.tool-state.is-done {
+  color: #10b981;
+}
+
+.tool-latency {
+  color: #94a3b8;
+  font-size: 10.5px;
+}
+
+.tool-args,
+.tool-summary {
+  margin: 3px 0 0;
+  color: #64748b;
+  font-size: 11.5px;
+  line-height: 1.6;
+  word-break: break-word;
+}
+
+.tool-args {
+  color: #94a3b8;
+  font-family: 'JetBrains Mono', Consolas, monospace;
+  font-size: 10.5px;
+}
+
+.error-text {
+  margin: 2px 0;
+  color: #b91c1c;
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+.answer-block {
+  margin-top: 12px;
+  padding: 13px 14px;
+  border: 1px solid #e8edf5;
+  border-radius: 9px;
+  background: #fbfcfe;
+}
+
+.answer-label {
+  margin-bottom: 6px;
+  color: #6366f1;
+  font-size: 10.5px;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+}
+
+.answer-text {
+  margin: 0;
+  color: #334155;
+  font-family: inherit;
+  font-size: 12.5px;
+  line-height: 1.8;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.caret {
+  color: #6366f1;
+  animation: blink 0.9s step-end infinite;
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+.agent-error {
+  margin-top: 12px;
+}
+
+.reveal-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #eef2f7;
+}
+
+.reveal-row span {
+  color: #94a3b8;
+  font-size: 11px;
+}
+</style>

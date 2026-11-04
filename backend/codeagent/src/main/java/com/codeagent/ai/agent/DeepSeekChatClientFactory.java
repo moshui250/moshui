@@ -31,6 +31,32 @@ public class DeepSeekChatClientFactory {
      * @return 可执行 Tool Calling 的 ChatClient
      */
     public ChatClient create() {
+        return ChatClient.builder(buildModel())
+                .defaultSystem(AgentPrompts.SYSTEM)
+                .defaultTools(agentTools)
+                .defaultAdvisors(toolCallLoggingAdvisor)
+                .build();
+    }
+
+    /**
+     * 创建仅用于流式正文生成的 ChatClient，不注册任何工具。
+     * 工具编排已由流式服务确定性执行，避免 stream() 再触发一次工具调用。
+     *
+     * @param systemPrompt 本轮系统提示词
+     * @return 无工具 ChatClient
+     */
+    public ChatClient createForAnswer(String systemPrompt) {
+        return ChatClient.builder(buildModel())
+                .defaultSystem(systemPrompt)
+                .build();
+    }
+
+    /**
+     * 构建指向 DeepSeek 的底层 ChatModel。
+     *
+     * @return OpenAiChatModel
+     */
+    private OpenAiChatModel buildModel() {
         if (properties.getApiKey() == null || properties.getApiKey().isBlank()) {
             throw new BizException(ErrorCode.AI_UNAVAILABLE, "未配置 DEEPSEEK_API_KEY");
         }
@@ -46,18 +72,12 @@ public class DeepSeekChatClientFactory {
                 .parallelToolCalls(false)
                 .build();
 
-        OpenAiChatModel model = OpenAiChatModel.builder()
+        return OpenAiChatModel.builder()
                 .openAiApi(api)
                 .defaultOptions(options)
                 .toolCallingManager(ToolCallingManager.builder().build())
                 .retryTemplate(RetryTemplate.defaultInstance())
                 .observationRegistry(ObservationRegistry.NOOP)
-                .build();
-
-        return ChatClient.builder(model)
-                .defaultSystem(AgentPrompts.SYSTEM)
-                .defaultTools(agentTools)
-                .defaultAdvisors(toolCallLoggingAdvisor)
                 .build();
     }
 }

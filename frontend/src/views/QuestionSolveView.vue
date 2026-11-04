@@ -11,8 +11,10 @@ import {
   VideoPlay,
   Warning
 } from '@element-plus/icons-vue'
+import AgentTimeline from '@/components/AgentTimeline.vue'
 import CodeEditor from '@/components/CodeEditor.vue'
 import MarkdownBody from '@/components/MarkdownBody.vue'
+import { getAgentHistory, streamAgent } from '@/api/agent'
 import { getJudgeResult, getQuestion, submitCode } from '@/api/question'
 
 const route = useRoute()
@@ -49,11 +51,20 @@ const judgeResult = ref(null)
 const judgeError = ref('')
 const usingDemoJudge = ref(false)
 
+const agentEvents = ref([])
+const agentAnswer = ref('')
+const agentError = ref('')
+const agentRunning = ref(false)
+const agentCanReveal = ref(false)
+const agentSessionId = ref(null)
+
 let pollTimer = null
 let demoTimer = null
 let saveTimer = null
 let disposed = false
 let switchingLanguage = false
+let agentController = null
+let agentRunId = 0
 
 const difficultyMap = {
   1: { label: '入门', type: 'success' },
@@ -227,6 +238,7 @@ async function loadQuestion() {
     language.value = readInitialLanguage()
     baselineCode.value = templateFor(language.value)
     code.value = readStoredCode(data.id, language.value) ?? baselineCode.value
+    loadAgentHistory()
   } catch (error) {
     question.value = null
     loadError.value = error?.message || '题目加载失败'
@@ -332,6 +344,7 @@ function runDemoJudge() {
     judgeResult.value = buildDemoResult()
     judging.value = false
     ElMessage.info('判题接口尚未接入，当前展示演示结果')
+    startAgent('HINT')
   }, 900)
 }
 
@@ -409,6 +422,10 @@ async function submit() {
     const submitId = data?.submitId ?? data?.id
     if (!submitId) throw new Error('判题服务未返回 submitId')
     await pollJudge(submitId)
+    const status = String(judgeResult.value?.status || '').toUpperCase()
+    if (status && status !== 'AC') {
+      startAgent('HINT')
+    }
   } catch (error) {
     if (error?.status === 404 || error?.status === 405 || error?.status === 501) {
       runDemoJudge()
@@ -430,8 +447,181 @@ function notifyRunSample() {
   ElMessage.info('运行样例将在 S7 判题服务接入后开放')
 }
 
-function notifyAiCoach() {
-  ElMessage.info('AI 调试将在 S12 接入')
+/**
+ * 清空并取消当前 Agent 时间线。
+ *
+ * @returns {void}
+ */
+function resetAgent() {
+  if (agentController) {
+    agentController.abort()
+    agentController = null
+  }
+  agentEvents.value = []
+  agentAnswer.value = ''
+  agentError.value = ''
+  agentCanReveal.value = false
+}
+
+/**
+ * 把一条 SSE 事件合并进时间线。
+ *
+ * @param {{type: string, data: object}} event SSE 事件
+ * @param {number} runId 当前请求序号，用于丢弃旧请求
+ * @returns {void}
+ */
+function handleAgentEvent(event, runId) {
+  if (runId !== agentRunId || disposed) return
+  const data = event.data || {}
+
+  if (event.type === 'meta') {
+    agentSessionId.value = data.sessionId ?? null
+    return
+  }
+
+  if (event.type === 'thinking') {
+    agentEvents.value.push({
+      id: `thinking-${agentEvents.value.length}`,
+      type: 'thinking',
+      message: data.delta || '正在分析…'
+    })
+    return
+  }
+
+  if (event.type === 'tool_call') {
+    agentEvents.value.push({
+      id: data.id || `tool-call-${agentEvents.value.length}`,
+      type: 'tool_call',
+      name: data.name || 'tool',
+      args: data.args
+    })
+    return
+  }
+
+  if (event.type === 'tool_result') {
+    const item = agentEvents.value.find((entry) => entry.id === data.id)
+    if (item) {
+      item.type = 'tool_result'
+      item.summary = data.summary || '工具执行完成'
+      item.latencyMs = data.latencyMs
+    } else {
+      agentEvents.value.push({
+        id: data.id || `tool-result-${agentEvents.value.length}`,
+        type: 'tool_result',
+        name: data.name || 'tool',
+        summary: data.summary || '工具执行完成',
+        latencyMs: data.latencyMs
+      })
+    }
+    return
+  }
+
+  if (event.type === 'delta') {
+    agentAnswer.value += data.delta || ''
+    return
+  }
+
+  if (event.type === 'done') {
+    agentCanReveal.value = Boolean(data.canReveal)
+    return
+  }
+
+  if (event.type === 'error') {
+    agentError.value = data.message || 'Agent 调试失败'
+    agentEvents.value.push({
+      id: `error-${agentEvents.value.length}`,
+      type: 'error',
+      message: agentError.value
+    })
+  }
+}
+
+/**
+ * 启动一次流式调试；HINT 失败后会自动调用，也可由按钮触发。
+ *
+ * @param {'HINT'|'SOLUTION'} mode 提示层级
+ * @returns {Promise<void>} 流结束或取消后完成
+ */
+async function startAgent(mode = 'HINT') {
+  if (!question.value || agentRunning.value) return
+
+  resetAgent()
+  const runId = ++agentRunId
+  const controller = new AbortController()
+  agentController = controller
+  agentRunning.value = true
+
+  const rawSubmitId = judgeResult.value?.submitId
+  const payload = {
+    questionId: question.value.id,
+    message: mode === 'SOLUTION' ? '请给我这道题的参考代码' : '请帮我定位这段代码的错误，并给出修改方向',
+    mode,
+    language: language.value,
+    code: code.value,
+    submitId: typeof rawSubmitId === 'number' ? rawSubmitId : null,
+    sessionId: agentSessionId.value
+  }
+
+  try {
+    await streamAgent(payload, {
+      signal: controller.signal,
+      onEvent: (event) => handleAgentEvent(event, runId)
+    })
+  } catch (error) {
+    if (error?.name === 'AbortError' || disposed) return
+    if (!agentError.value) {
+      agentError.value = error?.message || '调试连接中断，请稍后重试'
+      agentEvents.value.push({
+        id: `error-${agentEvents.value.length}`,
+        type: 'error',
+        message: agentError.value
+      })
+    }
+  } finally {
+    if (runId === agentRunId) {
+      agentRunning.value = false
+      agentController = null
+    }
+  }
+}
+
+/**
+ * 刷新页面后从后端历史中恢复最近一次时间线。
+ *
+ * @returns {Promise<void>} 历史加载完成后结束
+ */
+async function loadAgentHistory() {
+  if (!question.value) return
+  try {
+    const data = await getAgentHistory(question.value.id)
+    const session = data?.sessions?.[0]
+    const messages = session?.messages || []
+    if (!session || !messages.length) return
+
+    const events = []
+    messages
+      .filter((message) => message.role === 'tool')
+      .forEach((message) => {
+        events.push({
+          id: `history-result-${message.id}`,
+          type: 'tool_result',
+          name: message.toolName || 'tool',
+          args: message.toolInput,
+          summary: message.content || '工具执行完成',
+          latencyMs: null
+        })
+      })
+
+    const assistant = [...messages].reverse().find((message) => message.role === 'assistant')
+    if (!assistant?.content) return
+
+    agentEvents.value = events
+    agentAnswer.value = assistant.content
+    agentCanReveal.value = assistant.hintLevel === 1
+    agentSessionId.value = session.id
+  } catch {
+    // 历史接口失败不阻断答题页。
+  }
 }
 
 function handleBeforeUnload() {
@@ -445,6 +635,10 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   disposed = true
+  if (agentController) {
+    agentController.abort()
+    agentController = null
+  }
   saveCurrentCode()
   clearTimers()
   window.removeEventListener('beforeunload', handleBeforeUnload)
@@ -549,15 +743,16 @@ onBeforeRouteLeave(() => {
                   {{ judging ? '判题中' : '提交' }}
                 </el-button>
 
-                <el-tooltip content="AI 调试将在 S12 接入" placement="top">
-                  <span class="disabled-wrap">
-                    <el-button disabled @click="notifyAiCoach">
-                      <el-icon><MagicStick /></el-icon>
-                      AI 调试
-                      <span class="soon">S12</span>
-                    </el-button>
-                  </span>
-                </el-tooltip>
+                <el-button
+                  type="primary"
+                  plain
+                  :loading="agentRunning"
+                  :disabled="!question"
+                  @click="startAgent('HINT')"
+                >
+                  <el-icon><MagicStick /></el-icon>
+                  AI 调试
+                </el-button>
               </div>
             </div>
           </div>
@@ -675,6 +870,16 @@ onBeforeRouteLeave(() => {
               <p>这里会显示每个用例是否通过；失败用例会给出第几个、期望输出和实际输出。</p>
             </div>
           </div>
+
+          <AgentTimeline
+            v-if="question"
+            :events="agentEvents"
+            :answer="agentAnswer"
+            :running="agentRunning"
+            :can-reveal="agentCanReveal"
+            :error="agentError"
+            @reveal="startAgent('SOLUTION')"
+          />
         </section>
       </div>
     </template>

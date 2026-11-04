@@ -35,6 +35,7 @@ public final class AgentRunContext {
     private boolean degraded;
     private boolean toolMessagesLogged;
     private ToolCallRecord currentCall;
+    private ToolEventListener toolEventListener;
 
     private AgentRunContext(Long userId, Long questionId, String language, String code) {
         this.userId = userId;
@@ -90,7 +91,10 @@ public final class AgentRunContext {
             return null;
         }
         toolCallCount++;
-        currentCall = new ToolCallRecord(name, input);
+        currentCall = new ToolCallRecord("call_" + toolCallCount, name, input);
+        if (toolEventListener != null) {
+            toolEventListener.onToolCall(currentCall);
+        }
         return currentCall;
     }
 
@@ -110,6 +114,9 @@ public final class AgentRunContext {
         }
         currentCall.latencyMs = (System.nanoTime() - currentCall.startedNanos) / 1_000_000L;
         toolCalls.add(currentCall);
+        if (toolEventListener != null) {
+            toolEventListener.onToolResult(currentCall);
+        }
         currentCall = null;
     }
 
@@ -331,9 +338,39 @@ public final class AgentRunContext {
     }
 
     /**
+     * 绑定工具事件监听器，供流式接口发送 SSE 并落库。
+     *
+     * @param listener 监听器；null 表示不监听
+     */
+    public void setToolEventListener(ToolEventListener listener) {
+        this.toolEventListener = listener;
+    }
+
+    /**
+     * 工具调用生命周期监听器。
+     */
+    public interface ToolEventListener {
+
+        /**
+         * 工具开始执行。
+         *
+         * @param call 调用记录
+         */
+        void onToolCall(ToolCallRecord call);
+
+        /**
+         * 工具执行结束。
+         *
+         * @param call 调用记录
+         */
+        void onToolResult(ToolCallRecord call);
+    }
+
+    /**
      * 单次工具调用记录，供 Advisor 落库和时间线展示。
      */
     public static final class ToolCallRecord {
+        private final String id;
         private final String name;
         private final String input;
         private final long startedNanos = System.nanoTime();
@@ -341,9 +378,14 @@ public final class AgentRunContext {
         private String output;
         private long latencyMs;
 
-        private ToolCallRecord(String name, String input) {
+        private ToolCallRecord(String id, String name, String input) {
+            this.id = id;
             this.name = name;
             this.input = input;
+        }
+
+        public String getId() {
+            return id;
         }
 
         public String getName() {

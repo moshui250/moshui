@@ -7,6 +7,8 @@ import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.Update;
 
+import java.util.List;
+
 /**
  * 对话会话 Mapper。
  * 一个用户在同一道题下复用最近一次会话。
@@ -44,4 +46,32 @@ public interface ChatSessionMapper {
      */
     @Update("UPDATE chat_session SET update_time = NOW() WHERE id = #{id}")
     int touch(@Param("id") Long id);
+
+    /**
+     * 按用户与题目查询全部会话，用于历史回放。
+     *
+     * @param userId     用户 ID
+     * @param questionId 题目 ID
+     * @return 会话列表，最近更新的在前
+     */
+    @Select("SELECT id, user_id, question_id, title, create_time, update_time " +
+            "FROM chat_session WHERE user_id = #{userId} AND question_id = #{questionId} " +
+            "ORDER BY update_time DESC, id DESC")
+    List<ChatSession> selectByUserAndQuestion(@Param("userId") Long userId,
+                                              @Param("questionId") Long questionId);
+
+    /**
+     * 查询属于当前用户和题目的指定会话，避免跨用户复用。
+     *
+     * @param id         会话 ID
+     * @param userId     用户 ID
+     * @param questionId 题目 ID
+     * @return 会话；不存在时返回 null
+     */
+    @Select("SELECT id, user_id, question_id, title, create_time, update_time " +
+            "FROM chat_session WHERE id = #{id} AND user_id = #{userId} " +
+            "AND question_id = #{questionId} LIMIT 1")
+    ChatSession selectOwned(@Param("id") Long id,
+                            @Param("userId") Long userId,
+                            @Param("questionId") Long questionId);
 }
