@@ -27,7 +27,7 @@ AI 原生的编程练习平台，前后端单仓库。
 
 `powershell
 cd backend/codeagent
-mvn -B "-Dmaven.repo.local=D:\java project\.m2repo" clean package
+mvn -B clean package
 java -jar target/codeagent-0.0.1-SNAPSHOT.jar
 `
 
