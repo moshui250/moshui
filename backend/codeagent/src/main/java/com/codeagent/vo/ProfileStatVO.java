@@ -1,0 +1,39 @@
+package com.codeagent.vo;
+
+import lombok.Data;
+
+import java.io.Serial;
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * 学情看板统计响应，口径见手册 §2.5。
+ */
+@Data
+public class ProfileStatVO implements Serializable {
+
+    @Serial
+    private static final long serialVersionUID = 1L;
+
+    /** 全部提交数。 */
+    private long totalSubmit;
+
+    /** AC 提交数。 */
+    private long acSubmit;
+
+    /** 正确率 = acSubmit / totalSubmit，保留 3 位小数；无提交时为 0。 */
+    private double accuracy;
+
+    /** 有过 AC 的不同题目数。 */
+    private long solvedCount;
+
+    /** 未掌握的错题数。 */
+    private long wrongCount;
+
+    /** 5 个知识点的提交与错误率。 */
+    private List<KnowledgeStatVO> knowledgeStats = new ArrayList<>();
+
+    /** 最近 5 次提交。 */
+    private List<RecentSubmitVO> recentSubmits = new ArrayList<>();
+}

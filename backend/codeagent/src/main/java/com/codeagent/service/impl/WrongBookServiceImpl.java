@@ -6,6 +6,7 @@ import com.codeagent.common.UserContext;
 import com.codeagent.dto.WrongBookItemRow;
 import com.codeagent.exception.BizException;
 import com.codeagent.mapper.UserWrongQuestionMapper;
+import com.codeagent.service.ProfileStatService;
 import com.codeagent.service.WrongBookService;
 import com.codeagent.vo.KnowledgePointBriefVO;
 import com.codeagent.vo.WrongBookItemVO;
@@ -29,6 +30,7 @@ public class WrongBookServiceImpl implements WrongBookService {
     private static final int MAX_PAGE_SIZE = 50;
 
     private final UserWrongQuestionMapper userWrongQuestionMapper;
+    private final ProfileStatService profileStatService;
 
     /**
      * 使用 MySQL upsert 保证同一用户同一题只有一条错题记录。
@@ -41,6 +43,7 @@ public class WrongBookServiceImpl implements WrongBookService {
     @Transactional
     public void recordWrong(Long userId, Long questionId, Long submitId) {
         userWrongQuestionMapper.upsertWrong(userId, questionId, submitId);
+        profileStatService.invalidate(userId);
     }
 
     /**
@@ -97,6 +100,7 @@ public class WrongBookServiceImpl implements WrongBookService {
         if (updated == 0) {
             throw new BizException(ErrorCode.NOT_FOUND, "错题记录不存在");
         }
+        profileStatService.invalidate(userId);
     }
 
     /**
@@ -143,7 +147,9 @@ public class WrongBookServiceImpl implements WrongBookService {
             WrongBookLastSubmitVO lastSubmit = new WrongBookLastSubmitVO();
             lastSubmit.setId(row.getLastSubmitId());
             lastSubmit.setStatus(row.getLastSubmitStatus());
+            lastSubmit.setLanguage(row.getLastSubmitLanguage());
             lastSubmit.setCodeSnippet(row.getLastSubmitCode());
+            lastSubmit.setCode(row.getLastSubmitCodeFull());
             vo.setLastSubmit(lastSubmit);
         }
         return vo;

@@ -14,6 +14,7 @@ import com.codeagent.mapper.QuestionTestCaseMapper;
 import com.codeagent.mapper.SubmitRecordMapper;
 import com.codeagent.service.JudgeRateLimiter;
 import com.codeagent.service.JudgeService;
+import com.codeagent.service.ProfileStatService;
 import com.codeagent.service.WrongBookService;
 import com.codeagent.vo.JudgeCaseResultVO;
 import com.codeagent.vo.JudgeHistoryVO;
@@ -61,6 +62,7 @@ public class JudgeServiceImpl implements JudgeService {
     private final SubmitRecordMapper submitRecordMapper;
     private final PistonClient pistonClient;
     private final WrongBookService wrongBookService;
+    private final ProfileStatService profileStatService;
     private final ObjectMapper objectMapper;
 
     @Resource(name = "judgeExecutor")
@@ -204,6 +206,7 @@ public class JudgeServiceImpl implements JudgeService {
             }
             SubmitRecord result = executeCases(record, cases);
             submitRecordMapper.updateResult(result);
+            profileStatService.invalidate(result.getUserId());
 
             if (!AC.equals(result.getStatus()) && !SE.equals(result.getStatus())) {
                 try {

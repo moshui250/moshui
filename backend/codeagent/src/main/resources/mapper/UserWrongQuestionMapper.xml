@@ -38,7 +38,9 @@
                w.last_wrong_time,
                s.id AS last_submit_id,
                s.status AS last_submit_status,
-               LEFT(s.code, 200) AS last_submit_code
+               s.language AS last_submit_language,
+               LEFT(s.code, 200) AS last_submit_code,
+               s.code AS last_submit_code_full
         <include refid="listFrom"/>
         <include refid="listWhere"/>
         ORDER BY w.last_wrong_time DESC, w.id DESC

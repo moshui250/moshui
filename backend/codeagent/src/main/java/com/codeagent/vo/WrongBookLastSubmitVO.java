@@ -22,4 +22,10 @@ public class WrongBookLastSubmitVO implements Serializable {
 
     /** 代码片段，最多 200 个字符。 */
     private String codeSnippet;
+
+    /** 完整代码，用于展开后的代码块与语法高亮。 */
+    private String code;
+
+    /** 提交语言：CPP / JAVA。 */
+    private String language;
 }

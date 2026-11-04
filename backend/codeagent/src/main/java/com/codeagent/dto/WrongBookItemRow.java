@@ -51,4 +51,10 @@ public class WrongBookItemRow {
 
     /** 最近一次错误提交的代码片段，SQL 中截取前 200 个字符。 */
     private String lastSubmitCode;
+
+    /** 最近一次错误提交的完整代码，用于错题展开后的代码块展示。 */
+    private String lastSubmitCodeFull;
+
+    /** 最近一次错误提交的语言：CPP / JAVA。 */
+    private String lastSubmitLanguage;
 }

@@ -9,5 +9,5 @@ export function listWrongQuestions(params) {
 }
 
 export function markMastered(questionId) {
-  return request.put(`/wrong/${questionId}/mastered`)
+  return request.put(`/wrong/${questionId}/mastered`, { mastered: true })
 }

@@ -118,5 +118,6 @@ export const emptyProfileStat = {
   accuracy: 0,
   solvedCount: 0,
   wrongCount: 0,
-  knowledgeStats: []
+  knowledgeStats: [],
+  recentSubmits: []
 }
