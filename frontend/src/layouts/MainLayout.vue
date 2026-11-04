@@ -99,6 +99,20 @@ function goLogin() {
   router.push({ name: 'login', query: { redirect: route.fullPath } })
 }
 
+/**
+ * 打开 AI 调试教练：答题页直接滚动到时间线，其他页面回到题库选择题目。
+ *
+ * @returns {void}
+ */
+function openCoach() {
+  if (route.name === 'question-solve') {
+    document.querySelector('.agent-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    return
+  }
+  ElMessage.info('选一道题并提交，失败后会自动触发 AI 调试')
+  router.push('/question')
+}
+
 watch(
   () => route.fullPath,
   () => {
@@ -139,7 +153,14 @@ onBeforeUnmount(() => {
 
       <div class="sidebar-spacer"></div>
 
-      <div class="coach-card">
+      <div
+        class="coach-card"
+        role="button"
+        tabindex="0"
+        @click="openCoach"
+        @keydown.enter="openCoach"
+        @keydown.space.prevent="openCoach"
+      >
         <div class="coach-icon">
           <el-icon><MagicStick /></el-icon>
         </div>
@@ -147,7 +168,7 @@ onBeforeUnmount(() => {
           <strong>AI 调试教练</strong>
           <p>提交失败后自动分析报错，分层给出提示，不直接给答案。</p>
         </div>
-        <span class="coach-badge">S12 接入</span>
+        <span class="coach-badge">答题页已接入 →</span>
       </div>
 
       <div class="sidebar-footer">v0.1 · 工程骨架</div>
@@ -343,6 +364,15 @@ onBeforeUnmount(() => {
   background:
     radial-gradient(circle at 100% 0%, rgba(99, 102, 241, 0.16), transparent 52%),
     linear-gradient(160deg, #f7f8ff 0%, #ffffff 100%);
+  cursor: pointer;
+  transition: border-color 0.18s ease, transform 0.18s ease;
+}
+
+.coach-card:hover,
+.coach-card:focus-visible {
+  border-color: #a5b4fc;
+  outline: none;
+  transform: translateY(-1px);
 }
 
 .coach-icon {

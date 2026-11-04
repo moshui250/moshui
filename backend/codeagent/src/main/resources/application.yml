@@ -96,8 +96,8 @@ dashscope:
 deepseek:
   base-url: ${DEEPSEEK_BASE_URL:https://api.deepseek.com}
   api-key: ${DEEPSEEK_API_KEY:}
-  model: deepseek-chat
-  temperature: 0.2
+  model: deepseek-flash
+  temperature: 0.7
   connect-timeout-ms: 5000
   read-timeout-ms: 60000
 

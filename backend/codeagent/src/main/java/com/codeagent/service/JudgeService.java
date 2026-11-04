@@ -3,6 +3,7 @@ package com.codeagent.service;
 import com.codeagent.common.PageResult;
 import com.codeagent.vo.JudgeHistoryVO;
 import com.codeagent.vo.JudgeResultVO;
+import com.codeagent.vo.JudgeRunSampleVO;
 
 /**
  * 异步判题服务。
@@ -19,6 +20,17 @@ public interface JudgeService {
      * @return 新建的提交记录 ID
      */
     Long submit(Long userId, Long questionId, String language, String code);
+
+    /**
+     * 只运行题目的公开样例，不写提交记录、不记错题、不触发统计缓存。
+     *
+     * @param userId     当前登录用户 ID
+     * @param questionId 题目 ID
+     * @param language   语言代码 CPP / JAVA
+     * @param code       完整源代码
+     * @return 样例运行结果，仅包含公开样例
+     */
+    JudgeRunSampleVO runSample(Long userId, Long questionId, String language, String code);
 
     /**
      * 查询某次提交的判题结果，只能查询自己的提交。

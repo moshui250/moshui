@@ -3,11 +3,14 @@ package com.codeagent.controller;
 import com.codeagent.common.ErrorCode;
 import com.codeagent.common.R;
 import com.codeagent.common.UserContext;
+import com.codeagent.dto.AgentSessionRequest;
 import com.codeagent.dto.AgentStreamRequest;
 import com.codeagent.exception.BizException;
+import com.codeagent.service.AgentSessionService;
 import com.codeagent.service.AgentStreamService;
 import com.codeagent.service.RateLimitService;
 import com.codeagent.vo.AgentHistoryVO;
+import com.codeagent.vo.AgentSessionVO;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
@@ -28,7 +31,19 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 public class AgentStreamController {
 
     private final AgentStreamService agentStreamService;
+    private final AgentSessionService agentSessionService;
     private final RateLimitService rateLimitService;
+
+    /**
+     * 创建或复用某道题的 AI 调试会话。
+     *
+     * @param request 题目 ID
+     * @return 会话 ID 和标题
+     */
+    @PostMapping("/session")
+    public R<AgentSessionVO> session(@Valid @RequestBody AgentSessionRequest request) {
+        return R.ok(agentSessionService.createOrReuse(requireUserId(), request.getQuestionId()));
+    }
 
     /**
      * 建立流式调试连接。

@@ -9,6 +9,7 @@ import com.codeagent.exception.BizException;
 import com.codeagent.service.JudgeService;
 import com.codeagent.vo.JudgeHistoryVO;
 import com.codeagent.vo.JudgeResultVO;
+import com.codeagent.vo.JudgeRunSampleVO;
 import com.codeagent.vo.JudgeSubmitVO;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -41,6 +42,18 @@ public class JudgeController {
         Long submitId = judgeService.submit(
                 requireUserId(), request.getQuestionId(), request.getLanguage(), request.getCode());
         return R.ok(new JudgeSubmitVO(submitId, "PENDING"));
+    }
+
+    /**
+     * 只运行公开样例，不创建提交记录，用于答题页的“运行样例”按钮。
+     *
+     * @param request 题目 ID、语言和完整代码
+     * @return 样例运行结果
+     */
+    @PostMapping("/run-sample")
+    public R<JudgeRunSampleVO> runSample(@Valid @RequestBody JudgeSubmitRequest request) {
+        return R.ok(judgeService.runSample(
+                requireUserId(), request.getQuestionId(), request.getLanguage(), request.getCode()));
     }
 
     /**

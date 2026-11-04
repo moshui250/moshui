@@ -1,0 +1,13 @@
+services:
+  piston:
+    image: ghcr.io/engineer-man/piston:latest
+    container_name: codeagent-piston
+    privileged: true
+    restart: unless-stopped
+    ports:
+      - "2000:2000"
+    volumes:
+      - piston_data:/piston
+
+volumes:
+  piston_data:

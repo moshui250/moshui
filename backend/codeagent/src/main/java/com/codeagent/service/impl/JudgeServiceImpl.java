@@ -16,10 +16,12 @@ import com.codeagent.mapper.SubmitRecordMapper;
 import com.codeagent.service.JudgeRateLimiter;
 import com.codeagent.service.JudgeService;
 import com.codeagent.service.ProfileStatService;
+import com.codeagent.service.RateLimitService;
 import com.codeagent.service.WrongBookService;
 import com.codeagent.vo.JudgeCaseResultVO;
 import com.codeagent.vo.JudgeHistoryVO;
 import com.codeagent.vo.JudgeResultVO;
+import com.codeagent.vo.JudgeRunSampleVO;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -58,6 +60,7 @@ public class JudgeServiceImpl implements JudgeService {
     private static final int MAX_COMPILE_OUTPUT = 20_000;
 
     private final JudgeRateLimiter rateLimiter;
+    private final RateLimitService rateLimitService;
     private final QuestionMapper questionMapper;
     private final QuestionTestCaseMapper testCaseMapper;
     private final SubmitRecordMapper submitRecordMapper;
@@ -126,6 +129,68 @@ public class JudgeServiceImpl implements JudgeService {
             throw new BizException(ErrorCode.JUDGE_QUEUE_FULL, "判题繁忙，请稍后");
         }
         return submitId;
+    }
+
+    /**
+     * 只执行公开样例：不落 submit_record，不记错题，也不让样例结果污染统计。
+     *
+     * @param userId     当前登录用户 ID
+     * @param questionId 题目 ID
+     * @param language   语言代码 CPP / JAVA
+     * @param code       完整源代码
+     * @return 样例运行结果
+     */
+    @Override
+    public JudgeRunSampleVO runSample(Long userId, Long questionId, String language, String code) {
+        if (userId == null) {
+            throw new BizException(ErrorCode.UNAUTHORIZED);
+        }
+        rateLimitService.check("judge:run-sample:" + userId, 10, 60_000L,
+                "运行样例过于频繁，请稍后再试");
+        pistonCircuitBreaker.ensureAvailable();
+
+        if (questionId == null) {
+            throw new BizException(ErrorCode.PARAM_ERROR, "题目 ID 不能为空");
+        }
+        String normalizedLanguage = normalizeLanguage(language);
+        if (code == null || code.isBlank()) {
+            throw new BizException(ErrorCode.PARAM_ERROR, "代码不能为空");
+        }
+        if (code.length() > MAX_CODE_LENGTH) {
+            throw new BizException(ErrorCode.PARAM_ERROR, "代码长度不能超过 100000 个字符");
+        }
+        requireAccessible(questionId, userId);
+
+        List<QuestionTestCase> allCases = testCaseMapper.selectAllByQuestionId(questionId);
+        List<QuestionTestCase> samples = allCases == null ? List.of() : allCases.stream()
+                .filter(item -> Integer.valueOf(1).equals(item.getIsSample()))
+                .toList();
+        if (samples.isEmpty()) {
+            throw new BizException(ErrorCode.PARAM_ERROR, "题目没有公开样例，暂时无法运行");
+        }
+
+        SubmitRecord record = new SubmitRecord();
+        record.setUserId(userId);
+        record.setQuestionId(questionId);
+        record.setLanguage(normalizedLanguage);
+        record.setCode(code);
+        record.setStatus(PENDING);
+        record.setPassedCount(0);
+        record.setTotalCount(samples.size());
+        record.setRunTimeMs(0L);
+
+        SubmitRecord result = executeCases(record, samples);
+        JudgeRunSampleVO vo = new JudgeRunSampleVO();
+        vo.setStatus(result.getStatus());
+        vo.setPassedCount(result.getPassedCount() == null ? 0 : result.getPassedCount());
+        vo.setTotalCount(result.getTotalCount() == null ? samples.size() : result.getTotalCount());
+        vo.setRunTimeMs(result.getRunTimeMs() == null ? 0L : result.getRunTimeMs());
+        vo.setCompileOutput(result.getCompileOutput());
+        vo.setErrorMessage(result.getErrorMessage());
+        vo.setCaseResults(parseCaseResults(result.getCaseResultJson()));
+        log.info("[monitor] type=run-sample userId={} questionId={} status={} passed={}/{} durationMs={}",
+                userId, questionId, vo.getStatus(), vo.getPassedCount(), vo.getTotalCount(), vo.getRunTimeMs());
+        return vo;
     }
 
     /**

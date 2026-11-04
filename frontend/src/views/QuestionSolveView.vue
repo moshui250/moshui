@@ -15,7 +15,7 @@ import AgentTimeline from '@/components/AgentTimeline.vue'
 import CodeEditor from '@/components/CodeEditor.vue'
 import MarkdownBody from '@/components/MarkdownBody.vue'
 import { getAgentHistory, streamAgent } from '@/api/agent'
-import { getJudgeResult, getQuestion, submitCode } from '@/api/question'
+import { getJudgeResult, getQuestion, runSampleCode, submitCode } from '@/api/question'
 
 const route = useRoute()
 const router = useRouter()
@@ -50,6 +50,7 @@ const judging = ref(false)
 const judgeResult = ref(null)
 const judgeError = ref('')
 const usingDemoJudge = ref(false)
+const sampleOnly = ref(false)
 
 const agentEvents = ref([])
 const agentAnswer = ref('')
@@ -335,6 +336,7 @@ function buildDemoResult() {
 
 function runDemoJudge() {
   usingDemoJudge.value = true
+  sampleOnly.value = false
   judging.value = true
   judgeError.value = ''
   judgeResult.value = null
@@ -412,6 +414,7 @@ async function submit() {
   judgeResult.value = null
   judgeError.value = ''
   usingDemoJudge.value = false
+  sampleOnly.value = false
 
   try {
     const data = await submitCode({
@@ -441,10 +444,41 @@ function resetJudge() {
   judgeResult.value = null
   judgeError.value = ''
   usingDemoJudge.value = false
+  sampleOnly.value = false
 }
 
-function notifyRunSample() {
-  ElMessage.info('运行样例将在 S7 判题服务接入后开放')
+/**
+ * 只运行公开样例：结果不会写入提交记录，失败也不会自动触发 AI 调试。
+ * @returns {Promise<void>} 样例运行结束后完成
+ */
+async function runSample() {
+  if (!question.value || judging.value) return
+  if (!code.value.trim()) {
+    ElMessage.warning('请先编写代码再运行样例')
+    return
+  }
+
+  saveCurrentCode()
+  clearTimers()
+  judging.value = true
+  judgeResult.value = null
+  judgeError.value = ''
+  usingDemoJudge.value = false
+  sampleOnly.value = true
+
+  try {
+    const data = await runSampleCode({
+      questionId: question.value.id,
+      language: language.value,
+      code: code.value
+    })
+    judgeResult.value = data
+  } catch (error) {
+    judgeError.value = error?.message || '样例运行失败，请稍后重试'
+    ElMessage.error(judgeError.value)
+  } finally {
+    judging.value = false
+  }
 }
 
 /**
@@ -729,15 +763,14 @@ onBeforeRouteLeave(() => {
               </span>
 
               <div class="actions">
-                <el-tooltip content="运行样例将在 S7 接入" placement="top">
-                  <span class="disabled-wrap">
-                    <el-button disabled @click="notifyRunSample">
-                      <el-icon><VideoPlay /></el-icon>
-                      运行样例
-                      <span class="soon">S7</span>
-                    </el-button>
-                  </span>
-                </el-tooltip>
+                <el-button
+                  :loading="judging && sampleOnly"
+                  :disabled="judging || !code.trim()"
+                  @click="runSample"
+                >
+                  <el-icon><VideoPlay /></el-icon>
+                  运行样例
+                </el-button>
 
                 <el-button type="primary" :loading="judging" :disabled="!canSubmit" @click="submit">
                   {{ judging ? '判题中' : '提交' }}
@@ -760,8 +793,10 @@ onBeforeRouteLeave(() => {
           <div class="panel judge-panel">
             <div class="judge-head">
               <div>
-                <div class="panel-title">判题结果</div>
-                <div class="panel-subtitle">按用例逐项比对，失败时显示期望与实际输出</div>
+                <div class="panel-title">{{ sampleOnly ? '样例运行' : '判题结果' }}</div>
+                <div class="panel-subtitle">
+                  {{ sampleOnly ? '仅运行公开样例，不写入提交记录' : '按用例逐项比对，失败时显示期望与实际输出' }}
+                </div>
               </div>
               <el-tag v-if="judgeResult" :type="resultMeta.type" effect="light" round size="small">
                 {{ resultMeta.label }}
@@ -781,10 +816,17 @@ onBeforeRouteLeave(() => {
 
             <div v-else-if="judgeError" class="judge-error">
               <el-alert :title="judgeError" type="error" :closable="false" show-icon />
-              <el-button :icon="RefreshRight" @click="resetJudge">重新提交</el-button>
+              <el-button :icon="RefreshRight" @click="resetJudge">
+                {{ sampleOnly ? '重新运行' : '重新提交' }}
+              </el-button>
             </div>
 
             <div v-else-if="judgeResult" class="judge-result">
+              <div v-if="sampleOnly" class="demo-banner sample-banner">
+                <el-icon><Warning /></el-icon>
+                <span>仅运行公开样例，不会写入提交记录，也不会自动触发 AI 调试。</span>
+              </div>
+
               <div v-if="usingDemoJudge" class="demo-banner">
                 <el-icon><Warning /></el-icon>
                 <span>判题接口尚未接入（S7），以下为界面演示结果，不会写入提交记录。</span>
@@ -799,7 +841,7 @@ onBeforeRouteLeave(() => {
                   <span>运行时间</span>
                   <strong>{{ judgeResult.runTimeMs != null ? `${judgeResult.runTimeMs} ms` : '—' }}</strong>
                 </div>
-                <div class="summary-item">
+                <div v-if="!sampleOnly" class="summary-item">
                   <span>提交编号</span>
                   <strong>{{ judgeResult.submitId ?? '—' }}</strong>
                 </div>
