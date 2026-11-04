@@ -29,15 +29,18 @@ public class PistonClient {
     private static final int MAX_ATTEMPTS = 2;
 
     private final PistonProperties properties;
+    private final PistonCircuitBreaker circuitBreaker;
     private final RestClient restClient;
 
     /**
      * 根据配置创建 RestClient，并设置连接、读取超时。
      *
-     * @param properties Piston 配置，包含根地址、超时和语言版本
+     * @param properties     Piston 配置，包含根地址、超时和语言版本
+     * @param circuitBreaker 连续失败熔断器
      */
-    public PistonClient(PistonProperties properties) {
+    public PistonClient(PistonProperties properties, PistonCircuitBreaker circuitBreaker) {
         this.properties = properties;
+        this.circuitBreaker = circuitBreaker;
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(properties.getConnectTimeoutMs());
         factory.setReadTimeout(properties.getReadTimeoutMs());
@@ -69,6 +72,7 @@ public class PistonClient {
      * @return Piston 的编译和运行结果
      */
     public PistonExecuteResponse execute(String language, String code, String stdin) {
+        circuitBreaker.ensureAvailable();
         PistonProperties.Language target = properties.requireLanguage(language);
         Map<String, Object> request = new LinkedHashMap<>();
         request.put("language", target.getName());
@@ -79,12 +83,19 @@ public class PistonClient {
         request.put("compile_timeout", properties.getCompileTimeoutMs());
         request.put("run_memory_limit", properties.getMemoryLimit());
         request.put("compile_memory_limit", properties.getMemoryLimit());
-        return call(() -> restClient.post()
-                .uri(EXECUTE_PATH)
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(request)
-                .retrieve()
-                .body(PistonExecuteResponse.class));
+        try {
+            PistonExecuteResponse response = call(() -> restClient.post()
+                    .uri(EXECUTE_PATH)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(request)
+                    .retrieve()
+                    .body(PistonExecuteResponse.class));
+            circuitBreaker.recordSuccess();
+            return response;
+        } catch (BizException e) {
+            circuitBreaker.recordFailure();
+            throw e;
+        }
     }
 
     /**

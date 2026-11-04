@@ -13,6 +13,7 @@ import {
 import hljs from 'highlight.js/lib/core'
 import cpp from 'highlight.js/lib/languages/cpp'
 import java from 'highlight.js/lib/languages/java'
+import DOMPurify from 'dompurify'
 import 'highlight.js/styles/github.css'
 import {
   listWrongQuestions,
@@ -96,9 +97,9 @@ function highlightCode(row) {
     return '<span class="code-empty">这条错题没有保留提交代码</span>'
   }
   try {
-    return hljs.highlight(code, { language: languageOf(row) }).value
+    return DOMPurify.sanitize(hljs.highlight(code, { language: languageOf(row) }).value)
   } catch {
-    return hljs.highlightAuto(code).value
+    return DOMPurify.sanitize(hljs.highlightAuto(code).value)
   }
 }
 

@@ -2,6 +2,7 @@ package com.codeagent.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
@@ -21,6 +22,7 @@ public class AgentRunRequest {
     private String message;
 
     /** 当前语言，可选 CPP / JAVA。 */
+    @Pattern(regexp = "(?i)CPP|JAVA", message = "语言只能是 CPP 或 JAVA")
     private String language;
 
     /** 当前代码，可选；用于定位错误。 */

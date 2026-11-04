@@ -50,6 +50,7 @@ public class ToolCallLoggingAdvisor implements CallAdvisor {
             int seq = chatMessageMapper.selectMaxSeq(context.getSessionId());
             for (AgentRunContext.ToolCallRecord record : context.getToolCalls()) {
                 log.info("Agent 工具调用: {} - {}", record.getName(), record.getSummary());
+                log.info("[monitor] type=tool tool={} latencyMs={}", record.getName(), record.getLatencyMs());
                 ChatMessage message = new ChatMessage();
                 message.setSessionId(context.getSessionId());
                 message.setUserId(context.getUserId());

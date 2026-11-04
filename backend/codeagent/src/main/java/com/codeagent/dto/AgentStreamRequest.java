@@ -2,6 +2,8 @@ package com.codeagent.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
@@ -27,11 +29,13 @@ public class AgentStreamRequest {
     /**
      * 提示模式：HINT（默认）或 SOLUTION。
      */
+    @Pattern(regexp = "(?i)HINT|SOLUTION", message = "mode 只能是 HINT 或 SOLUTION")
     private String mode;
 
     /**
      * 当前语言 CPP / JAVA，可不传。
      */
+    @Pattern(regexp = "(?i)CPP|JAVA", message = "语言只能是 CPP 或 JAVA")
     private String language;
 
     /**
@@ -43,10 +47,12 @@ public class AgentStreamRequest {
     /**
      * 可选提交记录 ID，用于复用最近一次判题结果。
      */
+    @Positive(message = "提交记录 ID 必须为正数")
     private Long submitId;
 
     /**
      * 可选会话 ID；不传则复用最近会话或新建。
      */
+    @Positive(message = "会话 ID 必须为正数")
     private Long sessionId;
 }

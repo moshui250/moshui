@@ -26,10 +26,13 @@ public class QuestionSaveRequest {
     private String title;
 
     @NotBlank(message = "题目描述不能为空")
+    @Size(max = 20000, message = "题目描述不能超过 20000 个字符")
     private String description;
 
+    @Size(max = 10000, message = "输入格式不能超过 10000 个字符")
     private String inputDesc;
 
+    @Size(max = 10000, message = "输出格式不能超过 10000 个字符")
     private String outputDesc;
 
     @NotNull(message = "难度不能为空")
@@ -43,10 +46,12 @@ public class QuestionSaveRequest {
     private JsonNode templateJson;
 
     @Valid
+    @Size(max = 20, message = "用例数量不能超过 20 条")
     @JsonAlias("cases")
     private List<TestCaseRequest> testCases;
 
     @Valid
+    @Size(max = 20, message = "样例数量不能超过 20 条")
     private List<TestCaseRequest> samples;
 
     /**
@@ -55,7 +60,9 @@ public class QuestionSaveRequest {
     private JsonNode referenceCode;
 
     @Valid
+    @Size(max = 10, message = "参考题解数量不能超过 10 条")
     private List<ReferenceSolutionRequest> solutions;
 
+    @Size(max = 512, message = "图片地址不能超过 512 个字符")
     private String sourceImageUrl;
 }

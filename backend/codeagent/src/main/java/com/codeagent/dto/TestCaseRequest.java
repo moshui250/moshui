@@ -1,8 +1,11 @@
 package com.codeagent.dto;
 
 import com.fasterxml.jackson.annotation.JsonAlias;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 /**
@@ -13,18 +16,23 @@ import lombok.Data;
 public class TestCaseRequest {
 
     @NotBlank(message = "用例输入不能为空")
+    @Size(max = 10000, message = "单条用例输入不能超过 10000 个字符")
     @JsonAlias("input")
     private String inputData;
 
     @NotNull(message = "用例期望输出不能为空")
+    @Size(max = 10000, message = "单条用例输出不能超过 10000 个字符")
     @JsonAlias("output")
     private String expectedOutput;
 
     @JsonAlias("sample")
     private Object isSample;
 
+    @Min(value = 0, message = "用例分值不能小于 0")
+    @Max(value = 100, message = "用例分值不能大于 100")
     private Integer score;
 
+    @Min(value = 1, message = "用例排序必须大于 0")
     private Integer sortNo;
 
     /**

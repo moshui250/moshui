@@ -73,7 +73,7 @@ rag:
     database-name: ${ZILLIZ_DATABASE:default}
     collection-name: codeagent_docs
     dimension: 1024
-    initialize-schema: ${RAG_ZILLIZ_INITIALIZE_SCHEMA:true}
+    initialize-schema: ${RAG_ZILLIZ_INITIALIZE_SCHEMA:false}
   chunk:
     size: 500
     min-size: 400
@@ -104,3 +104,5 @@ deepseek:
 logging:
   level:
     com.codeagent: debug
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%X{traceId:-}] %logger{36} - %msg%n"

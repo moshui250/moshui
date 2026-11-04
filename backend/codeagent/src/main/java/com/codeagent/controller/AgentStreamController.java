@@ -1,9 +1,12 @@
 package com.codeagent.controller;
 
+import com.codeagent.common.ErrorCode;
 import com.codeagent.common.R;
 import com.codeagent.common.UserContext;
 import com.codeagent.dto.AgentStreamRequest;
+import com.codeagent.exception.BizException;
 import com.codeagent.service.AgentStreamService;
+import com.codeagent.service.RateLimitService;
 import com.codeagent.vo.AgentHistoryVO;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +28,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 public class AgentStreamController {
 
     private final AgentStreamService agentStreamService;
+    private final RateLimitService rateLimitService;
 
     /**
      * 建立流式调试连接。
@@ -34,7 +38,10 @@ public class AgentStreamController {
      */
     @PostMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter stream(@Valid @RequestBody AgentStreamRequest request) {
-        return agentStreamService.stream(UserContext.getUserId(), request);
+        Long userId = requireUserId();
+        rateLimitService.check("agent:stream:" + userId, 20, 3_600_000L,
+                "Agent 调试请求过于频繁，请稍后再试");
+        return agentStreamService.stream(userId, request);
     }
 
     /**
@@ -45,6 +52,19 @@ public class AgentStreamController {
      */
     @GetMapping("/history")
     public R<AgentHistoryVO> history(@RequestParam("questionId") Long questionId) {
-        return R.ok(agentStreamService.history(UserContext.getUserId(), questionId));
+        return R.ok(agentStreamService.history(requireUserId(), questionId));
+    }
+
+    /**
+     * 从 ThreadLocal 取当前登录用户 ID。
+     *
+     * @return 当前用户 ID
+     */
+    private Long requireUserId() {
+        Long userId = UserContext.getUserId();
+        if (userId == null) {
+            throw new BizException(ErrorCode.UNAUTHORIZED);
+        }
+        return userId;
     }
 }

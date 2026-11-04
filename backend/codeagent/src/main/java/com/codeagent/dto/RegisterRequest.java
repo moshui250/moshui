@@ -9,6 +9,7 @@ import lombok.Data;
 public class RegisterRequest {
 
     @NotBlank(message = "用户名不能为空")
+    @Size(min = 4, max = 20, message = "用户名需为 4-20 位")
     @Pattern(regexp = "^[A-Za-z0-9_]{4,20}$", message = "用户名需为 4-20 位字母、数字或下划线")
     private String username;
 

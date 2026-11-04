@@ -3,7 +3,9 @@ package com.codeagent.ai.explain;
 import com.codeagent.common.ErrorCode;
 import com.codeagent.config.DeepSeekProperties;
 import com.codeagent.exception.BizException;
+import com.codeagent.exception.LlmTimeoutException;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
@@ -56,6 +58,7 @@ public class DeepSeekClient {
                         Map.of("role", "user", "content", userPrompt)));
 
         try {
+            long startedAt = System.currentTimeMillis();
             DeepSeekResponse response = client.post()
                     .uri("/chat/completions")
                     .contentType(MediaType.APPLICATION_JSON)
@@ -64,6 +67,7 @@ public class DeepSeekClient {
                     .retrieve()
                     .body(DeepSeekResponse.class);
 
+            long elapsed = System.currentTimeMillis() - startedAt;
             if (response == null || response.choices() == null || response.choices().isEmpty()) {
                 throw new BizException(ErrorCode.AI_UNAVAILABLE, "DeepSeek 返回为空");
             }
@@ -72,6 +76,12 @@ public class DeepSeekClient {
             if (content == null || content.isBlank()) {
                 throw new BizException(ErrorCode.AI_UNAVAILABLE, "DeepSeek 返回内容为空");
             }
+            Usage usage = response.usage();
+            log.info("[monitor] type=llm provider=deepseek model={} latencyMs={} promptTokens={} completionTokens={} totalTokens={}",
+                    properties.getModel(), elapsed,
+                    usage == null ? null : usage.promptTokens(),
+                    usage == null ? null : usage.completionTokens(),
+                    usage == null ? null : usage.totalTokens());
             return content.trim();
         } catch (BizException e) {
             throw e;
@@ -81,7 +91,7 @@ public class DeepSeekClient {
             throw new BizException(ErrorCode.AI_UNAVAILABLE, "AI 服务调用失败，请稍后重试");
         } catch (ResourceAccessException e) {
             log.warn("DeepSeek 网络调用失败: {}", e.getMessage());
-            throw new BizException(ErrorCode.AI_UNAVAILABLE, "AI 服务超时，请稍后重试");
+            throw new LlmTimeoutException("AI 服务超时，请稍后重试");
         }
     }
 
@@ -91,7 +101,21 @@ public class DeepSeekClient {
      * @param choices 候选回答列表
      */
     @JsonIgnoreProperties(ignoreUnknown = true)
-    public record DeepSeekResponse(List<Choice> choices) {
+    public record DeepSeekResponse(List<Choice> choices, Usage usage) {
+    }
+
+    /**
+     * token 用量。
+     *
+     * @param promptTokens     输入 token 数
+     * @param completionTokens 输出 token 数
+     * @param totalTokens      总 token 数
+     */
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record Usage(
+            @JsonProperty("prompt_tokens") Integer promptTokens,
+            @JsonProperty("completion_tokens") Integer completionTokens,
+            @JsonProperty("total_tokens") Integer totalTokens) {
     }
 
     /**

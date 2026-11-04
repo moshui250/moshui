@@ -1,9 +1,12 @@
 package com.codeagent.controller;
 
+import com.codeagent.common.ErrorCode;
 import com.codeagent.common.R;
 import com.codeagent.common.UserContext;
 import com.codeagent.dto.ImportParsedRequest;
+import com.codeagent.exception.BizException;
 import com.codeagent.service.QuestionImageService;
+import com.codeagent.service.RateLimitService;
 import com.codeagent.vo.ImportParsedVO;
 import com.codeagent.vo.ParseImageVO;
 import jakarta.validation.Valid;
@@ -24,6 +27,7 @@ import org.springframework.web.multipart.MultipartFile;
 public class QuestionImageController {
 
     private final QuestionImageService questionImageService;
+    private final RateLimitService rateLimitService;
 
     /**
      * 识别题目图片，返回草稿和 parseId；结果只在内存缓存中保留 10 分钟。
@@ -36,7 +40,10 @@ public class QuestionImageController {
     public R<ParseImageVO> parseImage(
             @RequestParam("file") MultipartFile file,
             @RequestParam(value = "imageUrl", required = false) String imageUrl) {
-        return R.ok(questionImageService.parse(file, imageUrl, UserContext.getUserId()));
+        Long userId = requireUserId();
+        rateLimitService.check("image:parse:" + userId, 20, 3_600_000L,
+                "图片识别请求过于频繁，请稍后再试");
+        return R.ok(questionImageService.parse(file, imageUrl, userId));
     }
 
     /**
@@ -47,6 +54,19 @@ public class QuestionImageController {
      */
     @PostMapping("/import-parsed")
     public R<ImportParsedVO> importParsed(@Valid @RequestBody ImportParsedRequest request) {
-        return R.ok(questionImageService.importParsed(request, UserContext.getUserId()));
+        return R.ok(questionImageService.importParsed(request, requireUserId()));
+    }
+
+    /**
+     * 从 ThreadLocal 取当前登录用户 ID。
+     *
+     * @return 当前用户 ID
+     */
+    private Long requireUserId() {
+        Long userId = UserContext.getUserId();
+        if (userId == null) {
+            throw new BizException(ErrorCode.UNAUTHORIZED);
+        }
+        return userId;
     }
 }

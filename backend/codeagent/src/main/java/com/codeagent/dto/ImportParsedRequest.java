@@ -22,6 +22,7 @@ public class ImportParsedRequest {
      * 识别缓存 ID，必须属于当前用户且未过期。
      */
     @NotBlank(message = "识别结果不能为空")
+    @Size(max = 64, message = "识别结果 ID 不合法")
     private String parseId;
 
     /**
@@ -35,16 +36,19 @@ public class ImportParsedRequest {
      * Markdown 题面。
      */
     @NotBlank(message = "题目描述不能为空")
+    @Size(max = 20000, message = "题目描述不能超过 20000 个字符")
     private String description;
 
     /**
      * 输入格式。
      */
+    @Size(max = 10000, message = "输入格式不能超过 10000 个字符")
     private String inputDesc;
 
     /**
      * 输出格式。
      */
+    @Size(max = 10000, message = "输出格式不能超过 10000 个字符")
     private String outputDesc;
 
     /**
@@ -59,6 +63,7 @@ public class ImportParsedRequest {
      * 知识点编码。
      */
     @NotBlank(message = "知识点不能为空")
+    @Size(max = 64, message = "知识点编码不能超过 64 个字符")
     private String knowledgePointCode;
 
     /**
@@ -66,17 +71,20 @@ public class ImportParsedRequest {
      */
     @Valid
     @NotEmpty(message = "至少提交 1 条样例用例")
+    @Size(max = 20, message = "样例数量不能超过 20 条")
     private List<TestCaseRequest> samples;
 
     /**
      * 用户填写的隐藏用例；为空时由样例复制两条并提示人工确认。
      */
     @Valid
+    @Size(max = 20, message = "隐藏用例数量不能超过 20 条")
     @JsonAlias("hiddenCases")
     private List<TestCaseRequest> testCases;
 
     /**
      * 图片地址；为空时使用识别缓存中的地址。
      */
+    @Size(max = 512, message = "图片地址不能超过 512 个字符")
     private String sourceImageUrl;
 }

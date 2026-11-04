@@ -22,6 +22,7 @@ public class AgentStreamExecutorConfig {
         executor.setMaxPoolSize(8);
         executor.setQueueCapacity(32);
         executor.setThreadNamePrefix("agent-stream-");
+        executor.setTaskDecorator(new MdcTaskDecorator());
         executor.setWaitForTasksToCompleteOnShutdown(false);
         executor.initialize();
         return executor;

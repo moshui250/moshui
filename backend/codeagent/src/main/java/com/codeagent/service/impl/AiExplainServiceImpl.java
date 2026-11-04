@@ -14,6 +14,7 @@ import com.codeagent.entity.ChatSession;
 import com.codeagent.entity.KnowledgePoint;
 import com.codeagent.entity.Question;
 import com.codeagent.exception.BizException;
+import com.codeagent.exception.LlmTimeoutException;
 import com.codeagent.mapper.ChatMessageMapper;
 import com.codeagent.mapper.ChatSessionMapper;
 import com.codeagent.mapper.KnowledgePointMapper;
@@ -55,6 +56,9 @@ public class AiExplainServiceImpl implements AiExplainService {
     private static final String SOURCE_MARK = "📎 参考来源：";
     private static final String NO_CONTEXT_ANSWER =
             "知识库暂未覆盖，建议先看题目的输入输出说明，或把问题问得更具体一些。";
+    private static final String LLM_TIMEOUT_ANSWER =
+            "AI 讲解暂时超时，先按这三步自查：1. 变量是否初始化；2. 数组下标是否越界；"
+                    + "3. 循环边界是否正确。也可以点击下方来源查看对应手册。";
     private static final String SYSTEM_PROMPT = """
             你是编程助教。只能依据 <context> 回答；context 没有的内容，直接说"知识库暂未覆盖，建议…"。
             不要编造 API、不要编造语法。回答用中文，≤200 字，末尾另起一行写"📎 参考来源：<title>"。
@@ -112,8 +116,14 @@ public class AiExplainServiceImpl implements AiExplainService {
         if (contextItems.isEmpty()) {
             answer = NO_CONTEXT_ANSWER;
         } else {
-            String raw = deepSeekClient.chat(SYSTEM_PROMPT, buildUserPrompt(contextItems, request.getMessage()));
-            answer = ensureSourceAndLimit(raw, sources);
+            try {
+                String raw = deepSeekClient.chat(SYSTEM_PROMPT, buildUserPrompt(contextItems, request.getMessage()));
+                answer = ensureSourceAndLimit(raw, sources);
+            } catch (LlmTimeoutException e) {
+                log.warn("AI 讲解超时，返回预置排查话术: {}", e.getMessage());
+                degraded = true;
+                answer = ensureSourceAndLimit(LLM_TIMEOUT_ANSWER, sources);
+            }
         }
 
         saveHistory(userId, question, request.getMessage(), answer, sources);
@@ -224,7 +234,7 @@ public class AiExplainServiceImpl implements AiExplainService {
         try {
             return keywordSearch(message);
         } catch (Exception e) {
-            log.warn("关键词降级检索失败: {}", e.getMessage());
+            log.warn("关键词降级检索失败: {}", e.getMessage(), e);
             return List.of();
         }
     }
@@ -276,6 +286,7 @@ public class AiExplainServiceImpl implements AiExplainService {
                 break;
             }
         }
+        log.info("关键词降级检索: keyword={}, items={}", keyword, items.size());
         return items.stream().limit(MAX_CONTEXT).toList();
     }
 

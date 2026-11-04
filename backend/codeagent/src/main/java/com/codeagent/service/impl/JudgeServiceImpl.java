@@ -1,5 +1,6 @@
 package com.codeagent.service.impl;
 
+import com.codeagent.ai.PistonCircuitBreaker;
 import com.codeagent.ai.PistonClient;
 import com.codeagent.ai.PistonExecuteResponse;
 import com.codeagent.common.ErrorCode;
@@ -61,6 +62,7 @@ public class JudgeServiceImpl implements JudgeService {
     private final QuestionTestCaseMapper testCaseMapper;
     private final SubmitRecordMapper submitRecordMapper;
     private final PistonClient pistonClient;
+    private final PistonCircuitBreaker pistonCircuitBreaker;
     private final WrongBookService wrongBookService;
     private final ProfileStatService profileStatService;
     private final ObjectMapper objectMapper;
@@ -83,6 +85,7 @@ public class JudgeServiceImpl implements JudgeService {
             throw new BizException(ErrorCode.UNAUTHORIZED);
         }
         rateLimiter.check(userId);
+        pistonCircuitBreaker.ensureAvailable();
 
         if (questionId == null) {
             throw new BizException(ErrorCode.PARAM_ERROR, "题目 ID 不能为空");
@@ -191,6 +194,7 @@ public class JudgeServiceImpl implements JudgeService {
      * @param submitId 提交记录 ID
      */
     private void judgeAsync(Long submitId) {
+        long startedAt = System.currentTimeMillis();
         try {
             if (submitRecordMapper.markJudging(submitId) == 0) {
                 return;
@@ -207,6 +211,10 @@ public class JudgeServiceImpl implements JudgeService {
             SubmitRecord result = executeCases(record, cases);
             submitRecordMapper.updateResult(result);
             profileStatService.invalidate(result.getUserId());
+            log.info("[monitor] type=judge submitId={} userId={} status={} passed={}/{} durationMs={}",
+                    submitId, result.getUserId(), result.getStatus(),
+                    result.getPassedCount(), result.getTotalCount(),
+                    System.currentTimeMillis() - startedAt);
 
             if (!AC.equals(result.getStatus()) && !SE.equals(result.getStatus())) {
                 try {
