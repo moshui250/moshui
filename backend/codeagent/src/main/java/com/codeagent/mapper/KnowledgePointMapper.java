@@ -28,6 +28,16 @@ public interface KnowledgePointMapper {
     KnowledgePoint selectById(@Param("id") Long id);
 
     /**
+     * 按编码查询知识点，用于图片草稿导入时把 code 转成 ID。
+     *
+     * @param code 知识点编码，例如 array
+     * @return 知识点；不存在时返回 null
+     */
+    @Select("SELECT id, code, name, description, sort, create_time " +
+            "FROM knowledge_point WHERE code = #{code} LIMIT 1")
+    KnowledgePoint selectByCode(@Param("code") String code);
+
+    /**
      * 按名称模糊匹配知识点，用于向量库不可用时的关键词降级检索。
      *
      * @param keyword 已清洗的查询词

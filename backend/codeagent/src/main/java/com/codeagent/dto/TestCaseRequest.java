@@ -13,9 +13,11 @@ import lombok.Data;
 public class TestCaseRequest {
 
     @NotBlank(message = "用例输入不能为空")
+    @JsonAlias("input")
     private String inputData;
 
     @NotNull(message = "用例期望输出不能为空")
+    @JsonAlias("output")
     private String expectedOutput;
 
     @JsonAlias("sample")

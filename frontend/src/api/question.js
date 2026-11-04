@@ -48,3 +48,61 @@ export function getJudgeResult(submitId) {
 export function runSampleCode(data) {
   return request.post('/judge/run-sample', data, { silent: true })
 }
+
+/**
+ * 上传并压缩题目图片。
+ *
+ * @param {File} file 原始图片
+ * @param {(percent:number)=>void} onProgress 上传进度回调
+ * @returns {Promise<{url:string}>} 可访问图片地址
+ */
+export function uploadQuestionImage(file, onProgress) {
+  const form = new FormData()
+  form.append('file', file)
+  return request.post('/file/image', form, {
+    silent: true,
+    onUploadProgress: (event) => {
+      if (event.total) onProgress?.(Math.round((event.loaded / event.total) * 100))
+    }
+  })
+}
+
+/**
+ * 识别题目图片，返回草稿；不会直接入库。
+ *
+ * @param {File} file 原始图片
+ * @param {string} imageUrl 已上传图片地址，可为空
+ * @param {(percent:number)=>void} onProgress 上传进度回调
+ * @returns {Promise<object>} parseId、draft、missingFields、warn、imageUrl
+ */
+export function parseQuestionImage(file, imageUrl, onProgress) {
+  const form = new FormData()
+  form.append('file', file)
+  if (imageUrl) form.append('imageUrl', imageUrl)
+  return request.post('/question/parse-image', form, {
+    silent: true,
+    onUploadProgress: (event) => {
+      if (event.total) onProgress?.(Math.round((event.loaded / event.total) * 100))
+    }
+  })
+}
+
+/**
+ * 用户确认草稿后入库。
+ *
+ * @param {object} data 包含 parseId 和修改后的题目字段
+ * @returns {Promise<{questionId:number, needManualConfirm:boolean, message:string}>} 入库结果
+ */
+export function importParsedQuestion(data) {
+  return request.post('/question/import-parsed', data, { silent: true })
+}
+
+/**
+ * 手动创建个人题。
+ *
+ * @param {object} data 题目字段、样例和隐藏用例
+ * @returns {Promise<number>} 新题 ID
+ */
+export function createQuestion(data) {
+  return request.post('/question', data, { silent: true })
+}

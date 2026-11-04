@@ -228,6 +228,7 @@ onMounted(async () => {
 
       <el-button type="primary" @click="search">筛选</el-button>
       <el-button text :disabled="!hasFilters" @click="resetFilters">重置</el-button>
+      <el-button plain type="primary" @click="router.push('/question/import')">图片录题</el-button>
 
       <div class="filter-total">共 {{ total }} 道题</div>
     </section>

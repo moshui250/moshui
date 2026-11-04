@@ -1,9 +1,11 @@
 package com.codeagent.config;
 
 import com.codeagent.interceptor.JwtAuthInterceptor;
+import com.codeagent.service.FileStorageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
+import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @Configuration
@@ -11,6 +13,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 public class WebMvcConfig implements WebMvcConfigurer {
 
     private final JwtAuthInterceptor jwtAuthInterceptor;
+    private final FileStorageService fileStorageService;
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
@@ -22,5 +25,15 @@ public class WebMvcConfig implements WebMvcConfigurer {
                         "/api/health",
                         "/api/health/rag"
                 );
+    }
+
+    @Override
+    public void addResourceHandlers(ResourceHandlerRegistry registry) {
+        String location = fileStorageService.getRoot().toUri().toString();
+        if (!location.endsWith("/")) {
+            location = location + "/";
+        }
+        registry.addResourceHandler("/uploads/**")
+                .addResourceLocations(location);
     }
 }

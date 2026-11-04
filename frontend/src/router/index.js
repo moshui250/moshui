@@ -27,6 +27,12 @@ const routes = [
         meta: { title: '题库', section: '练习' }
       },
       {
+        path: 'question/import',
+        name: 'question-import',
+        component: () => import('@/views/QuestionImportView.vue'),
+        meta: { title: '图片录题', section: '练习' }
+      },
+      {
         path: 'question/:id',
         name: 'question-detail',
         component: () => import('@/views/QuestionDetailView.vue'),
