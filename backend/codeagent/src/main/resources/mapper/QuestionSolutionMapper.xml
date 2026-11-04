@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.codeagent.mapper.QuestionSolutionMapper">
+
+    <insert id="insertBatch">
+        INSERT INTO question_solution
+            (question_id, language, content, explanation, create_time)
+        VALUES
+        <foreach collection="list" item="s" separator=",">
+            (#{s.questionId}, #{s.language}, #{s.content}, #{s.explanation}, NOW())
+        </foreach>
+    </insert>
+</mapper>

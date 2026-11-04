@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.codeagent.mapper.KnowledgePointMapper">
+
+    <select id="selectListWithQuestionCount" resultType="com.codeagent.vo.KnowledgePointVO">
+        SELECT kp.id, kp.code, kp.name, kp.description,
+               COUNT(q.id) AS question_count
+        FROM knowledge_point kp
+        LEFT JOIN question q ON q.knowledge_point_id = kp.id
+            AND q.type = 'PUBLIC'
+            AND q.deleted = 0
+        GROUP BY kp.id, kp.code, kp.name, kp.description, kp.sort
+        ORDER BY kp.sort ASC, kp.id ASC
+    </select>
+</mapper>

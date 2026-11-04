@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.codeagent.mapper.SubmitRecordMapper">
+
+    <select id="selectHistory" resultType="com.codeagent.vo.JudgeHistoryVO">
+        SELECT id, language, status, run_time_ms AS run_time, create_time
+        FROM submit_record
+        WHERE user_id = #{userId}
+        <if test="questionId != null">
+            AND question_id = #{questionId}
+        </if>
+        ORDER BY id DESC
+        LIMIT #{offset}, #{size}
+    </select>
+
+    <select id="countHistory" resultType="long">
+        SELECT COUNT(*)
+        FROM submit_record
+        WHERE user_id = #{userId}
+        <if test="questionId != null">
+            AND question_id = #{questionId}
+        </if>
+    </select>
+</mapper>

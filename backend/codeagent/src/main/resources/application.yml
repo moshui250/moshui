@@ -1,0 +1,93 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: codeagent
+  ai:
+    openai:
+      # 硅基流动 OpenAI 兼容端点；密钥只从环境变量读取，不写死。
+      base-url: ${SILICONFLOW_BASE_URL:https://api.siliconflow.cn}
+      # 占位值保证未配置密钥时应用仍能启动；真正调用 embedding 前必须通过环境变量提供密钥。
+      api-key: ${SILICONFLOW_API_KEY:not-configured}
+      embedding:
+        options:
+          model: ${SILICONFLOW_EMBEDDING_MODEL:BAAI/bge-m3}
+          # SiliconFlow 的 bge-m3 原生输出 1024 维，但不接受 OpenAI 的 dimensions 参数。
+          # 维度由 rag.zilliz.dimension 固定为 1024，避免请求体带 dimensions 导致 20015。
+        # 不把 metadata 拼进 embedding 文本，避免标题/编号干扰语义。
+        metadata-mode: NONE
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:codeagent}?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:}
+    hikari:
+      connection-timeout: 3000
+      initialization-fail-timeout: -1
+      maximum-pool-size: 10
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: GMT+8
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 6MB
+
+mybatis:
+  mapper-locations: classpath:mapper/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+# 必须通过环境变量 JWT_SECRET 提供不少于 32 字节的随机密钥。
+# HS256 要求密钥不少于 32 字节（256 bit），默认值满足要求。
+jwt:
+  secret: ${JWT_SECRET}
+  expire-seconds: 7200
+
+# Piston 判题服务。公共 API 自 2026-02-15 起仅允许白名单访问，
+# 本地联调可通过 PISTON_BASE_URL 指向自建 Piston 或兼容服务。
+# 版本号来自 GET /api/v2/piston/runtimes 的真实结果，启动时会再次校准并打印日志。
+piston:
+  base-url: ${PISTON_BASE_URL:https://emkc.org}
+  connect-timeout-ms: 5000
+  read-timeout-ms: 35000
+  run-timeout-ms: 3000
+  compile-timeout-ms: 10000
+  memory-limit: 268435456
+  languages:
+    cpp:
+      name: c++
+      version: 10.2.0
+    java:
+      name: java
+      version: 15.0.2
+
+# RAG 向量库与切块参数。Zilliz 凭据只从环境变量读取。
+# 未配置 ZILLIZ_URI 时不会创建 VectorStore，普通接口仍可启动。
+rag:
+  zilliz:
+    uri: ${ZILLIZ_URI:}
+    token: ${ZILLIZ_TOKEN:}
+    database-name: ${ZILLIZ_DATABASE:default}
+    collection-name: codeagent_docs
+    dimension: 1024
+    initialize-schema: ${RAG_ZILLIZ_INITIALIZE_SCHEMA:true}
+  chunk:
+    size: 500
+    min-size: 400
+    overlap: 80
+
+# DeepSeek 讲解模型；密钥只从环境变量读取，未配置时返回 50302。
+deepseek:
+  base-url: ${DEEPSEEK_BASE_URL:https://api.deepseek.com}
+  api-key: ${DEEPSEEK_API_KEY:}
+  model: deepseek-chat
+  temperature: 0.2
+  connect-timeout-ms: 5000
+  read-timeout-ms: 60000
+
+logging:
+  level:
+    com.codeagent: debug

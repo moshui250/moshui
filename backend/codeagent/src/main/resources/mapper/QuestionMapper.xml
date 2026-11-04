@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.codeagent.mapper.QuestionMapper">
+
+    <sql id="listSelect">
+        SELECT q.id, q.title, q.difficulty, q.knowledge_point_id,
+               kp.name AS knowledge_point_name, q.type, q.user_id, q.create_time,
+               CASE WHEN EXISTS (
+                   SELECT 1 FROM submit_record sr
+                   WHERE sr.question_id = q.id
+                     AND sr.user_id = #{userId}
+                     AND sr.status = 'AC'
+               ) THEN 1 ELSE 0 END AS solved
+        FROM question q
+        LEFT JOIN knowledge_point kp ON kp.id = q.knowledge_point_id
+        WHERE q.deleted = 0
+    </sql>
+
+    <sql id="listWhere">
+        <choose>
+            <when test="personal">
+                AND q.type = 'PERSONAL' AND q.user_id = #{userId}
+            </when>
+            <otherwise>
+                AND q.type = 'PUBLIC'
+            </otherwise>
+        </choose>
+        <if test="knowledgePointId != null">
+            AND q.knowledge_point_id = #{knowledgePointId}
+        </if>
+        <if test="difficulty != null">
+            AND q.difficulty = #{difficulty}
+        </if>
+        <if test="keyword != null and keyword != ''">
+            AND q.title LIKE CONCAT('%', #{keyword}, '%')
+        </if>
+    </sql>
+
+    <select id="selectList" resultType="com.codeagent.vo.QuestionListItemVO">
+        <include refid="listSelect"/>
+        <include refid="listWhere"/>
+        ORDER BY q.create_time DESC, q.id DESC
+        LIMIT #{offset}, #{size}
+    </select>
+
+    <select id="countList" resultType="long">
+        SELECT COUNT(*)
+        FROM question q
+        WHERE q.deleted = 0
+        <include refid="listWhere"/>
+    </select>
+
+    <select id="selectDetailRow" resultType="com.codeagent.dto.QuestionDetailRow">
+        SELECT q.id, q.title, q.description, q.input_desc, q.output_desc, q.difficulty,
+               q.knowledge_point_id, q.template_json, q.type, q.user_id, q.source_image_url,
+               q.create_time, q.update_time,
+               kp.code AS knowledge_point_code, kp.name AS knowledge_point_name
+        FROM question q
+        LEFT JOIN knowledge_point kp ON kp.id = q.knowledge_point_id
+        WHERE q.id = #{id} AND q.deleted = 0
+        LIMIT 1
+    </select>
+
+    <insert id="insert" parameterType="com.codeagent.entity.Question"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO question
+            (title, description, input_desc, output_desc, difficulty, knowledge_point_id,
+             template_json, type, user_id, source_image_url, create_time, update_time, deleted)
+        VALUES
+            (#{title}, #{description}, #{inputDesc}, #{outputDesc}, #{difficulty}, #{knowledgePointId},
+             #{templateJson}, 'PERSONAL', #{userId}, #{sourceImageUrl}, NOW(), NOW(), 0)
+    </insert>
+
+    <update id="updateOwned" parameterType="com.codeagent.entity.Question">
+        UPDATE question
+        SET title = #{title},
+            description = #{description},
+            input_desc = #{inputDesc},
+            output_desc = #{outputDesc},
+            difficulty = #{difficulty},
+            knowledge_point_id = #{knowledgePointId},
+            template_json = #{templateJson},
+            source_image_url = #{sourceImageUrl},
+            update_time = NOW()
+        WHERE id = #{id}
+          AND type = 'PERSONAL'
+          AND user_id = #{userId}
+          AND deleted = 0
+    </update>
+
+    <update id="logicalDeleteOwned">
+        UPDATE question
+        SET deleted = 1, update_time = NOW()
+        WHERE id = #{id}
+          AND type = 'PERSONAL'
+          AND user_id = #{userId}
+          AND deleted = 0
+    </update>
+
+    <select id="selectRecommend" resultType="com.codeagent.vo.QuestionRecommendVO">
+        SELECT q.id, q.title, q.difficulty, q.knowledge_point_id,
+               kp.name AS knowledge_point_name,
+               CASE WHEN EXISTS (
+                   SELECT 1 FROM submit_record sr
+                   WHERE sr.question_id = q.id
+                     AND sr.user_id = #{userId}
+                     AND sr.status = 'AC'
+               ) THEN 1 ELSE 0 END AS solved
+        FROM question q
+        LEFT JOIN knowledge_point kp ON kp.id = q.knowledge_point_id
+        WHERE q.deleted = 0
+          AND q.type = 'PUBLIC'
+          AND q.id != #{excludeId}
+        ORDER BY CASE WHEN q.knowledge_point_id = #{knowledgePointId} THEN 0 ELSE 1 END,
+                 solved ASC,
+                 ABS(q.difficulty - #{difficulty}) ASC,
+                 q.id ASC
+        LIMIT #{limit}
+    </select>
+</mapper>

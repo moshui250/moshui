@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.codeagent.mapper.UserWrongQuestionMapper">
+
+    <sql id="listFrom">
+        FROM user_wrong_question w
+        JOIN question q ON q.id = w.question_id AND q.deleted = 0
+        LEFT JOIN knowledge_point kp ON kp.id = q.knowledge_point_id
+        LEFT JOIN submit_record s ON s.id = w.last_submit_id
+    </sql>
+
+    <sql id="listWhere">
+        WHERE w.user_id = #{userId}
+          AND w.mastered = #{mastered}
+        <if test="knowledgePointId != null">
+            AND q.knowledge_point_id = #{knowledgePointId}
+        </if>
+    </sql>
+
+    <select id="selectList" resultType="com.codeagent.dto.WrongBookItemRow">
+        SELECT w.id,
+               w.question_id,
+               q.title,
+               q.difficulty,
+               q.knowledge_point_id,
+               kp.code AS knowledge_point_code,
+               kp.name AS knowledge_point_name,
+               w.wrong_count,
+               w.mastered,
+               CASE WHEN EXISTS (
+                   SELECT 1
+                   FROM submit_record ac
+                   WHERE ac.user_id = w.user_id
+                     AND ac.question_id = w.question_id
+                     AND ac.status = 'AC'
+               ) THEN 1 ELSE 0 END AS passed,
+               w.last_wrong_time,
+               s.id AS last_submit_id,
+               s.status AS last_submit_status,
+               LEFT(s.code, 200) AS last_submit_code
+        <include refid="listFrom"/>
+        <include refid="listWhere"/>
+        ORDER BY w.last_wrong_time DESC, w.id DESC
+        LIMIT #{offset}, #{size}
+    </select>
+
+    <select id="countList" resultType="long">
+        SELECT COUNT(*)
+        <include refid="listFrom"/>
+        <include refid="listWhere"/>
+    </select>
+
+    <update id="updateMastered">
+        UPDATE user_wrong_question
+        SET mastered = #{mastered},
+            mastered_time = CASE WHEN #{mastered} = 1 THEN NOW() ELSE NULL END
+        WHERE user_id = #{userId}
+          AND question_id = #{questionId}
+    </update>
+
+    <insert id="upsertWrong">
+        INSERT INTO user_wrong_question
+            (user_id, question_id, wrong_count, last_submit_id, mastered,
+             first_wrong_time, last_wrong_time)
+        VALUES
+            (#{userId}, #{questionId}, 1, #{submitId}, 0, NOW(), NOW())
+        ON DUPLICATE KEY UPDATE
+            wrong_count = wrong_count + 1,
+            last_submit_id = VALUES(last_submit_id),
+            mastered = 0,
+            mastered_time = NULL,
+            last_wrong_time = NOW()
+    </insert>
+</mapper>

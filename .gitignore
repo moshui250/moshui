@@ -1,0 +1,18 @@
+# repository layout
+backend/*
+!backend/codeagent/
+!backend/codeagent/**
+
+# dependencies / build
+.m2repo/
+.orderverify/
+_ci/
+_probe_dir/
+_probe_root.txt
+backend/codeagent/target/
+backend/codeagent/.idea/
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend-campusmarket-backup-20261102/
+*.log
