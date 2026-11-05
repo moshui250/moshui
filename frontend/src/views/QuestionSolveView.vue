@@ -58,6 +58,7 @@ const judgeResult = ref(null)
 const judgeError = ref('')
 const usingDemoJudge = ref(false)
 const sampleOnly = ref(false)
+const activePane = ref('result')
 
 const agentEvents = ref([])
 const agentAnswer = ref('')
@@ -125,6 +126,12 @@ const caseResults = computed(() => {
 })
 const resultStatus = computed(() => String(judgeResult.value?.status || '').toUpperCase())
 const resultMeta = computed(() => STATUS_META[resultStatus.value] || { label: resultStatus.value || '未知', type: 'info' })
+const agentTabText = computed(() => {
+  if (agentError.value) return '调试失败'
+  if (agentRunning.value) return '思考中'
+  if (agentAnswer.value) return '已完成'
+  return '待调试'
+})
 
 function languageLabel(value) {
   return LANGUAGES.find((item) => item.value === value)?.label || value
@@ -344,6 +351,7 @@ function buildDemoResult() {
 function runDemoJudge() {
   usingDemoJudge.value = true
   sampleOnly.value = false
+  activePane.value = 'result'
   judging.value = true
   judgeError.value = ''
   judgeResult.value = null
@@ -430,6 +438,7 @@ async function submit() {
   judgeError.value = ''
   usingDemoJudge.value = false
   sampleOnly.value = false
+  activePane.value = 'result'
 
   try {
     const payload = {
@@ -482,6 +491,7 @@ async function runSample() {
   judgeError.value = ''
   usingDemoJudge.value = false
   sampleOnly.value = true
+  activePane.value = 'result'
 
   try {
     const data = await runSampleCode({
@@ -579,11 +589,6 @@ function handleAgentEvent(event, runId) {
 
   if (event.type === 'error') {
     agentError.value = data.message || 'Agent 调试失败'
-    agentEvents.value.push({
-      id: `error-${agentEvents.value.length}`,
-      type: 'error',
-      message: agentError.value
-    })
   }
 }
 
@@ -597,6 +602,7 @@ async function startAgent(mode = 'HINT') {
   if (!question.value || agentRunning.value) return
 
   resetAgent()
+  activePane.value = 'agent'
   const runId = ++agentRunId
   const controller = new AbortController()
   agentController = controller
@@ -622,11 +628,6 @@ async function startAgent(mode = 'HINT') {
     if (error?.name === 'AbortError' || disposed) return
     if (!agentError.value) {
       agentError.value = error?.message || '调试连接中断，请稍后重试'
-      agentEvents.value.push({
-        id: `error-${agentEvents.value.length}`,
-        type: 'error',
-        message: agentError.value
-      })
     }
   } finally {
     if (runId === agentRunId) {
@@ -670,6 +671,7 @@ async function loadAgentHistory() {
     agentAnswer.value = assistant.content
     agentCanReveal.value = assistant.hintLevel === 1
     agentSessionId.value = session.id
+    activePane.value = 'agent'
   } catch {
     // 历史接口失败不阻断答题页。
   }
@@ -702,7 +704,7 @@ onBeforeRouteLeave(() => {
 </script>
 
 <template>
-  <div v-loading="loading" :class="['solve-page', { 'contest-solve': contestId }]">
+  <div v-loading="loading" class="solve-page">
     <div v-if="!loading && !question" class="panel empty-panel">
       <el-empty :description="loadError || '题目不存在，或已被删除'" :image-size="100">
         <el-button type="primary" @click="router.push('/question')">回到题库</el-button>
@@ -711,37 +713,44 @@ onBeforeRouteLeave(() => {
     </div>
 
     <template v-else-if="question">
-      <header class="solve-head">
+      <header class="solve-top">
         <button class="back-link" @click="goBack">
           <el-icon><ArrowLeft /></el-icon>
-          {{ contestId ? '返回竞赛' : '返回题面' }}
+          {{ contestId ? '返回竞赛' : '返回题目' }}
         </button>
 
         <div class="head-main">
-          <div class="page-eyebrow">Solve · Problem {{ question.id }}</div>
-          <h1>{{ question.title }}</h1>
-          <div class="meta-row">
+          <div class="page-eyebrow">
+            <span>{{ contestId ? 'CONTEST' : 'PRACTICE' }}</span>
+            <span class="eyebrow-sep">/</span>
+            <span>PROBLEM {{ question.id }}</span>
+          </div>
+          <div class="head-title-line">
+            <h1>{{ question.title }}</h1>
             <el-tag :type="difficulty.type" effect="light" round size="small">
               {{ difficulty.label }}
             </el-tag>
-            <span class="meta-chip">{{ knowledgeName }}</span>
-            <el-tag v-if="contestId" type="warning" effect="light" round size="small">
-              竞赛提交
-            </el-tag>
-            <span v-if="question.solved" class="meta-solved">
-              <el-icon><CircleCheck /></el-icon>
-              已通过
-            </span>
           </div>
         </div>
 
-        <el-button v-if="!contestId" class="statement-link" text @click="router.push({ name: 'question-detail', params: { id: question.id } })">
-          查看完整题面
-        </el-button>
+        <div class="top-meta">
+          <span class="meta-chip">{{ knowledgeName }}</span>
+          <el-tag v-if="contestId" type="warning" effect="light" round size="small">
+            竞赛提交
+          </el-tag>
+          <span v-if="question.solved" class="meta-solved">
+            <el-icon><CircleCheck /></el-icon>
+            已通过
+          </span>
+        </div>
       </header>
 
       <div class="solve-grid">
-        <aside class="problem-pane panel">
+        <aside class="problem-pane">
+          <div class="pane-bar">
+            <span>题目说明</span>
+            <span class="pane-id">#{{ question.id }}</span>
+          </div>
           <div class="problem-scroll">
             <section class="problem-section problem-statement">
               <MarkdownBody :content="statementMarkdown" />
@@ -752,9 +761,10 @@ onBeforeRouteLeave(() => {
         <section class="workspace">
           <div class="panel editor-panel">
             <div class="editor-toolbar">
-              <div class="editor-label">
+              <div class="editor-file">
                 <span class="editor-dot"></span>
-                代码编辑器
+                <span class="file-name">{{ language === 'JAVA' ? 'Main.java' : 'main.cpp' }}</span>
+                <span class="file-save">自动保存</span>
               </div>
 
               <el-radio-group
@@ -772,14 +782,14 @@ onBeforeRouteLeave(() => {
             <CodeEditor
               :model-value="code"
               :language="currentLanguage.monaco"
-              height="470px"
+              height="clamp(340px, 44vh, 500px)"
               @update:model-value="handleCodeChange"
             />
 
             <div class="action-bar">
               <span class="autosave-tip">
                 <el-icon><CircleCheck /></el-icon>
-                代码自动保存在本机
+                代码只保存在本机
               </span>
 
               <div class="actions">
@@ -811,138 +821,168 @@ onBeforeRouteLeave(() => {
             </div>
           </div>
 
-          <div class="panel judge-panel">
-            <div class="judge-head">
-              <div>
-                <div class="panel-title">{{ sampleOnly ? '样例运行' : '判题结果' }}</div>
-                <div class="panel-subtitle">
-                  {{ sampleOnly ? '仅运行公开样例，不写入提交记录' : '按用例逐项比对，失败时显示期望与实际输出' }}
-                </div>
-              </div>
-              <el-tag v-if="judgeResult" :type="resultMeta.type" effect="light" round size="small">
-                {{ resultMeta.label }}
-              </el-tag>
-            </div>
+          <div class="panel workspace-lower">
+            <div class="lower-tabs">
+              <button
+                class="lower-tab"
+                :class="{ 'is-active': activePane === 'result' }"
+                @click="activePane = 'result'"
+              >
+                判题结果
+                <span v-if="judgeResult" class="tab-status" :class="`is-${resultMeta.type}`">
+                  {{ resultMeta.label }}
+                </span>
+                <span v-else-if="judging" class="tab-status is-primary">运行中</span>
+              </button>
 
-            <div v-if="judging" class="judging-state">
-              <div class="judging-copy">
-                <el-icon class="is-loading"><Clock /></el-icon>
-                <div>
-                  <strong>正在编译并运行用例</strong>
-                  <p>通常需要几秒钟，请保持当前页面。</p>
-                </div>
-              </div>
-              <el-skeleton :rows="5" animated />
-            </div>
-
-            <div v-else-if="judgeError" class="judge-error">
-              <el-alert :title="judgeError" type="error" :closable="false" show-icon />
-              <el-button :icon="RefreshRight" @click="resetJudge">
-                {{ sampleOnly ? '重新运行' : '重新提交' }}
-              </el-button>
-            </div>
-
-            <div v-else-if="judgeResult" class="judge-result">
-              <div v-if="sampleOnly" class="demo-banner sample-banner">
-                <el-icon><Warning /></el-icon>
-                <span>仅运行公开样例，不会写入提交记录，也不会自动触发 AI 调试。</span>
-              </div>
-
-              <div v-if="usingDemoJudge" class="demo-banner">
-                <el-icon><Warning /></el-icon>
-                <span>判题接口尚未接入（S7），以下为界面演示结果，不会写入提交记录。</span>
-              </div>
-
-              <div class="result-summary">
-                <div class="summary-item">
-                  <span>通过用例</span>
-                  <strong>{{ judgeResult.passedCount ?? 0 }} / {{ judgeResult.totalCount ?? caseResults.length }}</strong>
-                </div>
-                <div class="summary-item">
-                  <span>运行时间</span>
-                  <strong>{{ judgeResult.runTimeMs != null ? `${judgeResult.runTimeMs} ms` : '—' }}</strong>
-                </div>
-                <div v-if="!sampleOnly" class="summary-item">
-                  <span>提交编号</span>
-                  <strong>{{ judgeResult.submitId ?? '—' }}</strong>
-                </div>
-              </div>
-
-              <div v-if="judgeResult.errorMessage" class="result-message">
-                {{ judgeResult.errorMessage }}
-              </div>
-
-              <div v-if="judgeResult.compileOutput" class="compile-output">
-                <div class="case-section-title">编译信息</div>
-                <pre>{{ judgeResult.compileOutput }}</pre>
-              </div>
-
-              <div v-if="caseResults.length" class="case-list">
-                <div
-                  v-for="item in caseResults"
-                  :key="item.index"
-                  class="case-row"
-                  :class="{ 'is-failed': !item.passed }"
+              <button
+                class="lower-tab"
+                :class="{ 'is-active': activePane === 'agent' }"
+                @click="activePane = 'agent'"
+              >
+                AI 调试
+                <span
+                  class="tab-status"
+                  :class="{
+                    'is-primary': agentRunning,
+                    'is-success': !agentRunning && agentAnswer && !agentError,
+                    'is-danger': agentError,
+                    'is-muted': !agentRunning && !agentAnswer && !agentError
+                  }"
                 >
-                  <div class="case-row-head">
-                    <div class="case-title">
-                      <span class="case-index">用例 {{ item.index }}</span>
-                      <el-tag v-if="item.sample" size="small" effect="plain">样例</el-tag>
-                      <el-tag :type="item.passed ? 'success' : 'danger'" size="small" effect="light">
-                        {{ item.passed ? '通过' : '未通过' }}
-                      </el-tag>
-                    </div>
-                    <span v-if="item.runTimeMs != null" class="case-time">{{ item.runTimeMs }} ms</span>
+                  {{ agentTabText }}
+                </span>
+              </button>
+
+              <span class="lower-tip">
+                {{ activePane === 'result' ? (sampleOnly ? '仅运行公开样例，不写入提交记录' : '按用例逐项比对，失败时显示期望与实际输出') : '工具调用会实时显示在时间线上' }}
+              </span>
+            </div>
+
+            <div v-show="activePane === 'result'" class="lower-body">
+              <div v-if="judging" class="judging-state">
+                <div class="judging-copy">
+                  <el-icon class="is-loading"><Clock /></el-icon>
+                  <div>
+                    <strong>正在编译并运行用例</strong>
+                    <p>通常需要几秒钟，请保持当前页面。</p>
                   </div>
+                </div>
+                <el-skeleton :rows="4" animated />
+              </div>
 
-                  <div v-if="!item.passed" class="case-detail">
-                    <div v-if="caseInput(item)" class="case-block">
-                      <span>输入</span>
-                      <pre>{{ caseInput(item) }}</pre>
+              <div v-else-if="judgeError" class="judge-error">
+                <el-alert :title="judgeError" type="error" :closable="false" show-icon />
+                <el-button :icon="RefreshRight" @click="resetJudge">
+                  {{ sampleOnly ? '重新运行' : '重新提交' }}
+                </el-button>
+              </div>
+
+              <div v-else-if="judgeResult" class="judge-result">
+                <div v-if="sampleOnly" class="demo-banner sample-banner">
+                  <el-icon><Warning /></el-icon>
+                  <span>仅运行公开样例，不会写入提交记录，也不会自动触发 AI 调试。</span>
+                </div>
+
+                <div v-if="usingDemoJudge" class="demo-banner">
+                  <el-icon><Warning /></el-icon>
+                  <span>判题接口尚未接入，以下是界面演示结果，不会写入提交记录。</span>
+                </div>
+
+                <div class="result-summary">
+                  <div class="summary-item">
+                    <span>通过用例</span>
+                    <strong>{{ judgeResult.passedCount ?? 0 }} / {{ judgeResult.totalCount ?? caseResults.length }}</strong>
+                  </div>
+                  <div class="summary-item">
+                    <span>运行时间</span>
+                    <strong>{{ judgeResult.runTimeMs != null ? `${judgeResult.runTimeMs} ms` : '—' }}</strong>
+                  </div>
+                  <div v-if="!sampleOnly" class="summary-item">
+                    <span>提交编号</span>
+                    <strong>{{ judgeResult.submitId ?? '—' }}</strong>
+                  </div>
+                </div>
+
+                <div v-if="judgeResult.errorMessage" class="result-message">
+                  {{ judgeResult.errorMessage }}
+                </div>
+
+                <div v-if="judgeResult.compileOutput" class="compile-output">
+                  <div class="case-section-title">编译信息</div>
+                  <pre>{{ judgeResult.compileOutput }}</pre>
+                </div>
+
+                <div v-if="caseResults.length" class="case-list">
+                  <div
+                    v-for="item in caseResults"
+                    :key="item.index"
+                    class="case-row"
+                    :class="{ 'is-failed': !item.passed }"
+                  >
+                    <div class="case-row-head">
+                      <div class="case-title">
+                        <span class="case-index">用例 {{ item.index }}</span>
+                        <el-tag v-if="item.sample" size="small" effect="plain">样例</el-tag>
+                        <el-tag :type="item.passed ? 'success' : 'danger'" size="small" effect="light">
+                          {{ item.passed ? '通过' : '未通过' }}
+                        </el-tag>
+                      </div>
+                      <span v-if="item.runTimeMs != null" class="case-time">{{ item.runTimeMs }} ms</span>
                     </div>
 
-                    <div class="compare-grid">
-                      <div class="case-block">
-                        <span>期望</span>
-                        <pre>{{ caseExpected(item) || '(无)' }}</pre>
+                    <div v-if="!item.passed" class="case-detail">
+                      <div v-if="caseInput(item)" class="case-block">
+                        <span>输入</span>
+                        <pre>{{ caseInput(item) }}</pre>
                       </div>
-                      <div class="case-block">
-                        <span>实际</span>
-                        <pre>{{ caseActual(item) || '(无输出)' }}</pre>
-                      </div>
-                    </div>
 
-                    <div v-if="item.stderr" class="case-block">
-                      <span>错误输出</span>
-                      <pre>{{ item.stderr }}</pre>
+                      <div class="compare-grid">
+                        <div class="case-block">
+                          <span>期望</span>
+                          <pre>{{ caseExpected(item) || '(无)' }}</pre>
+                        </div>
+                        <div class="case-block">
+                          <span>实际</span>
+                          <pre>{{ caseActual(item) || '(无输出)' }}</pre>
+                        </div>
+                      </div>
+
+                      <div v-if="item.stderr" class="case-block">
+                        <span>错误输出</span>
+                        <pre>{{ item.stderr }}</pre>
+                      </div>
                     </div>
                   </div>
                 </div>
+
+                <div v-else class="no-case-result">
+                  {{ judgeResult.errorMessage || '暂无用例明细' }}
+                </div>
               </div>
 
-              <div v-else class="no-case-result">
-                {{ judgeResult.errorMessage || '暂无用例明细' }}
+              <div v-else class="judge-empty">
+                <span class="empty-icon">
+                  <el-icon><VideoPlay /></el-icon>
+                </span>
+                <div>
+                  <strong>还没有判题结果</strong>
+                  <p>运行样例或提交代码后，这里会显示每个用例是否通过，以及失败用例的期望输出和实际输出。</p>
+                </div>
               </div>
             </div>
 
-            <div v-else class="judge-empty">
-              <div class="empty-icon">
-                <el-icon><VideoPlay /></el-icon>
-              </div>
-              <strong>提交代码后查看判题结果</strong>
-              <p>这里会显示每个用例是否通过；失败用例会给出第几个、期望输出和实际输出。</p>
-            </div>
+            <AgentTimeline
+              v-if="activePane === 'agent'"
+              compact
+              :events="agentEvents"
+              :answer="agentAnswer"
+              :running="agentRunning"
+              :can-reveal="agentCanReveal"
+              :error="agentError"
+              @reveal="startAgent('SOLUTION')"
+            />
           </div>
-
-          <AgentTimeline
-            v-if="question"
-            :events="agentEvents"
-            :answer="agentAnswer"
-            :running="agentRunning"
-            :can-reveal="agentCanReveal"
-            :error="agentError"
-            @reveal="startAgent('SOLUTION')"
-          />
         </section>
       </div>
     </template>
@@ -1469,6 +1509,386 @@ onBeforeRouteLeave(() => {
 
   .compare-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+/* Public platform workspace */
+.solve-page {
+  width: min(1440px, 100%);
+  margin: 0 auto;
+  padding: 18px 24px 36px;
+}
+
+.solve-top {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 18px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e8edf5;
+}
+
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  padding: 7px 10px;
+  border: 1px solid #e8edf5;
+  border-radius: 8px;
+  background: #fff;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.back-link:hover {
+  border-color: #c7d2fe;
+  background: #f8faff;
+}
+
+.solve-top .page-eyebrow {
+  display: flex;
+  gap: 7px;
+  color: #94a3b8;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+}
+
+.eyebrow-sep {
+  color: #cbd5e1;
+}
+
+.head-title-line {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.head-title-line h1 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  line-height: 1.3;
+}
+
+.top-meta {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.solve-grid {
+  display: grid;
+  grid-template-columns: minmax(340px, 0.82fr) minmax(0, 1.18fr);
+  gap: 18px;
+  align-items: start;
+  margin-top: 18px;
+}
+
+.problem-pane {
+  position: sticky;
+  top: 84px;
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 106px);
+  overflow: hidden;
+  border: 1px solid #e8edf5;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.pane-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  height: 46px;
+  padding: 0 20px;
+  border-bottom: 1px solid #eef2f7;
+  color: #64748b;
+  font-size: 11.5px;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+}
+
+.pane-id {
+  color: #a3aec2;
+  font-family: 'JetBrains Mono', Consolas, monospace;
+  font-size: 10.5px;
+}
+
+.problem-scroll {
+  max-height: calc(100vh - 153px);
+  padding: 22px 24px 30px;
+  overflow-y: auto;
+}
+
+.workspace {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+
+.editor-panel {
+  overflow: hidden;
+  border-radius: 12px;
+}
+
+.editor-toolbar {
+  height: 50px;
+  padding: 0 16px;
+  background: #fbfcfe;
+}
+
+.editor-file {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.file-name {
+  color: #334155;
+  font-family: 'JetBrains Mono', Consolas, monospace;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.file-save {
+  padding-left: 9px;
+  border-left: 1px solid #e2e8f0;
+  color: #a3aec2;
+  font-size: 10.5px;
+}
+
+.action-bar {
+  padding: 11px 15px;
+}
+
+.workspace-lower {
+  overflow: hidden;
+  border-radius: 12px;
+}
+
+.lower-tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 48px;
+  padding: 0 14px;
+  border-bottom: 1px solid #eef2f7;
+  background: #fbfcfe;
+}
+
+.lower-tab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 100%;
+  padding: 0 10px;
+  border: 0;
+  background: transparent;
+  color: #64748b;
+  font-size: 12.5px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.lower-tab:hover {
+  color: #334155;
+}
+
+.lower-tab.is-active {
+  color: #1e293b;
+}
+
+.lower-tab.is-active::after {
+  position: absolute;
+  right: 9px;
+  bottom: -1px;
+  left: 9px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--ca-primary);
+  content: '';
+}
+
+.tab-status {
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: #f1f5f9;
+  color: #64748b;
+  font-size: 9.5px;
+  font-weight: 600;
+}
+
+.tab-status.is-success {
+  background: #ecfdf5;
+  color: #059669;
+}
+
+.tab-status.is-danger {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.tab-status.is-warning {
+  background: #fffbeb;
+  color: #d97706;
+}
+
+.tab-status.is-primary {
+  background: #eef2ff;
+  color: #4f46e5;
+}
+
+.tab-status.is-muted {
+  background: #f8fafc;
+  color: #94a3b8;
+}
+
+.lower-tip {
+  margin-left: auto;
+  overflow: hidden;
+  color: #94a3b8;
+  font-size: 10.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lower-body {
+  max-height: 390px;
+  overflow-y: auto;
+}
+
+.lower-body .judge-result {
+  padding: 16px 18px 20px;
+}
+
+.lower-body .judging-state {
+  padding: 18px;
+}
+
+.lower-body .judge-empty {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 28px 20px;
+  text-align: left;
+}
+
+.lower-body .judge-empty .empty-icon {
+  flex-shrink: 0;
+  margin: 0;
+}
+
+.lower-body .judge-empty strong {
+  display: block;
+  margin-top: 2px;
+}
+
+.lower-body .judge-empty p {
+  max-width: 520px;
+  margin: 5px 0 0;
+}
+
+@media (max-width: 1080px) {
+  .solve-top {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .top-meta {
+    grid-column: 2;
+    justify-content: flex-start;
+  }
+
+  .solve-grid {
+    grid-template-columns: minmax(300px, 0.78fr) minmax(0, 1.22fr);
+  }
+}
+
+@media (max-width: 860px) {
+  .solve-page {
+    padding: 14px 16px 28px;
+  }
+
+  .solve-top {
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .solve-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .problem-pane {
+    position: static;
+    max-height: none;
+  }
+
+  .problem-scroll {
+    max-height: 430px;
+  }
+}
+
+@media (max-width: 640px) {
+  .solve-page {
+    padding: 12px 12px 24px;
+  }
+
+  .solve-top {
+    grid-template-columns: 1fr;
+    gap: 9px;
+  }
+
+  .back-link {
+    justify-self: start;
+    padding: 6px 8px;
+    font-size: 11px;
+  }
+
+  .head-main {
+    grid-column: 1;
+  }
+
+  .head-title-line h1 {
+    font-size: 20px;
+  }
+
+  .top-meta {
+    grid-column: 1;
+  }
+
+  .editor-toolbar {
+    height: auto;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px 12px;
+  }
+
+  .lower-tip {
+    display: none;
+  }
+
+  .lower-body {
+    max-height: 460px;
+  }
+
+  .action-bar {
+    flex-direction: column;
+  }
+
+  .actions {
+    width: 100%;
   }
 }
 </style>

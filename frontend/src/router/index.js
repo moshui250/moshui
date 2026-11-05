@@ -54,6 +54,12 @@ const routes = [
         name: 'question-detail',
         component: () => import('@/views/QuestionDetailView.vue'),
         meta: { title: '题目详情' }
+      },
+      {
+        path: ':id(\\d+)/solve',
+        name: 'question-solve',
+        component: () => import('@/views/QuestionSolveView.vue'),
+        meta: { title: '答题' }
       }
     ]
   },
@@ -72,12 +78,6 @@ const routes = [
         name: 'question-import',
         component: () => import('@/views/QuestionImportView.vue'),
         meta: { title: '图片录题', section: '练习' }
-      },
-      {
-        path: 'question/:id/solve',
-        name: 'question-solve',
-        component: () => import('@/views/QuestionSolveView.vue'),
-        meta: { title: '答题', section: '练习' }
       },
       {
         path: 'wrong-book',

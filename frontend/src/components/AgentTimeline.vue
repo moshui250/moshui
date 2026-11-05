@@ -1,5 +1,6 @@
 <script setup>
 import { computed, nextTick, ref, watch } from 'vue'
+import MarkdownBody from '@/components/MarkdownBody.vue'
 import {
   CircleCheck,
   Loading,
@@ -27,6 +28,10 @@ const props = defineProps({
   error: {
     type: String,
     default: ''
+  },
+  compact: {
+    type: Boolean,
+    default: false
   }
 })
 
@@ -66,8 +71,8 @@ watch(() => [props.events.length, props.answer, props.error], scrollToBottom, { 
 </script>
 
 <template>
-  <section class="panel agent-panel">
-    <div class="agent-head">
+  <section class="panel agent-panel" :class="{ 'is-compact': compact }">
+    <div v-if="!compact" class="agent-head">
       <div>
         <div class="panel-title">
           <el-icon><MagicStick /></el-icon>
@@ -122,7 +127,8 @@ watch(() => [props.events.length, props.answer, props.error], scrollToBottom, { 
 
       <div v-if="answer" class="answer-block">
         <div class="answer-label">助教回答</div>
-        <pre class="answer-text">{{ answer }}<span v-if="running" class="caret">▍</span></pre>
+        <pre v-if="running" class="answer-text">{{ answer }}<span class="caret">▍</span></pre>
+        <MarkdownBody v-else :content="answer" class="answer-markdown" />
       </div>
 
       <el-alert
@@ -312,6 +318,20 @@ watch(() => [props.events.length, props.answer, props.error], scrollToBottom, { 
   word-break: break-word;
 }
 
+.answer-markdown {
+  color: #334155;
+  font-size: 12.5px;
+  line-height: 1.8;
+}
+
+.answer-markdown :deep(p) {
+  margin: 6px 0;
+}
+
+.answer-markdown :deep(code) {
+  font-size: 11.5px;
+}
+
 .caret {
   color: #6366f1;
   animation: blink 0.9s step-end infinite;
@@ -339,5 +359,21 @@ watch(() => [props.events.length, props.answer, props.error], scrollToBottom, { 
 .reveal-row span {
   color: #94a3b8;
   font-size: 11px;
+}
+
+.agent-panel.is-compact {
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.agent-panel.is-compact .timeline {
+  max-height: 380px;
+  padding: 16px 18px 20px;
+}
+
+.agent-panel.is-compact .timeline-empty {
+  padding: 26px 0;
 }
 </style>
