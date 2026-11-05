@@ -24,6 +24,8 @@ public interface ProfileStatMapper {
                    kp.name AS knowledge_point_name,
                    COUNT(sr.id) AS submit_count,
                    CAST(COALESCE(SUM(CASE WHEN sr.status = 'AC' THEN 1 ELSE 0 END), 0) AS SIGNED) AS ac_count,
+                   CAST(COALESCE(SUM(CASE WHEN sr.status = 'WA' THEN 1 ELSE 0 END), 0) AS SIGNED) AS wa_count,
+                   CAST(COALESCE(SUM(CASE WHEN sr.status <> 'AC' AND sr.status <> 'WA' THEN 1 ELSE 0 END), 0) AS SIGNED) AS other_count,
                    COUNT(DISTINCT CASE WHEN sr.status = 'AC' THEN sr.question_id END) AS solved_count,
                    (SELECT COUNT(*) FROM user_wrong_question w
                      WHERE w.user_id = #{userId} AND w.mastered = 0) AS wrong_count

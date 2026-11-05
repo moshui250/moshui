@@ -12,6 +12,7 @@
       <nav class="site-nav" aria-label="主导航">
         <router-link to="/question">题库</router-link>
         <router-link to="/contests">竞赛</router-link>
+        <router-link to="/rank">排名</router-link>
         <router-link to="/wrong-book">错题本</router-link>
         <router-link to="/dashboard">学习看板</router-link>
         <router-link to="/question/import">图片录题</router-link>
@@ -55,6 +56,7 @@
     <nav v-if="menuOpen" class="mobile-menu" aria-label="移动端导航">
       <router-link to="/question" @click="menuOpen = false">题库</router-link>
       <router-link to="/contests" @click="menuOpen = false">竞赛</router-link>
+      <router-link to="/rank" @click="menuOpen = false">排名</router-link>
       <router-link to="/wrong-book" @click="menuOpen = false">错题本</router-link>
       <router-link to="/dashboard" @click="menuOpen = false">学习看板</router-link>
       <router-link to="/question/import" @click="menuOpen = false">图片录题</router-link>
@@ -350,7 +352,7 @@ onBeforeUnmount(() => {
 
 .mobile-menu a:hover,
 .mobile-menu a.router-link-active {
-  background: #f4f5ff;
+  background: #f4f6f8;
   color: #1f3a5f;
 }
 

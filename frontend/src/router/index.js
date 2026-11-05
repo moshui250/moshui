@@ -40,6 +40,18 @@ const routes = [
     ]
   },
   {
+    path: '/rank',
+    component: () => import('@/layouts/PublicLayout.vue'),
+    children: [
+      {
+        path: '',
+        name: 'rank',
+        component: () => import('@/views/RankView.vue'),
+        meta: { title: '排名' }
+      }
+    ]
+  },
+  {
     path: '/dashboard',
     component: () => import('@/layouts/PublicLayout.vue'),
     children: [

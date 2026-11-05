@@ -22,6 +22,12 @@ public class ProfileStatVO implements Serializable {
     /** AC 提交数。 */
     private long acSubmit;
 
+    /** 答案错误提交数。 */
+    private long waSubmit;
+
+    /** AC、WA 以外的提交数。 */
+    private long otherSubmit;
+
     /** 正确率 = acSubmit / totalSubmit，保留 3 位小数；无提交时为 0。 */
     private double accuracy;
 
@@ -36,4 +42,10 @@ public class ProfileStatVO implements Serializable {
 
     /** 最近 5 次提交。 */
     private List<RecentSubmitVO> recentSubmits = new ArrayList<>();
+
+    /** 当前用户的全站排名与段位。 */
+    private RankInfoVO rankInfo;
+
+    /** 全部段位规则，供问号弹窗使用。 */
+    private List<TierVO> tiers = new ArrayList<>();
 }

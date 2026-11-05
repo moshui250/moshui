@@ -9,12 +9,16 @@ import {
   EditPen,
   Lock,
   Picture,
+  QuestionFilled,
   Setting,
   SwitchButton,
+  Trophy,
   User
 } from '@element-plus/icons-vue'
 import { getProfileStat } from '@/api/profile'
 import { useUserStore } from '@/store/user'
+import TierBadge from '@/components/TierBadge.vue'
+import TierHelpDialog from '@/components/TierHelpDialog.vue'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -36,10 +40,16 @@ const prefs = reactive({
 
 const savedHint = ref('')
 const loadingStats = ref(false)
+const helpVisible = ref(false)
 const stats = ref({
   totalSubmit: 0,
+  acSubmit: 0,
+  waSubmit: 0,
+  otherSubmit: 0,
   accuracy: 0,
-  wrongCount: 0
+  wrongCount: 0,
+  rankInfo: null,
+  tiers: []
 })
 
 const displayName = computed(() => userStore.displayName || '未登录')
@@ -54,10 +64,50 @@ const accuracyText = computed(() => {
   if (!stats.value.totalSubmit) return '—'
   return `${(Number(stats.value.accuracy || 0) * 100).toFixed(1)}%`
 })
+const rankInfo = computed(() => stats.value.rankInfo)
+const tierProgress = computed(() => rankInfo.value?.progress)
+const tierPercent = computed(() => {
+  const value = Number(tierProgress.value?.percent || 0)
+  return Math.max(0, Math.min(100, value * 100))
+})
+const tierHint = computed(() => {
+  if (!tierProgress.value) return '完成提交后生成段位进度'
+  if (tierProgress.value.maxTier) return '已达到最高段位'
+  const remain = Math.max(
+    0,
+    Number(tierProgress.value.targetAc || 0) - Number(tierProgress.value.currentAc || 0)
+  )
+  return `距离下一段「${tierProgress.value.nextTierName}」还差 ${remain} 题`
+})
+const rankText = computed(() => {
+  if (!rankInfo.value || rankInfo.value.rank == null) return '—'
+  return rankInfo.value.onBoard
+    ? `第 ${rankInfo.value.rank} 名`
+    : `第 ${rankInfo.value.rank} 名（未上榜）`
+})
+const ratio = computed(() => {
+  const total = Number(stats.value.totalSubmit || 0)
+  const ac = Number(stats.value.acSubmit || 0)
+  const wa = Number(stats.value.waSubmit || 0)
+  const other = Number(stats.value.otherSubmit || 0)
+  if (!total) {
+    return { total: 0, ac: 0, wa: 0, other: 0, background: '#edf0f3' }
+  }
+  const acPct = (ac / total) * 100
+  const waPct = (wa / total) * 100
+  return {
+    total,
+    ac: (ac / total) * 100,
+    wa: (wa / total) * 100,
+    other: (other / total) * 100,
+    background: `conic-gradient(#2f7d5b 0 ${acPct}%, #b42318 ${acPct}% ${acPct + waPct}%, #c8d2dc ${acPct + waPct}% 100%)`
+  }
+})
 const quickLinks = [
   { label: '我的错题', desc: '按知识点复盘', to: '/wrong-book', icon: Collection },
   { label: '学习看板', desc: '提交与正确率', to: '/dashboard', icon: DataAnalysis },
   { label: '图片录题', desc: '识别一张题目图', to: '/question/import', icon: Picture },
+  { label: '排名', desc: '查看全站位置', to: '/rank', icon: Trophy },
   { label: '去题库', desc: '继续下一道题', to: '/question', icon: User }
 ]
 
@@ -79,8 +129,13 @@ async function loadStats() {
     const data = await getProfileStat()
     stats.value = {
       totalSubmit: Number(data?.totalSubmit || 0),
+      acSubmit: Number(data?.acSubmit || 0),
+      waSubmit: Number(data?.waSubmit || 0),
+      otherSubmit: Number(data?.otherSubmit || 0),
       accuracy: Number(data?.accuracy || 0),
-      wrongCount: Number(data?.wrongCount || 0)
+      wrongCount: Number(data?.wrongCount || 0),
+      rankInfo: data?.rankInfo || null,
+      tiers: data?.tiers || []
     }
   } catch {
     // 统计失败时保留 0，不影响个人中心其他操作。
@@ -129,6 +184,13 @@ onMounted(loadStats)
               {{ userStore.user?.username ? `@${userStore.user.username}` : '已登录用户' }}
             </p>
             <p v-else>登录后可保存刷题进度、错题与 AI 对话记录。</p>
+            <div v-if="rankInfo?.tier" class="identity-tier">
+              <TierBadge :tier="rankInfo.tier" size="sm" />
+              <button class="tier-help" type="button" aria-label="查看段位规则" @click="helpVisible = true">
+                <el-icon><QuestionFilled /></el-icon>
+              </button>
+              <span class="identity-rank">{{ rankText }}</span>
+            </div>
           </div>
           <span class="account-state">{{ userStore.isLoggedIn ? '正常' : '未登录' }}</span>
         </div>
@@ -194,6 +256,58 @@ onMounted(loadStats)
         </div>
       </section>
     </div>
+
+    <section v-if="rankInfo" class="panel level-card">
+      <div class="panel-head">
+        <div>
+          <div class="panel-title">段位与排名</div>
+          <div class="panel-subtitle">全站唯一 AC 题数决定段位；重复 AC 不重复计数</div>
+        </div>
+        <button class="tier-help" type="button" aria-label="查看段位规则" @click="helpVisible = true">
+          <el-icon><QuestionFilled /></el-icon>
+        </button>
+      </div>
+
+      <div class="level-body">
+        <div class="level-main">
+          <div class="level-tier-line">
+            <TierBadge :tier="rankInfo.tier" size="lg" />
+            <span class="level-ac">{{ rankInfo.acCount }} 题 AC</span>
+          </div>
+
+          <div class="level-progress-head">
+            <span>段位进度</span>
+            <strong>
+              {{ tierProgress.currentAc }} / {{ tierProgress.maxTier ? '∞' : tierProgress.targetAc }}
+            </strong>
+          </div>
+          <div class="level-track">
+            <i :style="{ width: `${tierPercent}%` }"></i>
+          </div>
+          <p class="level-hint">{{ tierHint }}</p>
+
+          <div class="level-foot">
+            <span>个人排名 <strong>{{ rankText }}</strong></span>
+            <span v-if="!rankInfo.onBoard">未进前 100，仅本人可见</span>
+            <router-link v-else to="/rank">查看总榜 <el-icon><ArrowRight /></el-icon></router-link>
+          </div>
+        </div>
+
+        <div class="ratio-block">
+          <div class="ratio-donut" :style="{ background: ratio.background }">
+            <div class="ratio-hole">
+              <strong>{{ ratio.total }}</strong>
+              <span>次提交</span>
+            </div>
+          </div>
+          <div class="ratio-legend">
+            <div><i style="background: #2f7d5b"></i><span>AC</span><strong>{{ ratio.ac.toFixed(1) }}%</strong></div>
+            <div><i style="background: #b42318"></i><span>WA</span><strong>{{ ratio.wa.toFixed(1) }}%</strong></div>
+            <div><i style="background: #c8d2dc"></i><span>其他</span><strong>{{ ratio.other.toFixed(1) }}%</strong></div>
+          </div>
+        </div>
+      </div>
+    </section>
 
     <div class="profile-main">
       <section class="panel prefs-card">
@@ -273,6 +387,12 @@ onMounted(loadStats)
         </section>
       </aside>
     </div>
+
+    <TierHelpDialog
+      v-model="helpVisible"
+      :tiers="stats.tiers"
+      :current-code="rankInfo?.tier?.code"
+    />
   </div>
 </template>
 
@@ -681,6 +801,189 @@ onMounted(loadStats)
   line-height: 1.65;
 }
 
+.identity-tier {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.identity-rank {
+  margin-left: 2px;
+  color: #6b7280;
+  font-size: 10.5px;
+}
+
+.tier-help {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #8a93a6;
+  cursor: pointer;
+}
+
+.tier-help:hover {
+  color: #1f3a5f;
+  background: #f1f4f9;
+}
+
+.level-card {
+  margin-top: 16px;
+  padding: 20px 24px;
+}
+
+.level-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) 300px;
+  gap: 30px;
+  align-items: center;
+  margin-top: 16px;
+  padding-top: 18px;
+  border-top: 1px solid #f1f4f9;
+}
+
+.level-tier-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.level-ac {
+  color: #6b7280;
+  font-size: 11.5px;
+}
+
+.level-progress-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 18px;
+  color: #8a93a6;
+  font-size: 11px;
+}
+
+.level-progress-head strong {
+  color: #374151;
+  font-size: 12px;
+}
+
+.level-track {
+  height: 7px;
+  margin-top: 9px;
+  overflow: hidden;
+  border-radius: 99px;
+  background: #edf0f3;
+}
+
+.level-track i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #1f3a5f;
+}
+
+.level-hint {
+  margin-top: 8px;
+  color: #8a93a6;
+  font-size: 11px;
+}
+
+.level-foot {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 15px;
+  color: #8a93a6;
+  font-size: 11px;
+}
+
+.level-foot strong {
+  color: #374151;
+  font-weight: 650;
+}
+
+.level-foot a {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: auto;
+  color: #1f3a5f;
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.ratio-block {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  padding-left: 30px;
+  border-left: 1px solid #edf0f3;
+}
+
+.ratio-donut {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 108px;
+  height: 108px;
+  border-radius: 50%;
+}
+
+.ratio-hole {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  width: 74px;
+  height: 74px;
+  border-radius: 50%;
+  background: #fff;
+}
+
+.ratio-hole strong {
+  color: #111827;
+  font-size: 19px;
+  line-height: 1.2;
+}
+
+.ratio-hole span {
+  margin-top: 2px;
+  color: #9aa3b2;
+  font-size: 10px;
+}
+
+.ratio-legend {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.ratio-legend div {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #6b7280;
+  font-size: 11px;
+}
+
+.ratio-legend i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.ratio-legend strong {
+  margin-left: auto;
+  color: #374151;
+  font-size: 11.5px;
+}
+
 @media (max-width: 960px) {
   .profile-top,
   .profile-main {
@@ -759,6 +1062,33 @@ onMounted(loadStats)
 
   .slider-wrap {
     width: 100%;
+  }
+}
+
+@media (max-width: 760px) {
+  .level-card {
+    padding: 16px;
+  }
+
+  .level-body {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+
+  .ratio-block {
+    padding-top: 18px;
+    padding-left: 0;
+    border-top: 1px solid #edf0f3;
+    border-left: 0;
+  }
+
+  .level-foot {
+    flex-wrap: wrap;
+    gap: 8px 14px;
+  }
+
+  .level-foot a {
+    margin-left: 0;
   }
 }
 </style>

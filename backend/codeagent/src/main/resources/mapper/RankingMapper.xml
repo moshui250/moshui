@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.codeagent.mapper.RankingMapper">
+
+    <sql id="rankedUsers">
+        WITH first_ac AS (
+            SELECT sr.user_id,
+                   sr.question_id,
+                   MIN(sr.create_time) AS first_ac_time
+            FROM submit_record sr
+            WHERE sr.status = 'AC'
+            GROUP BY sr.user_id, sr.question_id
+        ),
+        user_ac AS (
+            SELECT fa.user_id,
+                   COUNT(*) AS ac_count,
+                   MAX(fa.first_ac_time) AS reached_at
+            FROM first_ac fa
+            GROUP BY fa.user_id
+        ),
+        ranked AS (
+            SELECT u.id AS user_id,
+                   u.username,
+                   u.nickname,
+                   COALESCE(ua.ac_count, 0) AS ac_count,
+                   ua.reached_at AS reached_at,
+                   ROW_NUMBER() OVER (
+                       ORDER BY COALESCE(ua.ac_count, 0) DESC,
+                                COALESCE(ua.reached_at, u.create_time) ASC,
+                                u.id ASC
+                   ) AS rank_no,
+                   COUNT(*) OVER() AS total_users
+            FROM sys_user u
+            LEFT JOIN user_ac ua ON ua.user_id = u.id
+            WHERE u.deleted = 0 AND u.status = 1
+        )
+    </sql>
+
+    <select id="selectTop" resultType="com.codeagent.dto.RankingRow">
+        <include refid="rankedUsers"/>
+        SELECT user_id,
+               username,
+               nickname,
+               ac_count,
+               reached_at,
+               rank_no,
+               total_users
+        FROM ranked
+        ORDER BY rank_no
+        LIMIT #{limit}
+    </select>
+
+    <select id="selectUserRank" resultType="com.codeagent.dto.RankingRow">
+        <include refid="rankedUsers"/>
+        SELECT user_id,
+               username,
+               nickname,
+               ac_count,
+               reached_at,
+               rank_no,
+               total_users
+        FROM ranked
+        WHERE user_id = #{userId}
+    </select>
+
+</mapper>

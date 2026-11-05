@@ -20,6 +20,12 @@ public class ProfileStatRow {
     /** 该知识点下的 AC 提交数。 */
     private Long acCount;
 
+    /** 该知识点下的答案错误提交数。 */
+    private Long waCount;
+
+    /** 该知识点下 AC、WA 以外的提交数。 */
+    private Long otherCount;
+
     /** 该知识点下有过 AC 的不同题目数。 */
     private Long solvedCount;
 

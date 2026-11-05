@@ -5,6 +5,7 @@ import com.codeagent.dto.ProfileStatRow;
 import com.codeagent.exception.BizException;
 import com.codeagent.mapper.ProfileStatMapper;
 import com.codeagent.service.ProfileStatService;
+import com.codeagent.service.RankingService;
 import com.codeagent.vo.KnowledgeStatVO;
 import com.codeagent.vo.ProfileStatVO;
 import com.codeagent.vo.RecentSubmitVO;
@@ -30,6 +31,7 @@ public class ProfileStatServiceImpl implements ProfileStatService {
     private static final int RECENT_LIMIT = 5;
 
     private final ProfileStatMapper profileStatMapper;
+    private final RankingService rankingService;
 
     /** 缓存键为用户 ID，30 秒过期；主动失效由提交/掌握状态变更触发。 */
     private final Cache<Long, ProfileStatVO> cache = Caffeine.newBuilder()
@@ -75,6 +77,8 @@ public class ProfileStatServiceImpl implements ProfileStatService {
         ProfileStatVO vo = new ProfileStatVO();
         long totalSubmit = 0L;
         long acSubmit = 0L;
+        long waSubmit = 0L;
+        long otherSubmit = 0L;
         long solvedCount = 0L;
         long wrongCount = 0L;
         List<KnowledgeStatVO> knowledgeStats = new ArrayList<>();
@@ -83,10 +87,14 @@ public class ProfileStatServiceImpl implements ProfileStatService {
             for (ProfileStatRow row : rows) {
                 long submitCount = row.getSubmitCount() == null ? 0L : row.getSubmitCount();
                 long acCount = row.getAcCount() == null ? 0L : row.getAcCount();
+                long waCount = row.getWaCount() == null ? 0L : row.getWaCount();
+                long otherCount = row.getOtherCount() == null ? 0L : row.getOtherCount();
                 long solved = row.getSolvedCount() == null ? 0L : row.getSolvedCount();
 
                 totalSubmit += submitCount;
                 acSubmit += acCount;
+                waSubmit += waCount;
+                otherSubmit += otherCount;
                 solvedCount += solved;
                 wrongCount = row.getWrongCount() == null ? 0L : row.getWrongCount();
 
@@ -105,10 +113,14 @@ public class ProfileStatServiceImpl implements ProfileStatService {
 
         vo.setTotalSubmit(totalSubmit);
         vo.setAcSubmit(acSubmit);
+        vo.setWaSubmit(waSubmit);
+        vo.setOtherSubmit(otherSubmit);
         vo.setSolvedCount(solvedCount);
         vo.setWrongCount(wrongCount);
         vo.setAccuracy(totalSubmit == 0 ? 0.0 : round((double) acSubmit / totalSubmit, 3));
         vo.setKnowledgeStats(knowledgeStats);
+        vo.setRankInfo(rankingService.getRankInfo(userId));
+        vo.setTiers(rankingService.getTiers());
 
         List<RecentSubmitVO> recentSubmits = profileStatMapper.selectRecentSubmits(userId, RECENT_LIMIT);
         vo.setRecentSubmits(recentSubmits == null ? new ArrayList<>() : recentSubmits);
