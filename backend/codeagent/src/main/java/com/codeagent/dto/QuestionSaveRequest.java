@@ -8,6 +8,7 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
@@ -65,4 +66,10 @@ public class QuestionSaveRequest {
 
     @Size(max = 512, message = "图片地址不能超过 512 个字符")
     private String sourceImageUrl;
+
+    /**
+     * 个人题可见性：PRIVATE 仅自己，SHARED 共享给其他用户；默认 PRIVATE。
+     */
+    @Pattern(regexp = "(?i)PRIVATE|SHARED", message = "可见性只能是 PRIVATE 或 SHARED")
+    private String visibility;
 }

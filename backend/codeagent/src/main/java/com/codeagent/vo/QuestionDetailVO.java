@@ -28,6 +28,7 @@ public class QuestionDetailVO implements Serializable {
     private KnowledgePointBriefVO knowledgePoint;
     private JsonNode templateJson;
     private String type;
+    private String visibility;
     private Long userId;
     private String sourceImageUrl;
     private LocalDateTime createTime;

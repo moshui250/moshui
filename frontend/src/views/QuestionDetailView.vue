@@ -32,6 +32,13 @@ const samples = computed(() =>
   }))
 )
 
+const typeText = computed(() => {
+  const value = question.value
+  if (!value) return '公共题'
+  if (value.type === 'PUBLIC') return '公共题'
+  return value.visibility === 'SHARED' ? '共享题' : '私有题'
+})
+
 // 题面 Markdown 通常已经包含输入/输出小节，缺失时才补，避免重复标题。
 const statementMarkdown = computed(() => {
   const description = question.value?.description || ''
@@ -89,7 +96,6 @@ onMounted(loadQuestion)
     <template v-else>
       <header class="detail-head">
         <div class="title-block">
-          <div class="eyebrow">PROBLEM #{{ question.id }}</div>
           <h1>{{ question.title }}</h1>
           <div class="meta-row">
             <span class="level-chip">
@@ -97,7 +103,7 @@ onMounted(loadQuestion)
               {{ difficulty.label }}
             </span>
             <span class="meta-chip">{{ knowledgeName }}</span>
-            <span class="meta-chip">{{ question.type === 'PERSONAL' ? '个人题' : '公共题' }}</span>
+            <span class="meta-chip">{{ typeText }}</span>
             <span v-if="question.solved" class="solved-chip">
               <el-icon><CircleCheck /></el-icon>
               已通过
@@ -115,7 +121,6 @@ onMounted(loadQuestion)
 
       <div class="detail-grid">
         <article class="statement-card">
-          <div class="statement-kicker">题目说明</div>
           <MarkdownBody :content="statementMarkdown" />
         </article>
 
@@ -133,7 +138,7 @@ onMounted(loadQuestion)
               </div>
               <div class="info-row">
                 <span>题型</span>
-                <strong>{{ question.type === 'PERSONAL' ? '个人题' : '公共题' }}</strong>
+                <strong>{{ typeText }}</strong>
               </div>
               <div class="info-row">
                 <span>状态</span>
@@ -148,7 +153,6 @@ onMounted(loadQuestion)
             <div class="side-head">
               <div>
                 <div class="side-title">样例输入输出</div>
-                <div class="side-sub">提交前先手动推演一遍</div>
               </div>
               <span class="sample-count">{{ samples.length }} 组</span>
             </div>
@@ -178,7 +182,7 @@ onMounted(loadQuestion)
             </div>
             <div>
               <strong>失败后再看提示</strong>
-              <p>提交错误后，答题页会自动定位失败用例，再给出分层提示；不直接贴完整答案。</p>
+              <p>提交错误后，答题页会定位失败用例并给分层提示，不直接给完整答案。</p>
             </div>
           </section>
         </aside>

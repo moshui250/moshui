@@ -8,6 +8,9 @@
                    sr.question_id,
                    MIN(sr.create_time) AS first_ac_time
             FROM submit_record sr
+            JOIN question q ON q.id = sr.question_id
+                AND q.deleted = 0
+                AND q.type = 'PUBLIC'
             WHERE sr.status = 'AC'
             GROUP BY sr.user_id, sr.question_id
         ),

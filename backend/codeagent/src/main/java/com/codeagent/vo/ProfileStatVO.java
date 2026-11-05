@@ -31,8 +31,11 @@ public class ProfileStatVO implements Serializable {
     /** 正确率 = acSubmit / totalSubmit，保留 3 位小数；无提交时为 0。 */
     private double accuracy;
 
-    /** 有过 AC 的不同题目数。 */
+    /** 有过 AC 的不同题目数，统计全部题目。 */
     private long solvedCount;
+
+    /** 累计 AC（公共题 + 图片录题），仅用于学习概览，不参与段位。 */
+    private long totalAc;
 
     /** 未掌握的错题数。 */
     private long wrongCount;

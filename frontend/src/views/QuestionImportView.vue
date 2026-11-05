@@ -33,6 +33,7 @@ const form = reactive({
   outputDesc: '',
   difficulty: 1,
   knowledgePointCode: '',
+  visibility: 'PRIVATE',
   samples: [{ input: '', output: '' }],
   hiddenCases: []
 })
@@ -220,6 +221,7 @@ async function submit() {
         outputDesc: form.outputDesc,
         difficulty: form.difficulty,
         knowledgePointCode: selected?.code || form.knowledgePointCode,
+        visibility: form.visibility,
         samples: normalizedSamples(),
         testCases: normalizedHiddenCases(),
         sourceImageUrl: imageUrl.value
@@ -238,6 +240,7 @@ async function submit() {
         outputDesc: form.outputDesc,
         difficulty: form.difficulty,
         knowledgePointId: selected?.id,
+        visibility: form.visibility,
         samples: normalizedSamples(),
         testCases: normalizedHiddenCases(),
         sourceImageUrl: imageUrl.value
@@ -446,6 +449,17 @@ onBeforeUnmount(revokePreview)
                 placeholder="支持 Markdown，建议保留原题的标题层级"
               />
             </label>
+
+            <div class="visibility-row">
+              <div class="visibility-copy">
+                <span>可见范围</span>
+                <small>共享题会出现在公共题库；不计入段位 AC。</small>
+              </div>
+              <el-radio-group v-model="form.visibility" class="difficulty-group">
+                <el-radio-button value="PRIVATE">仅自己</el-radio-button>
+                <el-radio-button value="SHARED">共享</el-radio-button>
+              </el-radio-group>
+            </div>
 
             <div class="form-row two">
               <label class="field">
@@ -1025,6 +1039,36 @@ onBeforeUnmount(revokePreview)
   grid-template-columns: 1fr 1fr;
 }
 
+.visibility-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin: 4px 0 16px;
+  padding: 12px 14px;
+  border: 1px solid #e4e7ec;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.visibility-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.visibility-copy span {
+  color: #374151;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.visibility-copy small {
+  color: #8a93a6;
+  font-size: 11px;
+  line-height: 1.6;
+}
+
 .field {
   display: flex;
   min-width: 0;
@@ -1221,6 +1265,12 @@ onBeforeUnmount(revokePreview)
   .form-row.two,
   .case-row {
     grid-template-columns: 1fr;
+  }
+
+  .visibility-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
   }
 
   .case-no {

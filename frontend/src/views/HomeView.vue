@@ -57,17 +57,17 @@ const steps = [
   {
     index: '01',
     title: '选一道刚好不会的题',
-    body: '从知识点出发，先选一道难度合适的题。不会做没关系，卡住才是练习的开始。'
+    body: '按知识点挑一道难度合适的题，卡住就是练习的开始。'
   },
   {
     index: '02',
     title: '写下第一版代码',
-    body: '用 C++ 或 Java 提交。判题会告诉你通过了几个用例，以及第一个失败在哪里。'
+    body: '用 C++ 或 Java 提交，先看第一个失败的用例。'
   },
   {
     index: '03',
     title: '让 AI 指出下一步',
-    body: 'AI 读取错误用例，先定位行号和原因，再给分层提示。不会一上来就甩完整答案。'
+    body: 'AI 先定位错误行和原因，再给分层提示。'
   }
 ]
 
@@ -269,11 +269,9 @@ onBeforeUnmount(() => {
     <main class="page">
       <section class="hero">
         <div class="hero-copy">
-          <p class="eyebrow"><span></span> AI-NATIVE CODE PRACTICE</p>
           <h1>把“不会做”<br />拆成<span class="mark">下一步</span>。</h1>
           <p class="lede">
-            CodeAgent 陪新手从一道题开始：先写第一版，再读判题结果，
-            最后由 AI 指出具体哪一行、为什么错。不直接给完整答案。
+            从第一道题开始，先写，再看判题结果，最后由 AI 指出错在哪一行。
           </p>
           <div class="hero-actions">
             <button class="btn-primary" type="button" @click="goWorkspace">
@@ -341,10 +339,8 @@ onBeforeUnmount(() => {
       <section class="loop">
         <div class="section-head">
           <div>
-            <p class="eyebrow"><span></span> HOW IT WORKS</p>
             <h2>从一道题，走完一次闭环</h2>
           </div>
-          <p class="section-note">不追求一次做对，追求每次都知道下一步做什么。</p>
         </div>
 
         <div class="step-list">
@@ -360,9 +356,7 @@ onBeforeUnmount(() => {
         <article class="panel chart-panel">
           <div class="panel-head">
             <div>
-              <p class="panel-kicker">THIS WEEK</p>
               <h2>本周练习</h2>
-              <p class="panel-desc">只统计最近七天，不制造不存在的学习记录。</p>
             </div>
             <div class="chart-total">
               <strong>{{ summary.hasData ? weeklyTotal : '—' }}</strong>
@@ -373,7 +367,6 @@ onBeforeUnmount(() => {
           <div v-if="loading" class="chart-state">正在读取本周数据…</div>
           <div v-else-if="!summary.hasData" class="chart-state">
             <strong>这一周还没有提交</strong>
-            <span>去题库写下第一版代码，这里就会出现你的练习节奏。</span>
           </div>
           <div ref="chartRef" class="chart-canvas" :class="{ 'is-empty': !summary.hasData || loading }"></div>
 
@@ -383,7 +376,6 @@ onBeforeUnmount(() => {
               <span><i class="legend-dot ac"></i>通过</span>
             </div>
             <span v-if="summary.hasData" class="pass-copy">全站通过率 {{ passRateText }}</span>
-            <span v-else class="pass-copy">还没有足够的提交</span>
           </div>
           <p v-if="summaryError" class="chart-error">{{ summaryError }}，当前展示空数据。</p>
         </article>
@@ -391,9 +383,7 @@ onBeforeUnmount(() => {
         <aside class="panel knowledge-panel">
           <div class="panel-head">
             <div>
-              <p class="panel-kicker">KNOWLEDGE MAP</p>
               <h2>知识地图</h2>
-              <p class="panel-desc">五个核心知识点，按顺序练。</p>
             </div>
             <span class="count-badge">{{ summary.knowledgePoints || knowledgePoints.length }}</span>
           </div>
@@ -424,9 +414,8 @@ onBeforeUnmount(() => {
 
       <section class="closing">
         <div>
-          <p class="closing-kicker">READY WHEN YOU ARE</p>
           <h2>选一道题，先写下第一版。</h2>
-          <p>不需要准备好才来。卡住的地方，才是这次练习真正开始的地方。</p>
+          <p>卡住的地方，就是练习开始的地方。</p>
         </div>
         <button class="btn-light" type="button" @click="goWorkspace">
           进入题库 <ArrowRight />

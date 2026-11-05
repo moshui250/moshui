@@ -86,9 +86,8 @@ async function handleSubmit() {
         返回首页
       </router-link>
       <div class="auth-card">
-        <div class="auth-kicker">WELCOME BACK</div>
         <h2>登录你的练习空间</h2>
-        <p>继续上次的题目，或者从错题本里挑一道重新开始。</p>
+        <p>继续上次的练习。</p>
 
         <el-form
           ref="formRef"

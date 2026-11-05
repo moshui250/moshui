@@ -203,11 +203,8 @@ onMounted(loadRows)
   <div class="wrong-page">
     <header class="page-head">
       <div class="head-copy">
-        <div class="page-eyebrow">REVIEW / 错题复盘</div>
         <h1 class="page-title">错题本</h1>
-        <p class="page-subtitle">
-          把每次报错留下来。先看上次错在哪，再用三道同类题把方法练熟。
-        </p>
+        <p class="page-subtitle">先看上次错因，再用同类题巩固。</p>
       </div>
       <button class="btn-primary" type="button" @click="router.push('/question')">
         去题库练习
@@ -232,7 +229,7 @@ onMounted(loadRows)
       </div>
       <div class="strip-note">
         <el-icon><CircleCheck /></el-icon>
-        <span>每道错题自动配 3 道同类题</span>
+        <span>每道错题配 3 道同类题</span>
       </div>
     </section>
 
@@ -261,7 +258,6 @@ onMounted(loadRows)
           <span>{{ masteredTotal }}</span>
         </button>
       </div>
-      <span class="sort-hint">按最近答错时间倒序</span>
     </div>
 
     <div v-if="loadError" class="error-banner">
@@ -274,13 +270,6 @@ onMounted(loadRows)
       <div v-if="!loading && !rows.length" class="empty-card">
         <div class="empty-mark">✓</div>
         <h2>{{ currentEmptyText }}</h2>
-        <p>
-          {{
-            activeFilter === 'mastered'
-              ? '做错的题在判题失败后会自动收进来，掌握后再回来看看。'
-              : '当前没有需要复习的题，去题库挑一道顺手的题保持手感。'
-          }}
-        </p>
         <button class="btn-primary" type="button" @click="router.push('/question')">
           去题库
           <el-icon><ArrowRight /></el-icon>
@@ -291,7 +280,7 @@ onMounted(loadRows)
         <div class="card-top">
           <div class="card-copy">
             <div class="card-kicker">
-              PROBLEM {{ questionOf(row).id || '—' }} · {{ knowledgeOf(row) }}
+              #{{ questionOf(row).id || '—' }} · {{ knowledgeOf(row) }}
             </div>
             <button class="card-title" type="button" @click="goSolve(row)">
               {{ titleOf(row) }}
@@ -346,7 +335,6 @@ onMounted(loadRows)
           <div class="similar-head">
             <div>
               <span class="similar-title">同类练习</span>
-              <span class="similar-sub">同知识点 · 优先未做 · 难度接近</span>
             </div>
             <span class="similar-count">
               {{ (recommendations[row.id] || []).length }} / 3
@@ -372,7 +360,7 @@ onMounted(loadRows)
               <span class="similar-arrow">→</span>
             </button>
           </div>
-          <div v-else class="similar-loading">暂无同类题，去题库看看其他知识点。</div>
+          <div v-else class="similar-loading">暂无同类题。</div>
         </div>
       </article>
     </section>

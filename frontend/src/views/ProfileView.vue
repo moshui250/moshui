@@ -47,6 +47,7 @@ const stats = ref({
   waSubmit: 0,
   otherSubmit: 0,
   accuracy: 0,
+  totalAc: 0,
   wrongCount: 0,
   rankInfo: null,
   tiers: []
@@ -133,6 +134,7 @@ async function loadStats() {
       waSubmit: Number(data?.waSubmit || 0),
       otherSubmit: Number(data?.otherSubmit || 0),
       accuracy: Number(data?.accuracy || 0),
+      totalAc: Number(data?.totalAc || 0),
       wrongCount: Number(data?.wrongCount || 0),
       rankInfo: data?.rankInfo || null,
       tiers: data?.tiers || []
@@ -161,9 +163,8 @@ onMounted(loadStats)
   <div class="profile-page">
     <header class="page-head">
       <div>
-        <div class="page-eyebrow">ACCOUNT / 学习账户</div>
         <h1 class="page-title">个人中心</h1>
-        <p class="page-subtitle">管理账号、查看学习概览，并调整答题页的本地编辑器偏好。</p>
+        <p class="page-subtitle">账号、学习数据与编辑器偏好。</p>
       </div>
       <el-button class="head-action" plain @click="router.push('/question')">
         去题库
@@ -219,7 +220,7 @@ onMounted(loadStats)
             <el-icon><SwitchButton /></el-icon>
             退出登录
           </el-button>
-          <span class="logout-note">退出后本机 token 会立即清除</span>
+          <span class="logout-note">退出后清除本机 token</span>
         </div>
       </section>
 
@@ -227,7 +228,7 @@ onMounted(loadStats)
         <div class="panel-head">
           <div>
             <div class="panel-title">学习概览</div>
-            <div class="panel-subtitle">来自当前账号的真实提交</div>
+            <div class="panel-subtitle">当前账号</div>
           </div>
           <router-link class="text-link" to="/dashboard">
             完整看板
@@ -245,14 +246,13 @@ onMounted(loadStats)
             <span>正确率</span>
           </div>
           <div class="stat-item">
+            <strong>{{ stats.totalAc }}</strong>
+            <span>累计 AC</span>
+          </div>
+          <div class="stat-item">
             <strong>{{ stats.wrongCount }}</strong>
             <span>未掌握错题</span>
           </div>
-        </div>
-
-        <div class="stat-note">
-          <span class="note-dot"></span>
-          这些数字与看板使用同一份统计口径
         </div>
       </section>
     </div>
@@ -261,7 +261,7 @@ onMounted(loadStats)
       <div class="panel-head">
         <div>
           <div class="panel-title">段位与排名</div>
-          <div class="panel-subtitle">全站唯一 AC 题数决定段位；重复 AC 不重复计数</div>
+          <div class="panel-subtitle">按唯一 AC 题数计算</div>
         </div>
         <button class="tier-help" type="button" aria-label="查看段位规则" @click="helpVisible = true">
           <el-icon><QuestionFilled /></el-icon>
@@ -314,7 +314,7 @@ onMounted(loadStats)
         <div class="panel-head">
           <div>
             <div class="panel-title">编辑器偏好</div>
-            <div class="panel-subtitle">只保存在当前浏览器，不会上传</div>
+            <div class="panel-subtitle">仅保存在本机</div>
           </div>
           <el-icon class="head-icon"><Setting /></el-icon>
         </div>
@@ -369,7 +369,6 @@ onMounted(loadStats)
               </span>
               <span class="quick-copy">
                 <strong>{{ item.label }}</strong>
-                <small>{{ item.desc }}</small>
               </span>
               <el-icon class="quick-arrow"><ArrowRight /></el-icon>
             </router-link>
@@ -382,7 +381,7 @@ onMounted(loadStats)
           </div>
           <div>
             <h3>账号安全</h3>
-            <p>登录由 JWT 保护，token 仅保存在当前浏览器。退出后需要重新验证。</p>
+            <p>登录由 JWT 保护，token 仅存本机。</p>
           </div>
         </section>
       </aside>
@@ -586,7 +585,7 @@ onMounted(loadStats)
 
 .stat-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 8px;
   margin-top: 22px;
 }

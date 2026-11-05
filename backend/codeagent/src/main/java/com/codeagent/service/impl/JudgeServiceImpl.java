@@ -603,7 +603,7 @@ public class JudgeServiceImpl implements JudgeService {
     }
 
     /**
-     * 校验题目存在且当前用户有权访问：公开题所有人可读，个人题仅作者可读。
+     * 校验题目存在且当前用户有权访问：公共题与共享题所有人可读，私有个人题仅作者可读。
      *
      * @param questionId 题目 ID
      * @param userId     当前登录用户 ID
@@ -614,7 +614,9 @@ public class JudgeServiceImpl implements JudgeService {
         if (question == null) {
             throw new BizException(ErrorCode.NOT_FOUND, "题目不存在");
         }
-        if ("PERSONAL".equals(question.getType()) && !userId.equals(question.getUserId())) {
+        if ("PERSONAL".equals(question.getType())
+                && !"SHARED".equalsIgnoreCase(question.getVisibility())
+                && !userId.equals(question.getUserId())) {
             throw new BizException(ErrorCode.FORBIDDEN);
         }
         return question;

@@ -5,7 +5,7 @@
 
     <sql id="listSelect">
         SELECT q.id, q.title, q.difficulty, q.knowledge_point_id,
-               kp.name AS knowledge_point_name, q.type, q.user_id, q.create_time,
+               kp.name AS knowledge_point_name, q.type, q.visibility, q.user_id, q.create_time,
                CASE WHEN EXISTS (
                    SELECT 1 FROM submit_record sr
                    WHERE sr.question_id = q.id
@@ -23,7 +23,7 @@
                 AND q.type = 'PERSONAL' AND q.user_id = #{userId}
             </when>
             <otherwise>
-                AND q.type = 'PUBLIC'
+                AND (q.type = 'PUBLIC' OR (q.type = 'PERSONAL' AND q.visibility = 'SHARED'))
             </otherwise>
         </choose>
         <if test="knowledgePointId != null">
@@ -53,7 +53,7 @@
 
     <select id="selectDetailRow" resultType="com.codeagent.dto.QuestionDetailRow">
         SELECT q.id, q.title, q.description, q.input_desc, q.output_desc, q.difficulty,
-               q.knowledge_point_id, q.template_json, q.type, q.user_id, q.source_image_url,
+               q.knowledge_point_id, q.template_json, q.type, q.visibility, q.user_id, q.source_image_url,
                q.create_time, q.update_time,
                kp.code AS knowledge_point_code, kp.name AS knowledge_point_name
         FROM question q
@@ -66,10 +66,10 @@
             useGeneratedKeys="true" keyProperty="id">
         INSERT INTO question
             (title, description, input_desc, output_desc, difficulty, knowledge_point_id,
-             template_json, type, user_id, source_image_url, create_time, update_time, deleted)
+             template_json, type, visibility, user_id, source_image_url, create_time, update_time, deleted)
         VALUES
             (#{title}, #{description}, #{inputDesc}, #{outputDesc}, #{difficulty}, #{knowledgePointId},
-             #{templateJson}, 'PERSONAL', #{userId}, #{sourceImageUrl}, NOW(), NOW(), 0)
+             #{templateJson}, 'PERSONAL', #{visibility}, #{userId}, #{sourceImageUrl}, NOW(), NOW(), 0)
     </insert>
 
     <update id="updateOwned" parameterType="com.codeagent.entity.Question">
@@ -81,6 +81,7 @@
             difficulty = #{difficulty},
             knowledge_point_id = #{knowledgePointId},
             template_json = #{templateJson},
+            visibility = #{visibility},
             source_image_url = #{sourceImageUrl},
             update_time = NOW()
         WHERE id = #{id}
@@ -110,7 +111,7 @@
         FROM question q
         LEFT JOIN knowledge_point kp ON kp.id = q.knowledge_point_id
         WHERE q.deleted = 0
-          AND q.type = 'PUBLIC'
+          AND (q.type = 'PUBLIC' OR (q.type = 'PERSONAL' AND q.visibility = 'SHARED'))
           AND q.id != #{excludeId}
         ORDER BY CASE WHEN q.knowledge_point_id = #{knowledgePointId} THEN 0 ELSE 1 END,
                  solved ASC,

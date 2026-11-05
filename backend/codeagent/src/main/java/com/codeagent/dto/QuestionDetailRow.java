@@ -19,6 +19,7 @@ public class QuestionDetailRow {
     private Long knowledgePointId;
     private String templateJson;
     private String type;
+    private String visibility;
     private Long userId;
     private String sourceImageUrl;
     private LocalDateTime createTime;

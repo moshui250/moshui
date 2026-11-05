@@ -44,6 +44,8 @@ public class QuestionServiceImpl implements QuestionService {
 
     private static final String PUBLIC = "PUBLIC";
     private static final String PERSONAL = "PERSONAL";
+    private static final String PRIVATE = "PRIVATE";
+    private static final String SHARED = "SHARED";
     private static final int DEFAULT_PAGE_SIZE = 10;
     private static final int MAX_PAGE_SIZE = 50;
     private static final int DEFAULT_SCORE = 25;
@@ -173,7 +175,7 @@ public class QuestionServiceImpl implements QuestionService {
     @Transactional
     public void update(Long id, QuestionSaveRequest request) {
         Long userId = requireUserId();
-        requireOwnedPersonal(id, userId);
+        QuestionDetailRow existing = requireOwnedPersonal(id, userId);
         requireKnowledgePoint(request.getKnowledgePointId());
 
         boolean casesProvided = request.getTestCases() != null || request.getSamples() != null;
@@ -181,6 +183,9 @@ public class QuestionServiceImpl implements QuestionService {
 
         Question question = new Question();
         fillQuestion(question, request, userId);
+        if (request.getVisibility() == null || request.getVisibility().isBlank()) {
+            question.setVisibility(existing.getVisibility());
+        }
         question.setId(id);
         int updated = questionMapper.updateOwned(question);
         if (updated == 0) {
@@ -267,8 +272,26 @@ public class QuestionServiceImpl implements QuestionService {
         question.setKnowledgePointId(request.getKnowledgePointId());
         question.setTemplateJson(normalizeTemplate(request.getTemplateJson()));
         question.setType(PERSONAL);
+        question.setVisibility(normalizeVisibility(request.getVisibility()));
         question.setUserId(userId);
         question.setSourceImageUrl(request.getSourceImageUrl());
+    }
+
+    /**
+     * 个人题只允许 PRIVATE 或 SHARED，未传时默认 PRIVATE。
+     *
+     * @param visibility 前端传入的可见性
+     * @return 规范化后的可见性
+     */
+    private String normalizeVisibility(String visibility) {
+        if (visibility == null || visibility.isBlank()) {
+            return PRIVATE;
+        }
+        String value = visibility.trim().toUpperCase(Locale.ROOT);
+        if (!PRIVATE.equals(value) && !SHARED.equals(value)) {
+            throw new BizException(ErrorCode.PARAM_ERROR, "可见性只能是 PRIVATE 或 SHARED");
+        }
+        return value;
     }
 
     /**
@@ -441,7 +464,7 @@ public class QuestionServiceImpl implements QuestionService {
     }
 
     /**
-     * 查询题目并校验访问权限：PUBLIC 所有人可读，PERSONAL 仅作者可读。
+     * 查询题目并校验访问权限：PUBLIC 所有人可读，SHARED 所有人可读，PRIVATE 仅作者可读。
      *
      * @param id     题目 ID
      * @param userId 当前登录用户 ID
@@ -452,7 +475,9 @@ public class QuestionServiceImpl implements QuestionService {
         if (row == null) {
             throw new BizException(ErrorCode.NOT_FOUND, "题目不存在");
         }
-        if (PERSONAL.equals(row.getType()) && !userId.equals(row.getUserId())) {
+        if (PERSONAL.equals(row.getType())
+                && !userId.equals(row.getUserId())
+                && !SHARED.equalsIgnoreCase(row.getVisibility())) {
             throw new BizException(ErrorCode.FORBIDDEN);
         }
         return row;

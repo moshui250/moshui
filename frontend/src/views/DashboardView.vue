@@ -50,12 +50,19 @@ const metrics = computed(() => [
     unit: '道',
     foot: '仅统计待复习',
     tone: 'rose'
+  },
+  {
+    label: '累计 AC',
+    value: stat.totalAc,
+    unit: '道',
+    foot: '含图片录题，不计段位',
+    tone: 'indigo'
   }
 ])
 
 const activeKnowledge = computed(() =>
   (stat.knowledgeStats || [])
-    .filter((item) => item.hasData)
+    .filter((item) => item.hasData && Number(item.errorRate) > 0)
     .sort((a, b) => Number(b.errorRate) - Number(a.errorRate))
 )
 
@@ -199,11 +206,8 @@ onBeforeUnmount(() => {
   <div class="dashboard-page">
     <header class="page-head">
       <div class="head-copy">
-        <div class="page-eyebrow">LEARNING / 学习复盘</div>
         <h1 class="page-title">学习看板</h1>
-        <p class="page-subtitle">
-          按真实提交还原练习轨迹：先看整体正确率，再找到最该补的知识点。
-        </p>
+        <p class="page-subtitle">正确率、薄弱点与最近提交。</p>
       </div>
       <div class="head-actions">
         <span class="date-chip">{{ today }}</span>
@@ -238,7 +242,7 @@ onBeforeUnmount(() => {
         <div class="panel-head">
           <div>
             <h2 class="panel-title">知识点错误率</h2>
-            <p class="panel-subtitle">按提交口径计算，没有提交的知识点显示“—”</p>
+            <p class="panel-subtitle">未提交的知识点显示 —</p>
           </div>
           <span class="panel-chip">错误率</span>
         </div>
@@ -251,7 +255,6 @@ onBeforeUnmount(() => {
         <div class="panel-head">
           <div>
             <h2 class="panel-title">薄弱知识点</h2>
-            <p class="panel-subtitle">错误率从高到低</p>
           </div>
         </div>
 
@@ -268,13 +271,14 @@ onBeforeUnmount(() => {
           </div>
         </div>
         <div v-else class="weak-empty">
-          <span>完成首次提交后，这里会生成你的薄弱知识点。</span>
+          <span>暂无明显薄弱点</span>
         </div>
 
         <div class="insight-note">
           <span v-if="weakest">
             优先复习「{{ weakest.name }}」，再去错题本做同类题。
           </span>
+          <span v-else-if="stat.totalSubmit">当前没有明显薄弱点，保持这个正确率。</span>
           <span v-else>先完成一次判题，再看复盘建议。</span>
         </div>
 
@@ -289,7 +293,6 @@ onBeforeUnmount(() => {
       <div class="panel-head">
         <div>
           <h2 class="panel-title">最近提交</h2>
-          <p class="panel-subtitle">最近 5 次判题记录</p>
         </div>
         <span class="panel-chip">{{ stat.recentSubmits.length }} 条</span>
       </div>
@@ -326,7 +329,7 @@ onBeforeUnmount(() => {
       <div v-else class="recent-empty">
         <span class="empty-mark">◎</span>
         <h3>还没有提交记录</h3>
-        <p>从题库开始第一道练习，提交后这里会出现判题结果。</p>
+        <p>提交后这里会显示判题结果。</p>
         <button class="btn-primary" type="button" @click="router.push('/question')">
           去挑一道题
           <el-icon><ArrowRight /></el-icon>
@@ -442,7 +445,7 @@ onBeforeUnmount(() => {
 
 .metric-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
   margin-bottom: 14px;
 }
@@ -804,7 +807,7 @@ onBeforeUnmount(() => {
   }
 
   .metric-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
   }
 

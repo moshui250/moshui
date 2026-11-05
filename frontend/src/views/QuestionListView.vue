@@ -12,6 +12,8 @@ const filters = reactive({
   knowledgePointId: null
 })
 
+const scope = ref('PUBLIC')
+
 const knowledgePoints = ref([])
 const rows = ref([])
 const total = ref(0)
@@ -44,6 +46,18 @@ function knowledgeName(row) {
   )
 }
 
+function typeLabel(row) {
+  if (row.type === 'PUBLIC') return '公共题'
+  return row.visibility === 'SHARED' ? '共享题' : '私有题'
+}
+
+function switchScope(value) {
+  if (scope.value === value) return
+  scope.value = value
+  page.value = 1
+  loadQuestions()
+}
+
 async function loadKnowledgeOptions() {
   try {
     const data = await listKnowledgePoints()
@@ -60,6 +74,7 @@ async function loadQuestions() {
     const data = await listQuestions({
       page: page.value,
       size: size.value,
+      type: scope.value,
       ...(filters.keyword.trim() ? { keyword: filters.keyword.trim() } : {}),
       ...(filters.difficulty !== null ? { difficulty: filters.difficulty } : {}),
       ...(filters.knowledgePointId !== null
@@ -116,11 +131,8 @@ onMounted(async () => {
   <div class="catalog-page">
     <section class="catalog-head">
       <div class="head-copy">
-        <div class="eyebrow">PROBLEM SET</div>
         <h1>题库</h1>
-        <p>
-          从数组、字符串到链表、递归与排序。先读题、写第一版，再让判题和 AI 教练告诉你下一步。
-        </p>
+        <p>按知识点练习，提交后看判题结果。</p>
       </div>
 
       <div class="head-side">
@@ -145,6 +157,26 @@ onMounted(async () => {
           </el-button>
         </div>
       </div>
+    </section>
+
+    <section class="scope-bar">
+      <button
+        type="button"
+        class="scope-tab"
+        :class="{ active: scope === 'PUBLIC' }"
+        @click="switchScope('PUBLIC')"
+      >
+        公共题库
+      </button>
+      <button
+        type="button"
+        class="scope-tab"
+        :class="{ active: scope === 'PERSONAL' }"
+        @click="switchScope('PERSONAL')"
+      >
+        我的题目
+      </button>
+      <span class="scope-note">共享题计入累计 AC，不计入段位</span>
     </section>
 
     <section class="filter-bar">
@@ -237,7 +269,7 @@ onMounted(async () => {
             <em>
               #{{ row.id }}
               <span>·</span>
-              {{ row.type === 'PERSONAL' ? '个人题' : '公共题' }}
+              {{ typeLabel(row) }}
             </em>
           </span>
 
@@ -357,6 +389,36 @@ onMounted(async () => {
 .head-actions {
   display: flex;
   gap: 8px;
+}
+
+.scope-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 24px 0 12px;
+}
+
+.scope-tab {
+  padding: 8px 14px;
+  border: 1px solid #e4e7ec;
+  border-radius: 8px;
+  background: #fff;
+  color: #6b7280;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.scope-tab.active {
+  border-color: #1f3a5f;
+  background: #1f3a5f;
+  color: #fff;
+}
+
+.scope-note {
+  margin-left: auto;
+  color: #8a93a6;
+  font-size: 11px;
 }
 
 .filter-bar {
@@ -628,6 +690,16 @@ onMounted(async () => {
 
   .head-actions .el-button {
     flex: 1;
+  }
+
+  .scope-bar {
+    flex-wrap: wrap;
+    margin-top: 18px;
+  }
+
+  .scope-note {
+    width: 100%;
+    margin-left: 0;
   }
 
   .filter-bar {

@@ -21,6 +21,7 @@ public class QuestionListItemVO implements Serializable {
     private Long knowledgePointId;
     private String knowledgePointName;
     private String type;
+    private String visibility;
     private Long userId;
     private LocalDateTime createTime;
     private Boolean solved;

@@ -30,6 +30,9 @@ public class Question implements Serializable {
 
     private String type;
 
+    /** PUBLIC / SHARED / PRIVATE；公共题固定 PUBLIC。 */
+    private String visibility;
+
     private Long userId;
 
     private String sourceImageUrl;

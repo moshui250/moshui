@@ -121,6 +121,7 @@ public class QuestionImageServiceImpl implements QuestionImageService {
         save.setSamples(request.getSamples());
         save.setTestCases(hidden);
         save.setSourceImageUrl(firstNonBlank(request.getSourceImageUrl(), cached.imageUrl()));
+        save.setVisibility(request.getVisibility());
 
         Long questionId = questionService.create(save);
         parsedDraftCache.remove(request.getParseId());

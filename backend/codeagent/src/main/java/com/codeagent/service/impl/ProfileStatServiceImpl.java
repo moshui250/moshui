@@ -116,6 +116,7 @@ public class ProfileStatServiceImpl implements ProfileStatService {
         vo.setWaSubmit(waSubmit);
         vo.setOtherSubmit(otherSubmit);
         vo.setSolvedCount(solvedCount);
+        vo.setTotalAc(solvedCount);
         vo.setWrongCount(wrongCount);
         vo.setAccuracy(totalSubmit == 0 ? 0.0 : round((double) acSubmit / totalSubmit, 3));
         vo.setKnowledgeStats(knowledgeStats);
