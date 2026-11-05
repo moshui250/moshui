@@ -9,7 +9,9 @@ import App from './App.vue'
 import router from './router'
 import { useUserStore } from './store/user'
 import { resetAuthExpired } from './utils/request'
+import reveal from './directives/reveal'
 import './styles/main.css'
+import './styles/reveal.css'
 
 const app = createApp(App)
 const pinia = createPinia()
@@ -21,6 +23,7 @@ for (const [name, component] of Object.entries(ElementPlusIconsVue)) {
 app.use(pinia)
 app.use(router)
 app.use(ElementPlus, { locale: zhCn })
+app.directive('reveal', reveal)
 
 // axios 层只发事件，不直接依赖 router，避免循环引用。
 // 多层拦截：请求层只提示一次，这里再保证只导航一次。

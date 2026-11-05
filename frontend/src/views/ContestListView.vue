@@ -40,8 +40,9 @@
 
       <div v-else-if="contests.length" class="contest-grid">
         <article
-          v-for="contest in contests"
+          v-for="(contest, index) in contests"
           :key="contest.id"
+          v-reveal="{ delay: index * 35 }"
           class="contest-card"
           :class="'is-' + contest.status.toLowerCase()"
           @click="openContest(contest)"

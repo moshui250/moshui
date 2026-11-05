@@ -337,14 +337,19 @@ onBeforeUnmount(() => {
       </section>
 
       <section class="loop">
-        <div class="section-head">
+        <div v-reveal class="section-head">
           <div>
             <h2>从一道题，走完一次闭环</h2>
           </div>
         </div>
 
         <div class="step-list">
-          <article v-for="step in steps" :key="step.index" class="step">
+          <article
+            v-for="(step, index) in steps"
+            :key="step.index"
+            v-reveal="{ delay: index * 45 }"
+            class="step"
+          >
             <span class="step-index">{{ step.index }}</span>
             <h3>{{ step.title }}</h3>
             <p>{{ step.body }}</p>
@@ -353,7 +358,7 @@ onBeforeUnmount(() => {
       </section>
 
       <section class="insight-grid">
-        <article class="panel chart-panel">
+        <article v-reveal class="panel chart-panel">
           <div class="panel-head">
             <div>
               <h2>本周练习</h2>
@@ -380,7 +385,7 @@ onBeforeUnmount(() => {
           <p v-if="summaryError" class="chart-error">{{ summaryError }}，当前展示空数据。</p>
         </article>
 
-        <aside class="panel knowledge-panel">
+        <aside v-reveal="{ delay: 70 }" class="panel knowledge-panel">
           <div class="panel-head">
             <div>
               <h2>知识地图</h2>

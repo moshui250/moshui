@@ -1,0 +1,24 @@
+/* 首次进入视口时轻微上浮，只播放一次，避免页面像动画模板。 */
+.is-reveal-ready {
+  opacity: 0;
+  transform: translateY(10px);
+  transition:
+    opacity 280ms ease-out var(--reveal-delay, 0ms),
+    transform 280ms ease-out var(--reveal-delay, 0ms);
+  will-change: opacity, transform;
+}
+
+.is-reveal-ready.is-revealed {
+  opacity: 1;
+  transform: translateY(0);
+  will-change: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .is-reveal-ready,
+  .is-reveal-ready.is-revealed {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
