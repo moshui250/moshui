@@ -59,6 +59,7 @@ const judgeError = ref('')
 const usingDemoJudge = ref(false)
 const sampleOnly = ref(false)
 const activePane = ref('result')
+let passNoticeShown = false
 
 const agentEvents = ref([])
 const agentAnswer = ref('')
@@ -424,6 +425,33 @@ function goBack() {
   router.push({ name: 'question-detail', params: { id: question.value.id } })
 }
 
+async function showPassNotice() {
+  if (passNoticeShown || disposed) return
+  passNoticeShown = true
+  const title = question.value?.title || '这道题'
+  try {
+    await ElMessageBox.alert(
+      `恭喜你通过了《${title}》！这次提交已经记录，继续保持。`,
+      '恭喜通过',
+      {
+        confirmButtonText: contestId.value ? '返回竞赛' : '返回题库',
+        type: 'success',
+        showClose: false,
+        closeOnClickModal: false,
+        closeOnPressEscape: false
+      }
+    )
+  } catch {
+    // 弹窗被关闭时也回到列表，避免停留在没有后续操作的答题页。
+  }
+  if (disposed) return
+  if (contestId.value) {
+    router.push({ name: 'contest-detail', params: { id: contestId.value } })
+  } else {
+    router.push({ name: 'question-list' })
+  }
+}
+
 async function submit() {
   if (!question.value || judging.value) return
   if (!code.value.trim()) {
@@ -433,6 +461,7 @@ async function submit() {
 
   saveCurrentCode()
   clearTimers()
+  passNoticeShown = false
   judging.value = true
   judgeResult.value = null
   judgeError.value = ''
@@ -452,6 +481,10 @@ async function submit() {
     if (!submitId) throw new Error('判题服务未返回 submitId')
     await pollJudge(submitId)
     const status = String(judgeResult.value?.status || '').toUpperCase()
+    if (status === 'AC' && !sampleOnly.value && !usingDemoJudge.value) {
+      await showPassNotice()
+      return
+    }
     if (status && status !== 'AC' && !contestId.value) {
       startAgent('HINT')
     }
