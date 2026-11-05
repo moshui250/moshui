@@ -1,10 +1,8 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
-import { ArrowRight, CircleCheck, InfoFilled, Search } from '@element-plus/icons-vue'
+import { ArrowRight, CircleCheck, Picture, Refresh, Search } from '@element-plus/icons-vue'
 import { listKnowledgePoints, listQuestions } from '@/api/question'
-import { demoKnowledgePoints, demoQuestions } from '@/data/demo'
 
 const router = useRouter()
 
@@ -14,27 +12,28 @@ const filters = reactive({
   knowledgePointId: null
 })
 
-const page = ref(1)
-const size = ref(8)
-const total = ref(0)
-const rows = ref([])
 const knowledgePoints = ref([])
+const rows = ref([])
+const total = ref(0)
+const page = ref(1)
+const size = ref(10)
 const loading = ref(false)
-const usingDemo = ref(false)
 const loadError = ref('')
 
-const hasFilters = computed(
-  () => Boolean(filters.keyword) || filters.difficulty !== null || filters.knowledgePointId !== null
-)
-
 const difficultyMap = {
-  1: { label: '入门', type: 'success' },
-  2: { label: '进阶', type: 'warning' },
-  3: { label: '挑战', type: 'danger' }
+  1: { label: '入门', className: 'is-easy' },
+  2: { label: '进阶', className: 'is-medium' },
+  3: { label: '挑战', className: 'is-hard' }
 }
 
+const hasFilters = computed(
+  () => Boolean(filters.keyword.trim()) || filters.difficulty !== null || filters.knowledgePointId !== null
+)
+
+const pageCount = computed(() => Math.ceil(total.value / size.value))
+
 function difficultyInfo(level) {
-  return difficultyMap[level] || { label: '未分级', type: 'info' }
+  return difficultyMap[level] || { label: '未分级', className: 'is-unknown' }
 }
 
 function knowledgeName(row) {
@@ -48,40 +47,20 @@ function knowledgeName(row) {
 async function loadKnowledgeOptions() {
   try {
     const data = await listKnowledgePoints()
-    knowledgePoints.value = Array.isArray(data) && data.length ? data : demoKnowledgePoints
+    knowledgePoints.value = Array.isArray(data) ? data : []
   } catch {
-    knowledgePoints.value = demoKnowledgePoints
+    knowledgePoints.value = []
   }
-}
-
-function applyDemoData() {
-  let list = [...demoQuestions]
-  const keyword = filters.keyword.trim().toLowerCase()
-
-  if (keyword) {
-    list = list.filter((item) => item.title.toLowerCase().includes(keyword))
-  }
-  if (filters.difficulty !== null) {
-    list = list.filter((item) => item.difficulty === filters.difficulty)
-  }
-  if (filters.knowledgePointId !== null) {
-    list = list.filter((item) => item.knowledgePointId === filters.knowledgePointId)
-  }
-
-  total.value = list.length
-  const start = (page.value - 1) * size.value
-  rows.value = list.slice(start, start + size.value)
 }
 
 async function loadQuestions() {
   loading.value = true
   loadError.value = ''
-
   try {
     const data = await listQuestions({
       page: page.value,
       size: size.value,
-      ...(filters.keyword ? { keyword: filters.keyword } : {}),
+      ...(filters.keyword.trim() ? { keyword: filters.keyword.trim() } : {}),
       ...(filters.difficulty !== null ? { difficulty: filters.difficulty } : {}),
       ...(filters.knowledgePointId !== null
         ? { knowledgePointId: filters.knowledgePointId }
@@ -89,11 +68,10 @@ async function loadQuestions() {
     })
     rows.value = data?.records || []
     total.value = Number(data?.total || 0)
-    usingDemo.value = false
   } catch (error) {
-    usingDemo.value = true
-    loadError.value = error.message || '题库接口暂未接入'
-    applyDemoData()
+    rows.value = []
+    total.value = 0
+    loadError.value = error?.message || '题库加载失败，请稍后再试'
   } finally {
     loading.value = false
   }
@@ -101,11 +79,7 @@ async function loadQuestions() {
 
 function search() {
   page.value = 1
-  if (usingDemo.value) {
-    applyDemoData()
-  } else {
-    loadQuestions()
-  }
+  loadQuestions()
 }
 
 function resetFilters() {
@@ -117,79 +91,67 @@ function resetFilters() {
 
 function changePage(nextPage) {
   page.value = nextPage
-  if (usingDemo.value) {
-    applyDemoData()
-  } else {
-    loadQuestions()
-  }
+  loadQuestions()
 }
 
 function openQuestion(row) {
-  router.push(`/question/${row.id}`)
+  router.push({ name: 'question-detail', params: { id: row.id } })
 }
 
 function randomQuestion() {
   if (!rows.value.length) {
-    ElMessage.info('当前没有可练习的题目')
+    search()
     return
   }
   const pick = rows.value[Math.floor(Math.random() * rows.value.length)]
-  router.push(`/question/${pick.id}`)
+  openQuestion(pick)
 }
 
 onMounted(async () => {
-  await loadKnowledgeOptions()
-  await loadQuestions()
+  await Promise.all([loadKnowledgeOptions(), loadQuestions()])
 })
 </script>
 
 <template>
-  <div class="question-page">
-    <section class="hero">
-      <div class="hero-copy">
-        <div class="page-eyebrow">Practice Library</div>
-        <h1 class="page-title">题库</h1>
-        <p class="page-subtitle">
-          从数组、字符串到链表、递归与排序，按知识点循序练习。提交失败时，AI 教练会分层提示，而不是直接给答案。
+  <div class="catalog-page">
+    <section class="catalog-head">
+      <div class="head-copy">
+        <div class="eyebrow">PROBLEM SET</div>
+        <h1>题库</h1>
+        <p>
+          从数组、字符串到链表、递归与排序。先读题、写第一版，再让判题和 AI 教练告诉你下一步。
         </p>
-        <div class="hero-meta">
-          <span><b>5</b> 个知识点</span>
-          <span class="meta-divider"></span>
-          <span><b>3</b> 个难度梯度</span>
-          <span class="meta-divider"></span>
-          <span>AI 调试待接入</span>
-        </div>
       </div>
 
-      <div class="hero-side">
-        <div class="suggest-card">
-          <div class="suggest-top">
-            <span class="suggest-label">今日建议</span>
-            <span class="suggest-step">STEP 01</span>
+      <div class="head-side">
+        <div class="head-stats">
+          <div>
+            <strong>{{ total || '—' }}</strong>
+            <span>道练习题</span>
           </div>
-          <strong>从一道数组题开始</strong>
-          <p>先读懂输入输出，再动手写。不会做也没关系，提交后可以进入 AI 调试。</p>
-          <el-button class="suggest-btn" type="primary" @click="randomQuestion">
-            随机一题
-            <el-icon><ArrowRight /></el-icon>
+          <div>
+            <strong>{{ knowledgePoints.length || '—' }}</strong>
+            <span>个知识点</span>
+          </div>
+          <div>
+            <strong>2</strong>
+            <span>种语言</span>
+          </div>
+        </div>
+        <div class="head-actions">
+          <el-button :icon="Refresh" @click="randomQuestion">随机一题</el-button>
+          <el-button type="primary" :icon="Picture" @click="router.push('/question/import')">
+            图片录题
           </el-button>
         </div>
       </div>
     </section>
 
-    <div v-if="usingDemo" class="demo-banner">
-      <el-icon><InfoFilled /></el-icon>
-      <span>
-        当前展示前端骨架演示数据。后端题库接口接入后会自动切换为真实数据
-        <template v-if="loadError">（{{ loadError }}）</template>。
-      </span>
-    </div>
-
-    <section class="panel filter-panel">
+    <section class="filter-bar">
       <el-input
         v-model="filters.keyword"
         class="search-input"
-        placeholder="搜索题目，例如：两数之和"
+        placeholder="搜索题目"
         clearable
         @keyup.enter="search"
         @clear="search"
@@ -216,7 +178,7 @@ onMounted(async () => {
 
       <el-select
         v-model="filters.difficulty"
-        class="filter-select filter-select-sm"
+        class="filter-select level-select"
         placeholder="全部难度"
         clearable
         @change="search"
@@ -228,83 +190,84 @@ onMounted(async () => {
 
       <el-button type="primary" @click="search">筛选</el-button>
       <el-button text :disabled="!hasFilters" @click="resetFilters">重置</el-button>
-      <el-button plain type="primary" @click="router.push('/question/import')">图片录题</el-button>
 
-      <div class="filter-total">共 {{ total }} 道题</div>
+      <span class="filter-count">共 {{ total }} 道</span>
     </section>
 
-    <section class="panel table-panel">
-      <el-table
-        v-loading="loading"
-        :data="rows"
-        row-key="id"
-        class="question-table"
-        @row-click="openQuestion"
-      >
-        <el-table-column label="题目" min-width="330">
-          <template #default="{ row }">
-            <div class="question-main">
-              <div class="question-title">{{ row.title }}</div>
-              <div class="question-sub">
-                <span>{{ row.type === 'PERSONAL' ? '个人题' : '公共题' }}</span>
-                <span class="dot">·</span>
-                <span>题号 {{ row.id }}</span>
-              </div>
-            </div>
-          </template>
-        </el-table-column>
+    <el-alert
+      v-if="loadError"
+      class="load-alert"
+      type="error"
+      :closable="false"
+      show-icon
+      :title="loadError"
+    />
 
-        <el-table-column label="知识点" width="130">
-          <template #default="{ row }">
-            <span class="knowledge-text">{{ knowledgeName(row) }}</span>
-          </template>
-        </el-table-column>
+    <section class="problem-board">
+      <div class="board-head">
+        <span class="col-status">状态</span>
+        <span class="col-title">题目</span>
+        <span class="col-kp">知识点</span>
+        <span class="col-level">难度</span>
+        <span class="col-action">操作</span>
+      </div>
 
-        <el-table-column label="难度" width="110">
-          <template #default="{ row }">
-            <el-tag :type="difficultyInfo(row.difficulty).type" effect="light" round size="small">
-              {{ difficultyInfo(row.difficulty).label }}
-            </el-tag>
-          </template>
-        </el-table-column>
+      <div v-if="loading" class="board-loading">
+        <el-skeleton :rows="6" animated />
+      </div>
 
-        <el-table-column label="状态" width="120">
-          <template #default="{ row }">
-            <el-tag v-if="row.solved" type="success" effect="plain" round size="small">
-              <span class="solved-tag">
-                <el-icon><CircleCheck /></el-icon>
-                已通过
-              </span>
-            </el-tag>
-            <span v-else class="status-todo">
-              <span class="status-dot"></span>
-              未作答
+      <div v-else-if="rows.length" class="board-body">
+        <button
+          v-for="row in rows"
+          :key="row.id"
+          type="button"
+          class="problem-row"
+          :class="{ 'is-solved': row.solved }"
+          @click="openQuestion(row)"
+        >
+          <span class="status-cell">
+            <span v-if="row.solved" class="status-icon is-done">
+              <el-icon><CircleCheck /></el-icon>
             </span>
-          </template>
-        </el-table-column>
+            <span v-else class="status-icon"></span>
+          </span>
 
-        <el-table-column label="操作" width="130" align="right">
-          <template #default="{ row }">
-            <el-button link type="primary" @click.stop="openQuestion(row)">
-              开始练习
-              <el-icon class="action-arrow"><ArrowRight /></el-icon>
-            </el-button>
-          </template>
-        </el-table-column>
+          <span class="title-cell">
+            <strong>{{ row.title }}</strong>
+            <em>
+              #{{ row.id }}
+              <span>·</span>
+              {{ row.type === 'PERSONAL' ? '个人题' : '公共题' }}
+            </em>
+          </span>
 
-        <template #empty>
-          <el-empty
-            :description="loadError ? '题库接口尚未接入，暂无真实数据' : '没有找到匹配的题目'"
-            :image-size="92"
-          >
-            <el-button v-if="hasFilters" type="primary" plain @click="resetFilters">
-              清空筛选
-            </el-button>
-          </el-empty>
-        </template>
-      </el-table>
+          <span class="kp-cell">{{ knowledgeName(row) }}</span>
 
-      <div v-if="total > 0" class="pagination-wrap">
+          <span class="level-cell">
+            <span class="level-dot" :class="difficultyInfo(row.difficulty).className"></span>
+            {{ difficultyInfo(row.difficulty).label }}
+          </span>
+
+          <span class="action-cell">
+            开始练习
+            <el-icon><ArrowRight /></el-icon>
+          </span>
+        </button>
+      </div>
+
+      <el-empty
+        v-else
+        class="board-empty"
+        :description="hasFilters ? '没有匹配的题目，换个条件试试' : '题库暂时还没有题目'"
+        :image-size="88"
+      >
+        <el-button v-if="hasFilters" type="primary" plain @click="resetFilters">
+          清空筛选
+        </el-button>
+      </el-empty>
+
+      <div v-if="total > 0" class="board-foot">
+        <span class="foot-count">第 {{ page }} / {{ pageCount }} 页</span>
         <el-pagination
           background
           layout="prev, pager, next"
@@ -319,227 +282,407 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-.hero {
+.catalog-page {
+  width: min(1240px, calc(100% - 48px));
+  margin: 0 auto;
+  padding: 38px 0 64px;
+}
+
+.catalog-head {
   display: flex;
-  align-items: stretch;
+  align-items: flex-end;
   justify-content: space-between;
   gap: 36px;
-  margin-bottom: 24px;
+  padding: 6px 0 30px;
+  border-bottom: 1px solid #e6e9f1;
 }
 
-.hero-copy {
-  flex: 1;
-  padding: 8px 0 4px;
+.eyebrow {
+  margin-bottom: 10px;
+  color: #4f46e5;
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 2.2px;
 }
 
-.hero-meta {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-top: 20px;
-  color: #7c869c;
-  font-size: 12px;
+.head-copy h1 {
+  color: #0f172a;
+  font-size: 58px;
+  font-weight: 800;
+  letter-spacing: -2.5px;
+  line-height: 1;
 }
 
-.hero-meta b {
-  color: #334155;
-  font-weight: 700;
-}
-
-.meta-divider {
-  width: 1px;
-  height: 11px;
-  background: #d9dfeb;
-}
-
-.hero-side {
-  flex: 0 0 300px;
-}
-
-.suggest-card {
-  height: 100%;
-  padding: 18px 19px 17px;
-  border: 1px solid #dfe3ff;
-  border-radius: 15px;
-  background:
-    radial-gradient(circle at 100% 0%, rgba(99, 102, 241, 0.16), transparent 55%),
-    linear-gradient(160deg, #f8f9ff 0%, #fff 100%);
-}
-
-.suggest-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 12px;
-}
-
-.suggest-label {
-  color: #6366f1;
-  font-size: 10.5px;
-  font-weight: 700;
-  letter-spacing: 1.4px;
-}
-
-.suggest-step {
-  color: #a7b0c3;
-  font-size: 9.5px;
-  letter-spacing: 1px;
-}
-
-.suggest-card strong {
-  display: block;
-  color: #1e293b;
+.head-copy p {
+  max-width: 610px;
+  margin-top: 18px;
+  color: #64748b;
   font-size: 15px;
-  font-weight: 650;
+  line-height: 1.8;
 }
 
-.suggest-card p {
-  margin: 7px 0 14px;
-  color: #6b7588;
-  font-size: 11.5px;
-  line-height: 1.7;
-}
-
-.suggest-btn {
-  height: 34px;
-  border-radius: 8px;
-  font-size: 12px;
-}
-
-.filter-panel {
+.head-side {
+  flex: 0 0 370px;
   display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 16px;
-  padding: 13px 15px;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 20px;
 }
 
-.search-input {
-  width: 280px;
+.head-stats {
+  display: flex;
+  align-items: flex-start;
+  gap: 30px;
 }
 
-.filter-select {
-  width: 156px;
-}
-
-.filter-select-sm {
-  width: 124px;
-}
-
-.filter-total {
-  margin-left: auto;
-  padding-right: 3px;
-  color: #94a3b8;
-  font-size: 11.5px;
-  white-space: nowrap;
-}
-
-.table-panel {
-  overflow: hidden;
-}
-
-.question-table {
-  width: 100%;
-}
-
-.question-table :deep(.el-table__row) {
-  cursor: pointer;
-}
-
-.question-main {
+.head-stats div {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  padding-left: 3px;
 }
 
-.question-title {
+.head-stats strong {
+  color: #0f172a;
+  font-size: 24px;
+  font-weight: 750;
+  letter-spacing: -0.6px;
+}
+
+.head-stats span {
+  color: #94a3b8;
+  font-size: 11px;
+}
+
+.head-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 22px 0 16px;
+  padding: 13px 14px;
+  border: 1px solid #e5e9f2;
+  border-radius: 14px;
+  background: #fff;
+}
+
+.search-input {
+  width: 300px;
+}
+
+.filter-select {
+  width: 160px;
+}
+
+.level-select {
+  width: 128px;
+}
+
+.filter-count {
+  margin-left: auto;
+  color: #94a3b8;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.load-alert {
+  margin-bottom: 14px;
+}
+
+.problem-board {
+  overflow: hidden;
+  border: 1px solid #e5e9f2;
+  border-radius: 16px;
+  background: #fff;
+}
+
+.board-head,
+.problem-row {
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr) 132px 100px 112px;
+  grid-template-areas: 'status title kp level action';
+  align-items: center;
+  gap: 12px;
+}
+
+.board-head {
+  min-height: 44px;
+  padding: 0 22px;
+  border-bottom: 1px solid #eef1f6;
+  background: #fafbfe;
+  color: #94a3b8;
+  font-size: 10.5px;
+  font-weight: 650;
+  letter-spacing: 0.6px;
+}
+
+.col-status { grid-area: status; }
+.col-title { grid-area: title; }
+.col-kp { grid-area: kp; }
+.col-level { grid-area: level; }
+.col-action { grid-area: action; text-align: right; }
+
+.problem-row {
+  width: 100%;
+  min-height: 72px;
+  padding: 0 22px;
+  border: 0;
+  border-bottom: 1px solid #f1f4f9;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.problem-row:last-child {
+  border-bottom: 0;
+}
+
+.problem-row:hover {
+  background: #f8f9ff;
+}
+
+.problem-row.is-solved .title-cell strong {
+  color: #334155;
+}
+
+.status-cell {
+  grid-area: status;
+}
+
+.status-icon {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border: 1.5px solid #dbe1eb;
+  border-radius: 50%;
+  color: #10b981;
+  font-size: 13px;
+}
+
+.status-icon.is-done {
+  border-color: #a7f3d0;
+  background: #ecfdf5;
+}
+
+.title-cell {
+  grid-area: title;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.title-cell strong {
+  overflow: hidden;
   color: #1e293b;
-  font-size: 13.5px;
-  font-weight: 600;
+  font-size: 14px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.question-sub {
+.title-cell em {
   color: #a0a9ba;
   font-size: 10.5px;
+  font-style: normal;
 }
 
-.dot {
-  margin: 0 5px;
+.title-cell em span {
+  margin: 0 4px;
 }
 
-.knowledge-text {
+.kp-cell {
+  grid-area: kp;
   color: #526078;
-  font-size: 12.5px;
-}
-
-.solved-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.status-todo {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  color: #94a3b8;
   font-size: 12px;
 }
 
-.status-dot {
-  width: 6px;
-  height: 6px;
+.level-cell {
+  grid-area: level;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #526078;
+  font-size: 11.5px;
+}
+
+.level-dot {
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   background: #cbd5e1;
 }
 
-.action-arrow {
-  margin-left: 2px;
+.level-dot.is-easy { background: #10b981; }
+.level-dot.is-medium { background: #f59e0b; }
+.level-dot.is-hard { background: #ef4444; }
+
+.action-cell {
+  grid-area: action;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  color: #4f46e5;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.action-cell .el-icon {
   font-size: 11px;
 }
 
-.pagination-wrap {
+.board-loading {
+  padding: 26px 22px;
+}
+
+.board-empty {
+  padding: 30px 0 26px;
+}
+
+.board-foot {
   display: flex;
-  justify-content: center;
-  padding: 17px 16px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 15px 22px;
   border-top: 1px solid #f1f4f9;
 }
 
-@media (max-width: 1100px) {
-  .hero-side {
-    flex-basis: 265px;
+.foot-count {
+  color: #94a3b8;
+  font-size: 11.5px;
+}
+
+@media (max-width: 1000px) {
+  .catalog-head {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 22px;
   }
 
-  .filter-panel {
+  .head-side {
+    flex: none;
+    width: 100%;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .head-copy h1 {
+    font-size: 48px;
+  }
+
+  .filter-bar {
     flex-wrap: wrap;
   }
 
-  .filter-total {
+  .filter-count {
     width: 100%;
     margin-left: 0;
-    padding-left: 3px;
   }
 }
 
 @media (max-width: 760px) {
-  .hero {
+  .catalog-page {
+    width: calc(100% - 28px);
+    padding: 24px 0 44px;
+  }
+
+  .catalog-head {
+    padding-bottom: 22px;
+  }
+
+  .head-copy h1 {
+    font-size: 42px;
+    letter-spacing: -1.6px;
+  }
+
+  .head-copy p {
+    margin-top: 12px;
+    font-size: 13.5px;
+  }
+
+  .head-side {
     flex-direction: column;
-    gap: 20px;
+    align-items: flex-start;
+    gap: 14px;
   }
 
-  .hero-side {
-    flex-basis: auto;
+  .head-stats {
+    width: 100%;
+    justify-content: space-between;
+    gap: 12px;
   }
 
-  .search-input {
+  .head-actions {
     width: 100%;
   }
 
-  .filter-select,
-  .filter-select-sm {
+  .head-actions .el-button {
     flex: 1;
-    width: auto;
+  }
+
+  .filter-bar {
+    padding: 11px;
+  }
+
+  .search-input,
+  .filter-select,
+  .level-select {
+    width: 100%;
+  }
+
+  .filter-bar > .el-button {
+    flex: 1;
+  }
+
+  .board-head {
+    display: none;
+  }
+
+  .problem-row {
+    grid-template-columns: 28px minmax(0, 1fr) auto;
+    grid-template-areas:
+      'status title action'
+      '. level level';
+    gap: 4px 10px;
+    min-height: 86px;
+    padding: 14px 14px;
+  }
+
+  .title-cell strong {
+    font-size: 13.5px;
+  }
+
+  .kp-cell {
+    display: none;
+  }
+
+  .level-cell {
+    font-size: 10.5px;
+  }
+
+  .action-cell {
+    font-size: 10.5px;
+  }
+
+  .board-foot {
+    padding: 12px 14px;
+  }
+
+  .foot-count {
+    display: none;
+  }
+
+  .board-foot .el-pagination {
+    margin: 0 auto;
   }
 }
 </style>

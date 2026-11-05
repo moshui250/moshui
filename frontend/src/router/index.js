@@ -40,6 +40,24 @@ const routes = [
     ]
   },
   {
+    path: '/question',
+    component: () => import('@/layouts/PublicLayout.vue'),
+    children: [
+      {
+        path: '',
+        name: 'question-list',
+        component: () => import('@/views/QuestionListView.vue'),
+        meta: { title: '题库' }
+      },
+      {
+        path: ':id(\\d+)',
+        name: 'question-detail',
+        component: () => import('@/views/QuestionDetailView.vue'),
+        meta: { title: '题目详情' }
+      }
+    ]
+  },
+  {
     path: '/',
     component: () => import('@/layouts/MainLayout.vue'),
     children: [
@@ -50,22 +68,10 @@ const routes = [
         meta: { title: '首页', public: true, layout: 'home' }
       },
       {
-        path: 'question',
-        name: 'question-list',
-        component: () => import('@/views/QuestionListView.vue'),
-        meta: { title: '题库', section: '练习' }
-      },
-      {
         path: 'question/import',
         name: 'question-import',
         component: () => import('@/views/QuestionImportView.vue'),
         meta: { title: '图片录题', section: '练习' }
-      },
-      {
-        path: 'question/:id',
-        name: 'question-detail',
-        component: () => import('@/views/QuestionDetailView.vue'),
-        meta: { title: '题目详情', section: '练习' }
       },
       {
         path: 'question/:id/solve',

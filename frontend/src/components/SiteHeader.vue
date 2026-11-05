@@ -17,6 +17,16 @@
         <router-link to="/question/import">图片录题</router-link>
       </nav>
 
+      <button
+        class="menu-toggle"
+        type="button"
+        aria-label="打开导航"
+        :aria-expanded="menuOpen"
+        @click="menuOpen = !menuOpen"
+      >
+        <span></span><span></span><span></span>
+      </button>
+
       <div class="header-right">
         <span class="health" :class="healthClass">
           <i></i>{{ healthText }}
@@ -41,11 +51,19 @@
         </router-link>
       </div>
     </div>
+
+    <nav v-if="menuOpen" class="mobile-menu" aria-label="移动端导航">
+      <router-link to="/question" @click="menuOpen = false">题库</router-link>
+      <router-link to="/contests" @click="menuOpen = false">竞赛</router-link>
+      <router-link to="/wrong-book" @click="menuOpen = false">错题本</router-link>
+      <router-link to="/dashboard" @click="menuOpen = false">学习看板</router-link>
+      <router-link to="/question/import" @click="menuOpen = false">图片录题</router-link>
+    </nav>
   </header>
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { getHealth } from '@/api/health'
@@ -55,7 +73,15 @@ const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
 const health = ref(null)
+const menuOpen = ref(false)
 let timer = null
+
+watch(
+  () => route.fullPath,
+  () => {
+    menuOpen.value = false
+  }
+)
 
 const initial = computed(() => (userStore.displayName || 'U').slice(0, 1))
 const healthClass = computed(() => {
@@ -278,10 +304,61 @@ onBeforeUnmount(() => {
   box-shadow: 0 8px 16px rgba(79, 70, 229, 0.2);
 }
 
+.menu-toggle {
+  display: none;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid #e1e5ee;
+  border-radius: 9px;
+  background: #fff;
+  cursor: pointer;
+  align-content: center;
+  justify-items: center;
+  gap: 4px;
+}
+
+.menu-toggle span {
+  display: block;
+  width: 15px;
+  height: 1.5px;
+  border-radius: 2px;
+  background: #334155;
+}
+
+.mobile-menu {
+  position: absolute;
+  top: 67px;
+  left: 16px;
+  right: 16px;
+  z-index: 21;
+  display: grid;
+  padding: 8px;
+  border: 1px solid #e5e9f2;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 16px 32px rgba(15, 23, 42, 0.12);
+}
+
+.mobile-menu a {
+  padding: 11px 12px;
+  border-radius: 8px;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.mobile-menu a:hover,
+.mobile-menu a.router-link-active {
+  background: #f4f5ff;
+  color: #4f46e5;
+}
+
 @media (max-width: 900px) {
   .site-inner {
     width: calc(100% - 32px);
-    gap: 14px;
+    gap: 10px;
   }
 
   .brand {
@@ -293,8 +370,15 @@ onBeforeUnmount(() => {
   }
 
   .header-right {
+    order: 2;
     margin-left: auto;
     gap: 8px;
+  }
+
+  .menu-toggle {
+    display: grid;
+    order: 3;
+    flex-shrink: 0;
   }
 
   .health {
