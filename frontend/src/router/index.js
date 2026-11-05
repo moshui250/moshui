@@ -103,11 +103,17 @@ const routes = [
         component: () => import('@/views/HomeView.vue'),
         meta: { title: '首页', public: true, layout: 'home' }
       },
+    ]
+  },
+  {
+    path: '/profile',
+    component: () => import('@/layouts/PublicLayout.vue'),
+    children: [
       {
-        path: 'profile',
+        path: '',
         name: 'profile',
         component: () => import('@/views/ProfileView.vue'),
-        meta: { title: '个人中心', section: '账户' }
+        meta: { title: '个人中心' }
       }
     ]
   },

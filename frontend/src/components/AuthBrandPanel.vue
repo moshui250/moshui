@@ -8,16 +8,23 @@ import { DataAnalysis, MagicStick, Reading } from '@element-plus/icons-vue'
       <div class="brand-mark">&lt;/&gt;</div>
       <div>
         <strong>CodeAgent</strong>
-        <span>智码刷题</span>
+        <span>AI 编程练习</span>
       </div>
     </div>
 
     <div class="auth-hero">
-      <h1>让每一次报错<br /><em>都有回应</em></h1>
+      <div class="auth-eyebrow">AI-NATIVE CODE PRACTICE</div>
+      <h1>把“不会做”<br /><em>拆成下一步。</em></h1>
       <p>
-        面向编程新手的 AI 原生练习平台。从选题、编码到判题失败后的分层提示，
-        把“不会做”拆成下一步可以完成的小事。
+        从一道题开始，先写第一版，再看判题结果。AI 会指出具体哪一行、
+        为什么错，把卡住的地方拆成可以继续的小步骤。
       </p>
+
+      <div class="auth-metrics">
+        <div><strong>15</strong><span>道公开题</span></div>
+        <div><strong>5</strong><span>个知识点</span></div>
+        <div><strong>2</strong><span>种语言</span></div>
+      </div>
 
       <div class="auth-features">
         <div class="auth-feature">
@@ -25,8 +32,8 @@ import { DataAnalysis, MagicStick, Reading } from '@element-plus/icons-vue'
             <el-icon><Reading /></el-icon>
           </div>
           <div>
-            <strong>5 个核心知识点</strong>
-            <span>数组、字符串、链表、递归与排序，每个知识点配套练习。</span>
+            <strong>先写第一版</strong>
+            <span>Monaco 编辑器、C++ / Java 模板与公开样例。</span>
           </div>
         </div>
         <div class="auth-feature">
@@ -34,8 +41,8 @@ import { DataAnalysis, MagicStick, Reading } from '@element-plus/icons-vue'
             <el-icon><MagicStick /></el-icon>
           </div>
           <div>
-            <strong>失败后自动调试</strong>
-            <span>AI 读取判题结果，先定位错误，再逐层给出提示，不直接泄题。</span>
+            <strong>让 AI 指出下一步</strong>
+            <span>定位失败用例和行号，再给提示，不直接给完整代码。</span>
           </div>
         </div>
         <div class="auth-feature">
@@ -43,8 +50,8 @@ import { DataAnalysis, MagicStick, Reading } from '@element-plus/icons-vue'
             <el-icon><DataAnalysis /></el-icon>
           </div>
           <div>
-            <strong>错题与学习轨迹</strong>
-            <span>自动收录错题，按知识点聚合错误率，推荐同类练习。</span>
+            <strong>错题变成同类练习</strong>
+            <span>自动收录错题，按知识点复盘，再推荐三道同类题。</span>
           </div>
         </div>
       </div>
@@ -52,7 +59,7 @@ import { DataAnalysis, MagicStick, Reading } from '@element-plus/icons-vue'
 
     <div class="auth-brand-foot">
       <span class="foot-dot"></span>
-      <span>AI Native · Java 17 · Spring Boot 3.5 · Vue 3</span>
+      <span>CodeAgent · 让每一次报错都有回应</span>
     </div>
   </section>
 </template>

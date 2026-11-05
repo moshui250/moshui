@@ -81,6 +81,10 @@ async function handleSubmit() {
     <AuthBrandPanel />
 
     <section class="auth-panel">
+      <router-link class="auth-back" to="/">
+        <span aria-hidden="true">←</span>
+        返回首页
+      </router-link>
       <div class="auth-card">
         <div class="auth-kicker">WELCOME BACK</div>
         <h2>登录你的练习空间</h2>

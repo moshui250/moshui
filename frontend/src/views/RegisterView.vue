@@ -105,6 +105,10 @@ async function handleSubmit() {
     <AuthBrandPanel />
 
     <section class="auth-panel">
+      <router-link class="auth-back" to="/">
+        <span aria-hidden="true">←</span>
+        返回首页
+      </router-link>
       <div class="auth-card">
         <div class="auth-kicker">CREATE ACCOUNT</div>
         <h2>创建你的练习账号</h2>
