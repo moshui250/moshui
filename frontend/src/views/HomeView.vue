@@ -1,12 +1,12 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
 import * as echarts from 'echarts/core'
 import { BarChart } from 'echarts/charts'
 import { GridComponent, TooltipComponent } from 'echarts/components'
 import { CanvasRenderer } from 'echarts/renderers'
 import {
+  ArrowRight,
   Collection,
   DataAnalysis,
   MagicStick,
@@ -15,6 +15,7 @@ import {
 } from '@element-plus/icons-vue'
 import { getHealth } from '@/api/health'
 import { getHomeSummary } from '@/api/home'
+import { listKnowledgePoints } from '@/api/question'
 import { useUserStore } from '@/store/user'
 
 echarts.use([BarChart, GridComponent, TooltipComponent, CanvasRenderer])
@@ -25,6 +26,7 @@ const userStore = useUserStore()
 const chartRef = ref(null)
 const loading = ref(true)
 const summaryError = ref('')
+const knowledgePoints = ref([])
 let chartInstance = null
 
 const summary = reactive({
@@ -44,42 +46,26 @@ const health = reactive({
 
 const navItems = [
   { label: '题库', path: '/question', icon: Reading },
-  { label: 'AI 调试', action: 'ai', icon: MagicStick },
   { label: '错题本', path: '/wrong-book', icon: Collection },
   { label: '数据看板', path: '/dashboard', icon: DataAnalysis },
   { label: '图片录题', path: '/question/import', icon: Picture }
 ]
 
-const announcements = [
+const steps = [
   {
-    tag: '进行中',
-    tone: 'green',
-    title: '自托管 Piston 判题服务已接入，C++ / Java 均可运行',
-    date: '2026-11-05'
+    index: '01',
+    title: '选一道刚好不会的题',
+    body: '从知识点出发，先选一道难度合适的题。不会做没关系，卡住才是练习的开始。'
   },
   {
-    tag: '置顶',
-    tone: 'amber',
-    title: '平台使用指南：从选题、提交到 AI 分层调试',
-    date: '2026-11-03'
+    index: '02',
+    title: '写下第一版代码',
+    body: '用 C++ 或 Java 提交。判题会告诉你通过了几个用例，以及第一个失败在哪里。'
   },
   {
-    tag: '重要',
-    tone: 'red',
-    title: '图片识别录题上线：识别结果需核对后才会入库',
-    date: '2026-11-02'
-  },
-  {
-    tag: '公告',
-    tone: 'gray',
-    title: '题库已覆盖 5 个知识点、15 道公共题',
-    date: '2026-10-28'
-  },
-  {
-    tag: '公告',
-    tone: 'gray',
-    title: 'AI 调试教练支持工具调用时间线回放',
-    date: '2026-10-20'
+    index: '03',
+    title: '让 AI 指出下一步',
+    body: 'AI 读取错误用例，先定位行号和原因，再给分层提示。不会一上来就甩完整答案。'
   }
 ]
 
@@ -87,10 +73,10 @@ const initial = computed(() => (userStore.displayName || 'U').slice(0, 1).toUppe
 
 const healthOk = computed(() => health.status === 'UP' && health.db === 'UP')
 const healthText = computed(() => {
-  if (health.status === 'CHECKING') return '正在检查服务状态'
+  if (health.status === 'CHECKING') return '正在检查服务'
   if (health.status === 'OFFLINE') return '服务连接异常'
   if (health.db !== 'UP') return '数据库暂未连接'
-  return '系统运行正常 · 服务器响应良好'
+  return '服务正常'
 })
 
 const passRateText = computed(() => {
@@ -98,14 +84,11 @@ const passRateText = computed(() => {
   return `${(Number(summary.passRate || 0) * 100).toFixed(1)}%`
 })
 
-const progressWidth = computed(() => {
-  if (!summary.hasData) return '0%'
-  return `${Math.min(100, Number(summary.passRate || 0) * 100)}%`
-})
-
 const weeklyTotal = computed(() =>
   (summary.weekly || []).reduce((sum, item) => sum + Number(item.submitCount || 0), 0)
 )
+
+const statValue = (value) => (loading.value ? '—' : value)
 
 async function loadHealth() {
   try {
@@ -141,6 +124,15 @@ async function loadSummary() {
   }
 }
 
+async function loadKnowledgePoints() {
+  try {
+    const data = await listKnowledgePoints()
+    knowledgePoints.value = Array.isArray(data) ? data.slice(0, 5) : []
+  } catch {
+    knowledgePoints.value = []
+  }
+}
+
 function renderChart() {
   if (!chartRef.value) return
   if (!chartInstance) {
@@ -153,15 +145,15 @@ function renderChart() {
   const acData = weekly.map((item) => Number(item.acCount || 0))
 
   chartInstance.setOption({
-    animationDuration: 420,
-    grid: { left: 48, right: 28, top: 28, bottom: 34 },
+    animationDuration: 320,
+    grid: { left: 38, right: 16, top: 18, bottom: 28 },
     tooltip: {
       trigger: 'axis',
       axisPointer: { type: 'shadow' },
       formatter: (params) => {
         const day = params[0]?.axisValue || ''
-        const submit = params.find((item) => item.seriesName === '提交数')?.value ?? 0
-        const ac = params.find((item) => item.seriesName === '通过数')?.value ?? 0
+        const submit = params.find((item) => item.seriesName === '提交')?.value ?? 0
+        const ac = params.find((item) => item.seriesName === '通过')?.value ?? 0
         return `${day}<br/>提交 ${submit} 次<br/>通过 ${ac} 次`
       }
     },
@@ -170,30 +162,30 @@ function renderChart() {
       type: 'category',
       data: labels,
       axisTick: { show: false },
-      axisLine: { lineStyle: { color: '#e3ddd2' } },
-      axisLabel: { color: '#6e6559', fontSize: 12 }
+      axisLine: { lineStyle: { color: '#e2e8f0' } },
+      axisLabel: { color: '#94a3b8', fontSize: 11 }
     },
     yAxis: {
       type: 'value',
       min: 0,
       minInterval: 1,
-      axisLabel: { color: '#9a9185', fontSize: 11 },
-      splitLine: { lineStyle: { color: '#f0ece5' } }
+      axisLabel: { color: '#94a3b8', fontSize: 11 },
+      splitLine: { lineStyle: { color: '#f1f5f9' } }
     },
     series: [
       {
-        name: '提交数',
+        name: '提交',
         type: 'bar',
         data: submitData,
-        barWidth: 26,
-        itemStyle: { color: '#c58a3a', borderRadius: [3, 3, 0, 0] }
+        barWidth: 14,
+        itemStyle: { color: '#4f46e5', borderRadius: [4, 4, 0, 0] }
       },
       {
-        name: '通过数',
+        name: '通过',
         type: 'bar',
         data: acData,
-        barWidth: 26,
-        itemStyle: { color: '#4f8a63', borderRadius: [3, 3, 0, 0] }
+        barWidth: 14,
+        itemStyle: { color: '#10b981', borderRadius: [4, 4, 0, 0] }
       }
     ]
   })
@@ -208,15 +200,6 @@ function go(path) {
   if (path) router.push(path)
 }
 
-function handleNav(item) {
-  if (item.action === 'ai') {
-    ElMessage.info('在答题页提交错误代码后，AI 调试教练会自动分析；也可以手动点「AI 调试」')
-    router.push('/question')
-    return
-  }
-  go(item.path)
-}
-
 function goLogin() {
   router.push({ name: 'login', query: { redirect: '/question' } })
 }
@@ -225,12 +208,16 @@ function goWorkspace() {
   router.push('/question')
 }
 
+function goWrongBook() {
+  router.push('/wrong-book')
+}
+
 onMounted(async () => {
-  // 首页放行早于路由守卫，登录用户需要在这里补一次用户信息。
+  // 首页早于路由守卫放行，登录用户需要在这里补一次用户信息。
   if (userStore.token && !userStore.user) {
     userStore.fetchMe().catch(() => {})
   }
-  await Promise.all([loadHealth(), loadSummary()])
+  await Promise.all([loadHealth(), loadSummary(), loadKnowledgePoints()])
   window.addEventListener('resize', handleResize)
 })
 
@@ -242,119 +229,212 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="home-page">
-    <header class="oj-header">
-      <button class="brand-block" type="button" @click="go('/')">
-        <span class="brand-icon">&lt;/&gt;</span>
-        <span class="brand-text">
+    <header class="site-head">
+      <button class="brand" type="button" @click="go('/')">
+        <span class="brand-mark">&lt;/&gt;</span>
+        <span class="brand-name">
           <strong>CodeAgent</strong>
-          <small>OJ ONLINE JUDGE</small>
+          <small>AI 编程练习</small>
         </span>
       </button>
 
-      <div class="title-block">
-        <h1>在线评测平台</h1>
-        <p>CODE · PRACTICE · GROW</p>
-      </div>
-
-      <div class="trophy" aria-hidden="true">🏆</div>
-    </header>
-
-    <nav class="oj-nav" aria-label="主导航">
-      <div class="nav-inner">
+      <nav class="site-nav" aria-label="主导航">
         <button
           v-for="item in navItems"
           :key="item.label"
-          class="nav-item"
+          class="nav-link"
           type="button"
-          @click="handleNav(item)"
+          @click="go(item.path)"
         >
-          <el-icon><component :is="item.icon" /></el-icon>
-          <span>{{ item.label }}</span>
+          {{ item.label }}
         </button>
+      </nav>
 
-        <div class="nav-spacer"></div>
-
+      <div class="head-actions">
+        <span class="health-pill" :class="{ warn: !healthOk }">
+          <i></i>{{ healthText }}
+        </span>
         <button v-if="userStore.isLoggedIn" class="user-pill" type="button" @click="goWorkspace">
-          <span class="user-avatar">{{ initial }}</span>
-          <span class="user-label">{{ userStore.displayName || '已登录' }}</span>
-          <span class="user-cta">进入题库 →</span>
+          <span class="avatar">{{ initial }}</span>
+          <span class="user-name">{{ userStore.displayName || '已登录' }}</span>
         </button>
-        <button v-else class="login-pill" type="button" @click="goLogin">登录</button>
+        <button v-else class="login-link" type="button" @click="goLogin">
+          登录 <ArrowRight />
+        </button>
       </div>
-    </nav>
+    </header>
 
-    <main class="oj-main">
-      <section class="status-strip" :class="{ 'is-warn': !healthOk }">
-        <div class="status-copy">
-          <span class="status-dot"></span>
-          <strong>{{ healthText }}</strong>
-          <span class="status-divider">·</span>
-          <span>{{ summary.hasData ? `近一周 ${weeklyTotal} 次提交` : '等待第一份提交' }}</span>
-        </div>
-        <div class="status-meter" aria-hidden="true">
-          <span :style="{ width: progressWidth }"></span>
-        </div>
-        <strong class="status-rate">{{ passRateText }}</strong>
-      </section>
-
-      <section class="stats-strip" aria-label="平台概览">
-        <span><strong>{{ summary.publicQuestions }}</strong> 道公共题</span>
-        <span><strong>{{ summary.knowledgePoints }}</strong> 个知识点</span>
-        <span><strong>{{ summary.totalSubmits }}</strong> 次全站提交</span>
-        <span v-if="summary.hasData"><strong>{{ summary.acSubmits }}</strong> 次通过</span>
-      </section>
-
-      <section class="panel chart-panel">
-        <div class="panel-title-row">
-          <div class="panel-title">
-            <span class="title-accent"></span>
+    <main class="page">
+      <section class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow"><span></span> AI-NATIVE CODE PRACTICE</p>
+          <h1>把“不会做”<br />拆成<span class="mark">下一步</span>。</h1>
+          <p class="lede">
+            CodeAgent 陪新手从一道题开始：先写第一版，再读判题结果，
+            最后由 AI 指出具体哪一行、为什么错。不直接给完整答案。
+          </p>
+          <div class="hero-actions">
+            <button class="btn-primary" type="button" @click="goWorkspace">
+              从题库开始 <ArrowRight />
+            </button>
+            <button class="btn-ghost" type="button" @click="goWrongBook">
+              看看我的错题
+            </button>
+          </div>
+          <dl class="hero-stats">
             <div>
-              <h2>评测速度统计</h2>
-              <p>本周提交与通过数量 · 周一至周日</p>
+              <dt>{{ statValue(summary.publicQuestions) }}</dt>
+              <dd>道公共题</dd>
+            </div>
+            <div>
+              <dt>{{ statValue(summary.knowledgePoints) }}</dt>
+              <dd>个知识点</dd>
+            </div>
+            <div>
+              <dt>{{ statValue(summary.totalSubmits) }}</dt>
+              <dd>次全站提交</dd>
+            </div>
+          </dl>
+        </div>
+
+        <div class="hero-visual" aria-label="AI 调试界面预览">
+          <div class="preview-card">
+            <div class="preview-head">
+              <span class="window-dots"><i></i><i></i><i></i></span>
+              <span class="file-name">Main.java</span>
+              <span class="preview-label">界面预览</span>
+            </div>
+            <div class="code-block">
+              <div class="code-line"><span>1</span><code>int sum = 0;</code></div>
+              <div class="code-line"><span>2</span><code>for (int i = 1; i &lt;= n; i++) {</code></div>
+              <div class="code-line is-error"><span>3</span><code>&nbsp;&nbsp;sum += a[i];</code></div>
+              <div class="code-line"><span>4</span><code>}</code></div>
+              <div class="code-line"><span>5</span><code>System.out.println(sum);</code></div>
+            </div>
+            <div class="fail-line">
+              <span class="fail-dot"></span>
+              用例 1 未通过 · 期望 15，实际 14
             </div>
           </div>
-          <div class="legend">
-            <span><i class="legend-dot submit"></i>提交数</span>
-            <span><i class="legend-dot ac"></i>通过数</span>
+
+          <div class="coach-card">
+            <div class="coach-head">
+              <span class="coach-icon"><MagicStick /></span>
+              <strong>AI 调试教练</strong>
+              <span class="coach-count">02 / 03</span>
+            </div>
+            <p>
+              第 3 行：循环从 <code>i = 1</code> 开始，并且条件写到
+              <code>i &lt;= n</code>，会访问 <code>a[n]</code>，导致数组越界。
+            </p>
+            <div class="coach-tools">
+              <span>locate_error</span>
+              <span>retrieve_knowledge</span>
+            </div>
+            <div class="coach-foot">先按提示自己改，需要时再看参考代码。</div>
           </div>
         </div>
-
-        <div v-if="loading" class="chart-loading">正在读取评测数据…</div>
-        <div v-else-if="!summary.hasData" class="chart-empty">
-          <strong>本周还没有提交</strong>
-          <span>去题库完成第一道题，这里会出现真实的提交曲线。</span>
-          <button type="button" class="text-link" @click="goWorkspace">去题库 →</button>
-        </div>
-        <div ref="chartRef" class="chart-canvas" :class="{ 'is-empty': !summary.hasData }"></div>
-
-        <p v-if="summaryError" class="chart-error">{{ summaryError }}，当前展示空数据。</p>
       </section>
 
-      <section class="panel notice-panel">
-        <div class="panel-title-row">
-          <div class="panel-title">
-            <span class="title-accent"></span>
+      <section class="loop">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow"><span></span> HOW IT WORKS</p>
+            <h2>从一道题，走完一次闭环</h2>
+          </div>
+          <p class="section-note">不追求一次做对，追求每次都知道下一步做什么。</p>
+        </div>
+
+        <div class="step-list">
+          <article v-for="step in steps" :key="step.index" class="step">
+            <span class="step-index">{{ step.index }}</span>
+            <h3>{{ step.title }}</h3>
+            <p>{{ step.body }}</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="insight-grid">
+        <article class="panel chart-panel">
+          <div class="panel-head">
             <div>
-              <h2>公告</h2>
-              <p>平台更新与使用提示</p>
+              <p class="panel-kicker">THIS WEEK</p>
+              <h2>本周练习</h2>
+              <p class="panel-desc">只统计最近七天，不制造不存在的学习记录。</p>
+            </div>
+            <div class="chart-total">
+              <strong>{{ summary.hasData ? weeklyTotal : '—' }}</strong>
+              <span>次提交</span>
             </div>
           </div>
-          <span class="notice-count">{{ announcements.length }} 条</span>
-        </div>
 
-        <ul class="notice-list">
-          <li v-for="item in announcements" :key="item.title" class="notice-row">
-            <span class="notice-tag" :class="`tone-${item.tone}`">{{ item.tag }}</span>
-            <span class="notice-title">{{ item.title }}</span>
-            <time>{{ item.date }}</time>
-          </li>
-        </ul>
+          <div v-if="loading" class="chart-state">正在读取本周数据…</div>
+          <div v-else-if="!summary.hasData" class="chart-state">
+            <strong>这一周还没有提交</strong>
+            <span>去题库写下第一版代码，这里就会出现你的练习节奏。</span>
+          </div>
+          <div ref="chartRef" class="chart-canvas" :class="{ 'is-empty': !summary.hasData || loading }"></div>
+
+          <div class="chart-foot">
+            <div class="legend">
+              <span><i class="legend-dot submit"></i>提交</span>
+              <span><i class="legend-dot ac"></i>通过</span>
+            </div>
+            <span v-if="summary.hasData" class="pass-copy">全站通过率 {{ passRateText }}</span>
+            <span v-else class="pass-copy">还没有足够的提交</span>
+          </div>
+          <p v-if="summaryError" class="chart-error">{{ summaryError }}，当前展示空数据。</p>
+        </article>
+
+        <aside class="panel knowledge-panel">
+          <div class="panel-head">
+            <div>
+              <p class="panel-kicker">KNOWLEDGE MAP</p>
+              <h2>知识地图</h2>
+              <p class="panel-desc">五个核心知识点，按顺序练。</p>
+            </div>
+            <span class="count-badge">{{ summary.knowledgePoints || knowledgePoints.length }}</span>
+          </div>
+
+          <div v-if="knowledgePoints.length" class="knowledge-list">
+            <button
+              v-for="(item, index) in knowledgePoints"
+              :key="item.id || item.code"
+              class="knowledge-row"
+              type="button"
+              @click="goWorkspace"
+            >
+              <span class="knowledge-index">{{ String(index + 1).padStart(2, '0') }}</span>
+              <span class="knowledge-copy">
+                <strong>{{ item.name }}</strong>
+                <small>{{ item.description || '从一个知识点开始练习' }}</small>
+              </span>
+              <span class="knowledge-count">{{ item.questionCount ?? 0 }} 题</span>
+            </button>
+          </div>
+          <div v-else class="knowledge-empty">知识点暂时未加载。</div>
+
+          <button class="panel-link" type="button" @click="goWorkspace">
+            查看全部题目 <ArrowRight />
+          </button>
+        </aside>
       </section>
 
-      <footer class="home-footer">
-        <span>CodeAgent · 让每一次报错都有回应</span>
-        <span class="footer-sep">/</span>
-        <span>AI 原生编程练习平台</span>
+      <section class="closing">
+        <div>
+          <p class="closing-kicker">READY WHEN YOU ARE</p>
+          <h2>选一道题，先写下第一版。</h2>
+          <p>不需要准备好才来。卡住的地方，才是这次练习真正开始的地方。</p>
+        </div>
+        <button class="btn-light" type="button" @click="goWorkspace">
+          进入题库 <ArrowRight />
+        </button>
+      </section>
+
+      <footer class="site-foot">
+        <span class="foot-brand">CodeAgent <em>智码刷题</em></span>
+        <span class="foot-copy">让每一次报错都有回应。</span>
+        <span class="foot-status" :class="{ warn: !healthOk }"><i></i>{{ healthText }}</span>
       </footer>
     </main>
   </div>
@@ -362,26 +442,38 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .home-page {
+  --h-ink: #0f172a;
+  --h-text: #475569;
+  --h-muted: #64748b;
+  --h-line: #e2e8f0;
+  --h-primary: #4f46e5;
+  --h-primary-soft: #eef2ff;
+  --h-mint: #10b981;
+  --h-surface: #ffffff;
   min-height: 100vh;
-  background: #f6f2ea;
-  color: #292722;
+  background: #f7f8fc;
+  color: var(--h-ink);
 }
 
-.oj-header {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: center;
-  gap: 24px;
-  width: min(1280px, calc(100% - 48px));
-  margin: 0 auto;
-  padding: 26px 0 20px;
-}
-
-.brand-block {
+.site-head {
+  position: sticky;
+  top: 0;
+  z-index: 20;
   display: flex;
   align-items: center;
-  gap: 12px;
-  justify-self: start;
+  gap: 32px;
+  min-height: 72px;
+  padding: 0 max(24px, calc((100vw - 1200px) / 2));
+  border-bottom: 1px solid rgba(226, 232, 240, 0.9);
+  background: rgba(247, 248, 252, 0.94);
+  backdrop-filter: blur(12px);
+}
+
+.brand {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 10px;
   padding: 0;
   border: 0;
   background: transparent;
@@ -390,621 +482,968 @@ onBeforeUnmount(() => {
   text-align: left;
 }
 
-.brand-icon {
+.brand-mark {
   display: grid;
   place-items: center;
-  width: 58px;
-  height: 58px;
-  border-radius: 4px;
-  background: #1e2025;
-  color: #f6f2ea;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--h-primary);
+  color: #fff;
   font-family: 'JetBrains Mono', Consolas, monospace;
-  font-size: 17px;
+  font-size: 13px;
   font-weight: 700;
-  letter-spacing: -2px;
+  letter-spacing: -1px;
 }
 
-.brand-text {
+.brand-name {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 1px;
 }
 
-.brand-text strong {
-  font-family: Georgia, 'Times New Roman', 'Songti SC', serif;
-  font-size: 27px;
-  font-weight: 700;
-  letter-spacing: -0.8px;
+.brand-name strong {
+  font-size: 16px;
+  font-weight: 750;
+  letter-spacing: -0.3px;
 }
 
-.brand-text small {
-  color: #786f63;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 1.4px;
+.brand-name small {
+  color: #94a3b8;
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.8px;
 }
 
-.title-block {
-  text-align: center;
-}
-
-.title-block h1 {
-  font-family: 'Songti SC', 'Noto Serif SC', 'STSong', serif;
-  font-size: 34px;
-  font-weight: 800;
-  letter-spacing: 2px;
-  line-height: 1.15;
-}
-
-.title-block p {
-  margin-top: 7px;
-  color: #b5532f;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 3px;
-}
-
-.trophy {
-  display: grid;
-  place-items: center;
-  justify-self: end;
-  width: 64px;
-  height: 64px;
-  border: 2px solid #b5532f;
-  border-radius: 50%;
-  background: #fffaf2;
-  font-size: 28px;
-  box-shadow: 0 0 0 5px #f6f2ea, 0 0 0 7px #d8b7a2;
-}
-
-.oj-nav {
-  background: #202228;
-  color: #f2ede3;
-}
-
-.nav-inner {
+.site-nav {
   display: flex;
   align-items: center;
-  gap: 4px;
-  width: min(1220px, calc(100% - 48px));
-  min-height: 68px;
-  margin: 0 auto;
+  gap: 2px;
 }
 
-.nav-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  height: 42px;
-  padding: 0 17px;
+.nav-link {
+  height: 34px;
+  padding: 0 12px;
   border: 0;
-  border-radius: 3px;
+  border-radius: 8px;
   background: transparent;
-  color: #ddd7cc;
-  font-size: 14px;
+  color: #64748b;
+  font-size: 13px;
   cursor: pointer;
-  transition: background 0.16s ease, color 0.16s ease;
 }
 
-.nav-item .el-icon {
-  font-size: 19px;
+.nav-link:hover {
+  background: #eef2ff;
+  color: var(--h-primary);
 }
 
-.nav-item:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: #fff;
+.head-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
 }
 
-.nav-spacer {
-  flex: 1;
-}
-
-.user-pill,
-.login-pill {
+.health-pill,
+.foot-status {
   display: inline-flex;
   align-items: center;
-  gap: 9px;
-  height: 38px;
-  border: 0;
-  border-radius: 999px;
+  gap: 6px;
+  color: #64748b;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.health-pill i,
+.foot-status i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--h-mint);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.12);
+}
+
+.health-pill.warn i,
+.foot-status.warn i {
+  background: #f59e0b;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.12);
+}
+
+.login-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 34px;
+  padding: 0 13px;
+  border: 1px solid #c7d2fe;
+  border-radius: 8px;
+  background: #fff;
+  color: var(--h-primary);
+  font-size: 12.5px;
+  font-weight: 600;
   cursor: pointer;
 }
 
-.login-pill {
-  padding: 0 27px;
-  background: #c4552f;
-  color: #fff;
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.login-pill:hover {
-  background: #aa4425;
+.login-link svg {
+  width: 14px;
+  height: 14px;
 }
 
 .user-pill {
-  padding: 0 13px 0 5px;
-  background: #f7f2e8;
-  color: #292722;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 34px;
+  padding: 0 10px 0 3px;
+  border: 1px solid var(--h-line);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--h-ink);
+  cursor: pointer;
 }
 
-.user-avatar {
+.avatar {
   display: grid;
   place-items: center;
-  width: 29px;
-  height: 29px;
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
-  background: #c4552f;
-  color: #fff;
-  font-size: 12px;
+  background: var(--h-primary-soft);
+  color: var(--h-primary);
+  font-size: 11px;
   font-weight: 700;
 }
 
-.user-label {
-  max-width: 120px;
+.user-name {
+  max-width: 110px;
   overflow: hidden;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.user-cta {
-  color: #9b4b2f;
-  font-size: 11px;
+.page {
+  width: min(1200px, calc(100% - 48px));
+  margin: 0 auto;
+  padding: 66px 0 26px;
 }
 
-.oj-main {
-  width: min(1220px, calc(100% - 48px));
-  margin: 22px auto 0;
-  padding-bottom: 30px;
-}
-
-.status-strip {
-  display: flex;
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(420px, 0.95fr);
+  gap: 64px;
   align-items: center;
-  gap: 16px;
-  min-height: 54px;
-  padding: 0 20px;
-  border-radius: 5px;
-  background: #202228;
-  color: #f1ece2;
 }
 
-.status-copy {
+.eyebrow {
   display: flex;
   align-items: center;
   gap: 8px;
-  flex: 0 0 auto;
-  font-size: 12px;
+  color: #6366f1;
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 1.7px;
 }
 
-.status-copy strong {
+.eyebrow span {
+  width: 18px;
+  height: 1px;
+  background: currentColor;
+}
+
+.hero h1 {
+  margin-top: 18px;
+  color: var(--h-ink);
+  font-size: clamp(42px, 5.2vw, 64px);
+  font-weight: 750;
+  letter-spacing: -3px;
+  line-height: 1.08;
+}
+
+.hero h1 .mark {
+  position: relative;
+  color: var(--h-primary);
+  white-space: nowrap;
+}
+
+.hero h1 .mark::after {
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  left: 2px;
+  height: 9px;
+  border-radius: 2px;
+  background: #c7d2fe;
+  content: '';
+  opacity: 0.7;
+  z-index: -1;
+}
+
+.lede {
+  max-width: 540px;
+  margin-top: 22px;
+  color: var(--h-text);
+  font-size: 15px;
+  line-height: 1.85;
+}
+
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 28px;
+}
+
+.btn-primary,
+.btn-ghost,
+.btn-light {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  height: 42px;
+  padding: 0 17px;
+  border-radius: 9px;
   font-size: 13px;
   font-weight: 600;
+  cursor: pointer;
 }
 
-.status-copy span:not(.status-dot):not(.status-divider) {
-  color: #b4aea3;
+.btn-primary {
+  border: 1px solid var(--h-primary);
+  background: var(--h-primary);
+  color: #fff;
 }
 
-.status-dot {
-  width: 11px;
-  height: 11px;
-  border-radius: 50%;
-  background: #4b9b68;
-  box-shadow: 0 0 0 3px rgba(75, 155, 104, 0.2);
+.btn-primary:hover {
+  background: #4338ca;
+  border-color: #4338ca;
 }
 
-.status-strip.is-warn .status-dot {
-  background: #c58a3a;
+.btn-primary svg,
+.btn-light svg {
+  width: 15px;
+  height: 15px;
 }
 
-.status-divider {
-  color: #6f6a61;
+.btn-ghost {
+  border: 1px solid var(--h-line);
+  background: #fff;
+  color: var(--h-text);
 }
 
-.status-meter {
-  flex: 1;
-  height: 8px;
+.btn-ghost:hover {
+  border-color: #c7d2fe;
+  color: var(--h-primary);
+}
+
+.hero-stats {
+  display: flex;
+  gap: 0;
+  margin: 34px 0 0;
+}
+
+.hero-stats > div {
+  min-width: 104px;
+  padding-right: 24px;
+}
+
+.hero-stats > div + div {
+  padding-left: 24px;
+  border-left: 1px solid var(--h-line);
+}
+
+.hero-stats dt {
+  color: var(--h-ink);
+  font-size: 22px;
+  font-weight: 750;
+  letter-spacing: -0.8px;
+}
+
+.hero-stats dd {
+  margin: 3px 0 0;
+  color: #94a3b8;
+  font-size: 11px;
+}
+
+.hero-visual {
+  position: relative;
+  padding: 4px 0 32px 18px;
+}
+
+.preview-card {
+  position: relative;
+  z-index: 1;
   overflow: hidden;
-  border-radius: 999px;
-  background: #45464b;
+  border: 1px solid #dfe5ee;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 14px 40px rgba(15, 23, 42, 0.07);
 }
 
-.status-meter span {
-  display: block;
-  height: 100%;
-  border-radius: inherit;
-  background: linear-gradient(90deg, #4b9b68, #5caa75);
-  transition: width 0.5s ease;
+.preview-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 40px;
+  padding: 0 14px;
+  border-bottom: 1px solid #eef2f7;
+  background: #fbfcfe;
 }
 
-.status-rate {
-  min-width: 52px;
-  font-size: 14px;
+.window-dots {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.window-dots i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #dbe3ee;
+}
+
+.window-dots i:first-child {
+  background: #fda4af;
+}
+
+.file-name {
+  color: #94a3b8;
+  font-family: 'JetBrains Mono', Consolas, monospace;
+  font-size: 10px;
+}
+
+.preview-label {
+  margin-left: auto;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: #f1f5f9;
+  color: #94a3b8;
+  font-size: 9px;
+}
+
+.code-block {
+  padding: 17px 16px 14px;
+  background: #fff;
+  font-family: 'JetBrains Mono', Consolas, monospace;
+  font-size: 11px;
+  line-height: 2.05;
+}
+
+.code-line {
+  display: flex;
+  gap: 15px;
+  padding: 0 5px;
+  border-radius: 3px;
+  color: #475569;
+  white-space: pre;
+}
+
+.code-line span {
+  width: 14px;
+  color: #cbd5e1;
+  font-size: 9px;
+  text-align: right;
+  user-select: none;
+}
+
+.code-line code {
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  font-family: inherit;
+}
+
+.code-line.is-error {
+  background: #fff1f2;
+  color: #be123c;
+}
+
+.code-line.is-error span {
+  color: #fda4af;
+}
+
+.fail-line {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 14px 14px;
+  padding: 8px 10px;
+  border: 1px solid #fecdd3;
+  border-radius: 6px;
+  background: #fff7f8;
+  color: #9f1239;
+  font-size: 10px;
+}
+
+.fail-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #e11d48;
+}
+
+.coach-card {
+  position: relative;
+  z-index: 2;
+  width: calc(100% - 28px);
+  margin: -6px 0 0 28px;
+  padding: 15px 16px 13px;
+  border: 1px solid #c7d2fe;
+  border-radius: 12px;
+  background: #f8faff;
+  box-shadow: 0 12px 30px rgba(79, 70, 229, 0.1);
+}
+
+.coach-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #312e81;
+  font-size: 11px;
+}
+
+.coach-icon {
+  display: grid;
+  place-items: center;
+  width: 21px;
+  height: 21px;
+  border-radius: 6px;
+  background: #e0e7ff;
+  color: var(--h-primary);
+}
+
+.coach-icon svg {
+  width: 13px;
+  height: 13px;
+}
+
+.coach-count {
+  margin-left: auto;
+  color: #a5b4fc;
+  font-size: 9px;
+}
+
+.coach-card p {
+  margin-top: 9px;
+  color: #4338ca;
+  font-size: 10.5px;
+  line-height: 1.75;
+}
+
+.coach-card p code {
+  padding: 1px 3px;
+  border-radius: 3px;
+  background: #eef2ff;
+  font-family: 'JetBrains Mono', Consolas, monospace;
+  font-size: 9.5px;
+}
+
+.coach-tools {
+  display: flex;
+  gap: 5px;
+  margin-top: 10px;
+}
+
+.coach-tools span {
+  padding: 2px 6px;
+  border: 1px solid #dbe3f5;
+  border-radius: 4px;
+  background: #fff;
+  color: #64748b;
+  font-family: 'JetBrains Mono', Consolas, monospace;
+  font-size: 8.5px;
+}
+
+.coach-foot {
+  margin-top: 9px;
+  padding-top: 8px;
+  border-top: 1px dashed #dbe3f5;
+  color: #94a3b8;
+  font-size: 9px;
+}
+
+.loop {
+  margin-top: 78px;
+  padding-top: 30px;
+  border-top: 1px solid var(--h-line);
+}
+
+.section-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 28px;
+}
+
+.section-head h2 {
+  margin-top: 9px;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.8px;
+}
+
+.section-note {
+  max-width: 330px;
+  color: #94a3b8;
+  font-size: 11.5px;
+  line-height: 1.7;
   text-align: right;
 }
 
-.stats-strip {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px 26px;
-  padding: 15px 2px 13px;
-  color: #857b6e;
-  font-size: 12px;
+.step-list {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  margin-top: 28px;
+  border-top: 1px solid var(--h-line);
 }
 
-.stats-strip strong {
-  margin-right: 3px;
-  color: #332f29;
-  font-size: 15px;
+.step {
+  padding: 22px 26px 8px 0;
+}
+
+.step + .step {
+  padding-left: 26px;
+  border-left: 1px solid var(--h-line);
+}
+
+.step-index {
+  color: #c7d2fe;
+  font-family: 'JetBrains Mono', Consolas, monospace;
+  font-size: 11px;
   font-weight: 700;
 }
 
+.step h3 {
+  margin-top: 9px;
+  font-size: 15px;
+  font-weight: 650;
+  letter-spacing: -0.2px;
+}
+
+.step p {
+  max-width: 280px;
+  margin-top: 8px;
+  color: var(--h-muted);
+  font-size: 12px;
+  line-height: 1.75;
+}
+
+.insight-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.65fr);
+  gap: 18px;
+  margin-top: 54px;
+}
+
 .panel {
-  border: 1px solid #e3ddd2;
-  border-radius: 7px;
-  background: #fffdf9;
-  box-shadow: 0 2px 8px rgba(75, 59, 38, 0.04);
+  border: 1px solid var(--h-line);
+  border-radius: 14px;
+  background: var(--h-surface);
 }
 
 .chart-panel {
   position: relative;
-  padding: 20px 22px 16px;
+  padding: 22px 22px 16px;
 }
 
-.panel-title-row {
+.panel-head {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 18px;
 }
 
-.panel-title {
-  display: flex;
-  align-items: flex-start;
-  gap: 11px;
+.panel-kicker {
+  color: #a5b4fc;
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: 1.4px;
 }
 
-.title-accent {
-  width: 4px;
-  height: 25px;
-  margin-top: 1px;
-  border-radius: 2px;
-  background: #c4552f;
+.panel-head h2 {
+  margin-top: 6px;
+  color: var(--h-ink);
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.4px;
 }
 
-.panel-title h2 {
-  font-family: 'Songti SC', 'Noto Serif SC', 'STSong', serif;
-  font-size: 20px;
-  font-weight: 800;
-  letter-spacing: 0.4px;
-}
-
-.panel-title p {
+.panel-desc {
   margin-top: 5px;
-  color: #9a9185;
-  font-size: 11px;
+  color: #94a3b8;
+  font-size: 10.5px;
+  line-height: 1.5;
+}
+
+.chart-total {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  color: #94a3b8;
+  font-size: 10px;
+}
+
+.chart-total strong {
+  color: var(--h-ink);
+  font-size: 24px;
+  font-weight: 750;
+  letter-spacing: -1px;
+}
+
+.chart-canvas {
+  height: 238px;
+  margin-top: 12px;
+}
+
+.chart-canvas.is-empty {
+  opacity: 0.35;
+}
+
+.chart-state {
+  position: absolute;
+  top: 128px;
+  left: 50%;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  width: min(300px, 80%);
+  color: #94a3b8;
+  font-size: 10.5px;
+  line-height: 1.6;
+  text-align: center;
+  transform: translateX(-50%);
+}
+
+.chart-state strong {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.chart-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #f1f5f9;
 }
 
 .legend {
   display: flex;
-  gap: 18px;
-  align-items: center;
-  color: #756c60;
-  font-size: 12px;
+  gap: 14px;
+  color: #94a3b8;
+  font-size: 10px;
 }
 
 .legend span {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
 }
 
 .legend-dot {
-  width: 12px;
-  height: 12px;
+  width: 6px;
+  height: 6px;
   border-radius: 2px;
 }
 
 .legend-dot.submit {
-  background: #c58a3a;
+  background: var(--h-primary);
 }
 
 .legend-dot.ac {
-  background: #4f8a63;
+  background: var(--h-mint);
 }
 
-.chart-canvas {
-  width: 100%;
-  height: 336px;
-  margin-top: 5px;
-}
-
-.chart-canvas.is-empty {
-  opacity: 0.18;
-}
-
-.chart-loading,
-.chart-empty {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 336px;
-  color: #9a9185;
-  font-size: 13px;
-}
-
-.chart-empty {
-  flex-direction: column;
-  gap: 7px;
-  position: absolute;
-  width: calc(100% - 44px);
-  pointer-events: none;
-}
-
-.chart-empty strong {
-  color: #514a40;
-  font-size: 15px;
-}
-
-.chart-empty span {
-  font-size: 12px;
-}
-
-.chart-empty .text-link {
-  margin-top: 8px;
-  border: 0;
-  background: transparent;
-  color: #b5532f;
-  font-size: 12px;
-  cursor: pointer;
-  pointer-events: auto;
+.pass-copy {
+  color: #94a3b8;
+  font-size: 10px;
 }
 
 .chart-error {
-  margin-top: 4px;
-  color: #b4533a;
+  margin-top: 8px;
+  color: #b45309;
+  font-size: 10px;
+}
+
+.knowledge-panel {
+  display: flex;
+  flex-direction: column;
+  padding: 22px 0 14px;
+}
+
+.knowledge-panel .panel-head {
+  padding: 0 20px 16px;
+}
+
+.count-badge {
+  display: grid;
+  place-items: center;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 7px;
+  border-radius: 8px;
+  background: var(--h-primary-soft);
+  color: var(--h-primary);
   font-size: 11px;
+  font-weight: 700;
 }
 
-.notice-panel {
-  margin-top: 16px;
-  padding: 20px 22px 10px;
+.knowledge-list {
+  flex: 1;
 }
 
-.notice-count {
-  color: #a29a8e;
-  font-size: 11px;
-}
-
-.notice-list {
-  margin: 13px 0 0;
-  padding: 0;
-  list-style: none;
-}
-
-.notice-row {
+.knowledge-row {
   display: flex;
   align-items: center;
-  gap: 12px;
-  min-height: 44px;
-  border-top: 1px solid #f0ece5;
-  font-size: 13px;
+  gap: 11px;
+  width: 100%;
+  padding: 11px 20px;
+  border: 0;
+  border-top: 1px solid #f1f5f9;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
 }
 
-.notice-tag {
-  flex: 0 0 auto;
-  min-width: 49px;
-  padding: 2px 7px;
-  border-radius: 2px;
-  font-size: 11px;
-  line-height: 18px;
-  text-align: center;
+.knowledge-row:hover {
+  background: #fafbff;
 }
 
-.tone-green {
-  background: #4f8a63;
-  color: #fff;
+.knowledge-index {
+  color: #c7d2fe;
+  font-family: 'JetBrains Mono', Consolas, monospace;
+  font-size: 9px;
 }
 
-.tone-amber {
-  background: #d2a04a;
-  color: #fff;
-}
-
-.tone-red {
-  background: #b5532f;
-  color: #fff;
-}
-
-.tone-gray {
-  background: #e5e0d7;
-  color: #71695e;
-}
-
-.notice-title {
-  flex: 1;
+.knowledge-copy {
+  display: flex;
   min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.knowledge-copy strong {
+  color: var(--h-ink);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.knowledge-copy small {
   overflow: hidden;
-  color: #35312b;
+  color: #94a3b8;
+  font-size: 9.5px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.notice-row time {
-  flex: 0 0 auto;
-  color: #a29a8e;
-  font-size: 12px;
+.knowledge-count {
+  color: #94a3b8;
+  font-size: 9.5px;
+  white-space: nowrap;
 }
 
-.home-footer {
-  display: flex;
-  justify-content: center;
-  gap: 8px;
-  padding: 20px 0 4px;
-  color: #a59c8e;
+.knowledge-empty {
+  padding: 30px 20px;
+  color: #94a3b8;
   font-size: 11px;
 }
 
-.footer-sep {
-  color: #cfc7ba;
+.panel-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin: 12px 20px 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--h-primary);
+  font-size: 10.5px;
+  cursor: pointer;
 }
 
-@media (max-width: 900px) {
-  .oj-header {
-    grid-template-columns: 1fr auto;
-    gap: 14px;
+.panel-link svg {
+  width: 12px;
+  height: 12px;
+}
+
+.closing {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 28px;
+  margin-top: 30px;
+  padding: 34px 36px;
+  border-radius: 16px;
+  background: var(--h-ink);
+  color: #fff;
+}
+
+.closing-kicker {
+  color: #818cf8;
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: 1.6px;
+}
+
+.closing h2 {
+  margin-top: 8px;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.6px;
+}
+
+.closing p:not(.closing-kicker) {
+  max-width: 470px;
+  margin-top: 7px;
+  color: #94a3b8;
+  font-size: 11px;
+  line-height: 1.7;
+}
+
+.btn-light {
+  flex-shrink: 0;
+  border: 1px solid #fff;
+  background: #fff;
+  color: var(--h-ink);
+}
+
+.btn-light:hover {
+  background: #eef2ff;
+  border-color: #eef2ff;
+}
+
+.site-foot {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 26px 2px 4px;
+  color: #94a3b8;
+  font-size: 10.5px;
+}
+
+.foot-brand {
+  color: #475569;
+  font-weight: 700;
+}
+
+.foot-brand em {
+  margin-left: 4px;
+  color: #94a3b8;
+  font-style: normal;
+  font-weight: 400;
+}
+
+.foot-copy {
+  flex: 1;
+}
+
+.foot-status {
+  font-size: 10px;
+}
+
+@media (max-width: 1000px) {
+  .site-nav {
+    display: none;
   }
 
-  .title-block {
-    grid-column: 1 / -1;
-    grid-row: 2;
+  .hero {
+    grid-template-columns: 1fr;
+    gap: 40px;
+  }
+
+  .hero-copy {
+    max-width: 700px;
+  }
+
+  .hero-visual {
+    max-width: 620px;
+    padding-left: 0;
+  }
+
+  .insight-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 700px) {
+  .site-head {
+    gap: 12px;
+    min-height: 64px;
+    padding: 0 18px;
+  }
+
+  .health-pill {
+    display: none;
+  }
+
+  .brand-name small {
+    display: none;
+  }
+
+  .page {
+    width: calc(100% - 36px);
+    padding-top: 42px;
+  }
+
+  .hero h1 {
+    font-size: 42px;
+    letter-spacing: -2px;
+  }
+
+  .hero-stats {
+    gap: 0;
+  }
+
+  .hero-stats > div {
+    min-width: 0;
+    flex: 1;
+    padding-right: 12px;
+  }
+
+  .hero-stats > div + div {
+    padding-left: 12px;
+  }
+
+  .step-list {
+    grid-template-columns: 1fr;
+  }
+
+  .step {
+    padding: 18px 0;
+  }
+
+  .step + .step {
+    padding-left: 0;
+    border-top: 1px solid var(--h-line);
+    border-left: 0;
+  }
+
+  .section-head {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .section-note {
     text-align: left;
   }
 
-  .title-block h1 {
-    font-size: 28px;
-  }
-
-  .trophy {
-    grid-column: 2;
-    grid-row: 1;
-    width: 52px;
-    height: 52px;
-    font-size: 23px;
-  }
-
-  .brand-icon {
-    width: 48px;
-    height: 48px;
-  }
-
-  .brand-text strong {
-    font-size: 23px;
-  }
-
-  .nav-inner {
-    flex-wrap: wrap;
-    width: calc(100% - 32px);
-    padding: 9px 0;
-  }
-
-  .nav-item {
-    padding: 0 10px;
-    font-size: 13px;
-  }
-
-  .nav-spacer {
-    display: none;
-  }
-
-  .oj-main {
-    width: calc(100% - 32px);
-    margin-top: 16px;
-  }
-
-  .status-strip {
+  .closing {
     align-items: flex-start;
-    flex-wrap: wrap;
-    gap: 10px;
-    padding: 13px 15px;
-  }
-
-  .status-copy {
-    flex: 1 1 100%;
-  }
-
-  .status-meter {
-    flex: 1 1 60%;
-  }
-
-  .chart-panel,
-  .notice-panel {
-    padding: 16px 14px 10px;
-  }
-
-  .chart-canvas {
-    height: 270px;
-  }
-
-  .legend {
-    gap: 10px;
-    font-size: 11px;
-  }
-
-  .notice-row {
-    flex-wrap: wrap;
-    gap: 5px 9px;
-    padding: 9px 0;
-  }
-
-  .notice-title {
-    flex: 1 1 calc(100% - 70px);
-    white-space: normal;
-  }
-
-  .notice-row time {
-    margin-left: 61px;
-  }
-}
-
-@media (max-width: 520px) {
-  .oj-header {
-    width: calc(100% - 28px);
-    padding-top: 16px;
-  }
-
-  .brand-text small {
-    display: none;
-  }
-
-  .brand-text strong {
-    font-size: 21px;
-  }
-
-  .title-block h1 {
-    font-size: 24px;
-    letter-spacing: 1px;
-  }
-
-  .title-block p {
-    font-size: 10px;
-    letter-spacing: 2px;
-  }
-
-  .nav-item span {
-    display: none;
-  }
-
-  .nav-item {
-    width: 38px;
-    justify-content: center;
-    padding: 0;
-  }
-
-  .user-cta,
-  .user-label {
-    display: none;
-  }
-
-  .user-pill {
-    padding-right: 5px;
-  }
-
-  .panel-title-row {
-    gap: 8px;
-  }
-
-  .panel-title h2 {
-    font-size: 18px;
-  }
-
-  .legend {
     flex-direction: column;
-    align-items: flex-start;
-    gap: 4px;
+    padding: 26px 22px;
+  }
+
+  .site-foot {
+    flex-wrap: wrap;
   }
 }
 </style>

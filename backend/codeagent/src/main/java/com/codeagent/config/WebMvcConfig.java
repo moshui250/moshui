@@ -24,7 +24,8 @@ public class WebMvcConfig implements WebMvcConfigurer {
                         "/api/auth/register",
                         "/api/health",
                         "/api/health/rag",
-                        "/api/home/summary"
+                        "/api/home/summary",
+                        "/api/knowledge-point/list"
                 );
     }
 
