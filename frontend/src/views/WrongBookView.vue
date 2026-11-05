@@ -4,10 +4,9 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import {
   ArrowRight,
-  Collection,
+  CircleCheck,
   InfoFilled,
   RefreshRight,
-  Reading,
   View
 } from '@element-plus/icons-vue'
 import hljs from 'highlight.js/lib/core'
@@ -15,10 +14,7 @@ import cpp from 'highlight.js/lib/languages/cpp'
 import java from 'highlight.js/lib/languages/java'
 import DOMPurify from 'dompurify'
 import 'highlight.js/styles/github.css'
-import {
-  listWrongQuestions,
-  markMastered
-} from '@/api/profile'
+import { listWrongQuestions, markMastered } from '@/api/profile'
 import { recommendQuestions } from '@/api/question'
 
 hljs.registerLanguage('cpp', cpp)
@@ -29,31 +25,37 @@ const loading = ref(false)
 const recLoading = ref(false)
 const loadError = ref('')
 const rows = ref([])
-const total = ref(0)
+const pendingTotal = ref(0)
 const masteredTotal = ref(0)
-const masteredFilter = ref(false)
+const activeFilter = ref('pending')
 const expanded = reactive({})
 const recommendations = reactive({})
 
 const difficultyMeta = {
-  1: { label: '入门', type: 'success' },
-  2: { label: '进阶', type: 'warning' },
-  3: { label: '挑战', type: 'danger' }
+  1: { label: '入门', className: 'easy' },
+  2: { label: '进阶', className: 'medium' },
+  3: { label: '挑战', className: 'hard' }
 }
 
 const statusMeta = {
-  AC: { label: '通过', type: 'success' },
-  WA: { label: '答案错误', type: 'danger' },
-  TLE: { label: '超时', type: 'warning' },
-  MLE: { label: '内存超限', type: 'warning' },
-  RE: { label: '运行错误', type: 'danger' },
-  CE: { label: '编译错误', type: 'danger' },
-  SE: { label: '系统错误', type: 'info' }
+  AC: '通过',
+  WA: '答案错误',
+  TLE: '运行超时',
+  MLE: '内存超限',
+  RE: '运行错误',
+  CE: '编译错误',
+  SE: '系统错误'
 }
 
-const emptyText = computed(() =>
-  masteredFilter.value ? '还没有已掌握的错题' : '还没有错题，继续保持'
-)
+const masteryRate = computed(() => {
+  const total = pendingTotal.value + masteredTotal.value
+  return total ? Math.round((masteredTotal.value / total) * 100) : 0
+})
+
+const currentEmptyText = computed(() => {
+  if (activeFilter.value === 'mastered') return '还没有已掌握的错题'
+  return '待复习的错题已经清空'
+})
 
 function questionOf(row) {
   return row.question || {}
@@ -81,14 +83,16 @@ function codeOf(row) {
 }
 
 function languageOf(row) {
-  const language = lastSubmitOf(row)?.language
-  if (language === 'JAVA') return 'java'
-  if (language === 'CPP') return 'cpp'
-  return 'cpp'
+  return lastSubmitOf(row)?.language === 'JAVA' ? 'java' : 'cpp'
 }
 
 function languageLabel(row) {
   return languageOf(row) === 'java' ? 'Java' : 'C++'
+}
+
+function formatTime(value) {
+  if (!value) return '—'
+  return String(value).slice(5, 16)
 }
 
 function highlightCode(row) {
@@ -97,7 +101,9 @@ function highlightCode(row) {
     return '<span class="code-empty">这条错题没有保留提交代码</span>'
   }
   try {
-    return DOMPurify.sanitize(hljs.highlight(code, { language: languageOf(row) }).value)
+    return DOMPurify.sanitize(
+      hljs.highlight(code, { language: languageOf(row) }).value
+    )
   } catch {
     return DOMPurify.sanitize(hljs.highlightAuto(code).value)
   }
@@ -107,33 +113,16 @@ function toggleCode(row) {
   expanded[row.id] = !expanded[row.id]
 }
 
-async function loadRows() {
-  loading.value = true
-  loadError.value = ''
-  try {
-    const data = await listWrongQuestions({
-      page: 1,
-      size: 20,
-      mastered: masteredFilter.value
-    })
-    rows.value = data?.records || []
-    total.value = data?.total || 0
-    await Promise.all([loadMasteredTotal(), loadRecommendations()])
-  } catch (error) {
-    loadError.value = error.message || '错题本加载失败'
-    rows.value = []
-    total.value = 0
-  } finally {
-    loading.value = false
+async function loadCounts() {
+  const results = await Promise.allSettled([
+    listWrongQuestions({ page: 1, size: 1, mastered: false }),
+    listWrongQuestions({ page: 1, size: 1, mastered: true })
+  ])
+  if (results[0].status === 'fulfilled') {
+    pendingTotal.value = results[0].value?.total || 0
   }
-}
-
-async function loadMasteredTotal() {
-  try {
-    const data = await listWrongQuestions({ page: 1, size: 1, mastered: true })
-    masteredTotal.value = data?.total || 0
-  } catch {
-    masteredTotal.value = 0
+  if (results[1].status === 'fulfilled') {
+    masteredTotal.value = results[1].value?.total || 0
   }
 }
 
@@ -148,30 +137,63 @@ async function loadRecommendations() {
   )
   results.forEach((result, index) => {
     const row = rows.value[index]
-    recommendations[row.id] = result.status === 'fulfilled' ? result.value || [] : []
+    recommendations[row.id] =
+      result.status === 'fulfilled' ? result.value || [] : []
   })
   recLoading.value = false
+}
+
+async function loadRows() {
+  loading.value = true
+  loadError.value = ''
+  try {
+    const data = await listWrongQuestions({
+      page: 1,
+      size: 20,
+      mastered: activeFilter.value === 'mastered'
+    })
+    rows.value = data?.records || []
+    if (activeFilter.value === 'mastered') {
+      masteredTotal.value = data?.total || 0
+    } else {
+      pendingTotal.value = data?.total || 0
+    }
+    await Promise.all([loadCounts(), loadRecommendations()])
+  } catch (error) {
+    loadError.value = error.message || '错题本加载失败'
+    rows.value = []
+  } finally {
+    loading.value = false
+  }
+}
+
+function changeFilter(value) {
+  if (activeFilter.value === value) return
+  activeFilter.value = value
+  Object.keys(expanded).forEach((key) => delete expanded[key])
+  loadRows()
 }
 
 function goSolve(row) {
   router.push(`/question/${questionOf(row).id}/solve`)
 }
 
+function goRecommend(item) {
+  router.push(`/question/${item.id}/solve`)
+}
+
 async function handleMastered(row) {
   try {
     await markMastered(questionOf(row).id)
-    ElMessage.success('已标记为掌握，已从待复习列表移除')
-    rows.value = rows.value.filter((item) => item.id !== row.id)
-    total.value = Math.max(0, total.value - 1)
+    ElMessage.success('已标记为掌握，移入已掌握列表')
+    if (activeFilter.value === 'pending') {
+      rows.value = rows.value.filter((item) => item.id !== row.id)
+      pendingTotal.value = Math.max(0, pendingTotal.value - 1)
+    }
     masteredTotal.value += 1
   } catch (error) {
-    ElMessage.error(error.message || '操作失败')
+    ElMessage.error(error.message || '操作失败，请稍后再试')
   }
-}
-
-async function changeFilter(value) {
-  masteredFilter.value = value === 'mastered'
-  await loadRows()
 }
 
 onMounted(loadRows)
@@ -179,133 +201,178 @@ onMounted(loadRows)
 
 <template>
   <div class="wrong-page">
-    <div class="page-head">
-      <div>
-        <div class="page-eyebrow">Review Space</div>
+    <header class="page-head">
+      <div class="head-copy">
+        <div class="page-eyebrow">REVIEW / 错题复盘</div>
         <h1 class="page-title">错题本</h1>
         <p class="page-subtitle">
-          做错的题不会消失。展开上次错误代码，按知识点复盘，再从同类题里把方法练熟。
+          把每次报错留下来。先看上次错在哪，再用三道同类题把方法练熟。
         </p>
       </div>
-      <div class="page-actions">
-        <el-button type="primary" @click="router.push('/question')">
-          <el-icon><Reading /></el-icon>
-          去题库练习
-        </el-button>
-      </div>
-    </div>
+      <button class="btn-primary" type="button" @click="router.push('/question')">
+        去题库练习
+        <el-icon><ArrowRight /></el-icon>
+      </button>
+    </header>
 
-    <section class="summary-strip">
-      <div class="summary-item">
-        <span>{{ masteredFilter ? '已掌握' : '待复习' }}</span>
-        <strong>{{ total }}</strong>
+    <section class="review-strip" aria-label="错题概览">
+      <div class="strip-metric">
+        <span class="metric-label">待复习</span>
+        <strong class="metric-value">{{ pendingTotal }}</strong>
       </div>
-      <div class="summary-item">
-        <span>已掌握</span>
-        <strong>{{ masteredTotal }}</strong>
+      <div class="strip-divider" />
+      <div class="strip-metric">
+        <span class="metric-label">已掌握</span>
+        <strong class="metric-value">{{ masteredTotal }}</strong>
       </div>
-      <div class="summary-note">
-        <el-icon><Collection /></el-icon>
-        <span>每条错题自动配 3 道同类题，点击即可继续练习</span>
+      <div class="strip-divider" />
+      <div class="strip-metric">
+        <span class="metric-label">复习进度</span>
+        <strong class="metric-value">{{ masteryRate }}<small>%</small></strong>
+      </div>
+      <div class="strip-note">
+        <el-icon><CircleCheck /></el-icon>
+        <span>每道错题自动配 3 道同类题</span>
       </div>
     </section>
 
-    <div class="filter-row">
-      <el-radio-group
-        :model-value="masteredFilter ? 'mastered' : 'pending'"
-        @change="changeFilter"
-      >
-        <el-radio-button value="pending">待复习</el-radio-button>
-        <el-radio-button value="mastered">已掌握</el-radio-button>
-      </el-radio-group>
-      <span class="filter-hint">按最近答错时间倒序</span>
+    <div class="filter-bar">
+      <div class="filter-tabs" role="tablist" aria-label="错题状态">
+        <button
+          class="filter-tab"
+          :class="{ active: activeFilter === 'pending' }"
+          type="button"
+          role="tab"
+          :aria-selected="activeFilter === 'pending'"
+          @click="changeFilter('pending')"
+        >
+          待复习
+          <span>{{ pendingTotal }}</span>
+        </button>
+        <button
+          class="filter-tab"
+          :class="{ active: activeFilter === 'mastered' }"
+          type="button"
+          role="tab"
+          :aria-selected="activeFilter === 'mastered'"
+          @click="changeFilter('mastered')"
+        >
+          已掌握
+          <span>{{ masteredTotal }}</span>
+        </button>
+      </div>
+      <span class="sort-hint">按最近答错时间倒序</span>
     </div>
 
-    <div v-if="loadError" class="demo-banner">
+    <div v-if="loadError" class="error-banner">
       <el-icon><InfoFilled /></el-icon>
       <span>{{ loadError }}</span>
+      <button type="button" @click="loadRows">重试</button>
     </div>
 
     <section v-loading="loading" class="wrong-list">
-      <el-empty v-if="!loading && !rows.length" :description="emptyText" :image-size="96">
-        <el-button type="primary" plain @click="router.push('/question')">
-          去挑一道题
+      <div v-if="!loading && !rows.length" class="empty-card">
+        <div class="empty-mark">✓</div>
+        <h2>{{ currentEmptyText }}</h2>
+        <p>
+          {{
+            activeFilter === 'mastered'
+              ? '做错的题在判题失败后会自动收进来，掌握后再回来看看。'
+              : '当前没有需要复习的题，去题库挑一道顺手的题保持手感。'
+          }}
+        </p>
+        <button class="btn-primary" type="button" @click="router.push('/question')">
+          去题库
           <el-icon><ArrowRight /></el-icon>
-        </el-button>
-      </el-empty>
+        </button>
+      </div>
 
       <article v-for="row in rows" :key="row.id" class="wrong-card">
-        <div class="wrong-main">
-          <div class="wrong-heading">
-            <button class="wrong-title" type="button" @click="goSolve(row)">
+        <div class="card-top">
+          <div class="card-copy">
+            <div class="card-kicker">
+              PROBLEM {{ questionOf(row).id || '—' }} · {{ knowledgeOf(row) }}
+            </div>
+            <button class="card-title" type="button" @click="goSolve(row)">
               {{ titleOf(row) }}
             </button>
-            <el-tag :type="difficultyOf(row).type" effect="light" round size="small">
-              {{ difficultyOf(row).label }}
-            </el-tag>
-            <el-tag :type="row.mastered ? 'success' : 'danger'" effect="plain" round size="small">
-              {{ row.mastered ? '已掌握' : '未掌握' }}
-            </el-tag>
+            <div class="card-meta">
+              <span class="difficulty" :class="difficultyOf(row).className">
+                <i />
+                {{ difficultyOf(row).label }}
+              </span>
+              <span>答错 {{ row.wrongCount }} 次</span>
+              <span>最近 {{ formatTime(row.lastWrongTime) }}</span>
+            </div>
           </div>
-
-          <div class="wrong-meta">
-            <span>{{ knowledgeOf(row) }}</span>
-            <span>答错 {{ row.wrongCount }} 次</span>
-            <span>最近 {{ row.lastWrongTime || '—' }}</span>
-          </div>
-
-          <div class="wrong-actions">
-            <el-button type="primary" size="small" @click="goSolve(row)">
+          <div class="card-actions">
+            <button class="btn-small" type="button" @click="goSolve(row)">
               <el-icon><RefreshRight /></el-icon>
               去重做
-            </el-button>
-            <el-button
+            </button>
+            <button
               v-if="!row.mastered"
-              size="small"
-              plain
+              class="btn-text"
+              type="button"
               @click="handleMastered(row)"
             >
               标记已掌握
-            </el-button>
-            <el-button link type="primary" @click="toggleCode(row)">
-              <el-icon><View /></el-icon>
-              {{ expanded[row.id] ? '收起上次代码' : '查看上次错误代码' }}
-            </el-button>
+            </button>
           </div>
+        </div>
 
-          <div v-if="expanded[row.id]" class="code-panel">
-            <div class="code-head">
-              <span>{{ languageLabel(row) }}</span>
-              <span class="code-status">
-                {{ statusMeta[lastSubmitOf(row)?.status]?.label || lastSubmitOf(row)?.status || '无提交记录' }}
-              </span>
-            </div>
-            <pre class="code-block"><code v-html="highlightCode(row)"></code></pre>
+        <button
+          class="code-toggle"
+          type="button"
+          :aria-expanded="!!expanded[row.id]"
+          @click="toggleCode(row)"
+        >
+          <el-icon><View /></el-icon>
+          {{ expanded[row.id] ? '收起错误代码' : '查看上次错误代码' }}
+          <span v-if="lastSubmitOf(row)?.status" class="code-status">
+            {{ statusMeta[lastSubmitOf(row).status] || lastSubmitOf(row).status }}
+          </span>
+        </button>
+
+        <div v-if="expanded[row.id]" class="code-panel">
+          <div class="code-head">
+            <span>{{ languageLabel(row) }}</span>
+            <span>上次提交</span>
           </div>
+          <pre class="code-block"><code v-html="highlightCode(row)"></code></pre>
+        </div>
 
-          <div class="similar-block">
-            <div class="similar-head">
-              <span>同类题推荐</span>
+        <div class="similar-block">
+          <div class="similar-head">
+            <div>
+              <span class="similar-title">同类练习</span>
               <span class="similar-sub">同知识点 · 优先未做 · 难度接近</span>
             </div>
-            <div v-if="recLoading" class="similar-loading">正在匹配同类题…</div>
-            <div v-else-if="(recommendations[row.id] || []).length" class="similar-grid">
-              <button
-                v-for="item in recommendations[row.id]"
-                :key="item.id"
-                type="button"
-                class="similar-card"
-                @click="router.push(`/question/${item.id}/solve`)"
-              >
-                <span class="similar-title">{{ item.title }}</span>
-                <span class="similar-meta">
-                  {{ item.knowledgePointName || knowledgeOf(row) }} · {{ difficultyMeta[item.difficulty]?.label || '入门' }}
-                  <em>{{ item.reason || '同类巩固' }}</em>
-                </span>
-              </button>
-            </div>
-            <div v-else class="similar-loading">暂无同类题，去题库看看其他知识点。</div>
+            <span class="similar-count">
+              {{ (recommendations[row.id] || []).length }} / 3
+            </span>
           </div>
+
+          <div v-if="recLoading" class="similar-loading">正在匹配同类题…</div>
+          <div v-else-if="(recommendations[row.id] || []).length" class="similar-grid">
+            <button
+              v-for="(item, index) in recommendations[row.id]"
+              :key="item.id"
+              class="similar-card"
+              type="button"
+              @click="goRecommend(item)"
+            >
+              <span class="similar-index">{{ String(index + 1).padStart(2, '0') }}</span>
+              <span class="similar-name">{{ item.title }}</span>
+              <span class="similar-meta">
+                {{ item.knowledgePointName || knowledgeOf(row) }} ·
+                {{ difficultyMeta[item.difficulty]?.label || '入门' }}
+              </span>
+              <span class="similar-reason">{{ item.reason || '同类巩固' }}</span>
+              <span class="similar-arrow">→</span>
+            </button>
+          </div>
+          <div v-else class="similar-loading">暂无同类题，去题库看看其他知识点。</div>
         </div>
       </article>
     </section>
@@ -313,124 +380,373 @@ onMounted(loadRows)
 </template>
 
 <style scoped>
-.summary-strip {
+.wrong-page {
+  width: 100%;
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 34px 24px 76px;
+}
+
+.page-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  padding-bottom: 26px;
+}
+
+.page-eyebrow {
+  color: #6366f1;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+}
+
+.page-title {
+  margin: 8px 0 10px;
+  color: #0f172a;
+  font-size: 44px;
+  font-weight: 750;
+  letter-spacing: -0.04em;
+  line-height: 1.08;
+}
+
+.page-subtitle {
+  max-width: 620px;
+  margin: 0;
+  color: #64748b;
+  font-size: 13.5px;
+  line-height: 1.8;
+}
+
+.btn-primary,
+.btn-small,
+.btn-text {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 0;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.btn-primary {
+  min-height: 38px;
+  padding: 0 16px;
+  border-radius: 8px;
+  background: #4f46e5;
+  color: #fff;
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: background 0.16s;
+}
+
+.btn-primary:hover {
+  background: #4338ca;
+}
+
+.review-strip {
   display: flex;
   align-items: center;
-  gap: 38px;
-  margin-bottom: 16px;
-  padding: 17px 22px;
-  border: 1px solid var(--ca-line);
-  border-radius: var(--ca-radius);
+  gap: 28px;
+  min-height: 84px;
+  padding: 18px 24px;
+  border: 1px solid #e8edf5;
+  border-radius: 14px;
   background: #fff;
 }
 
-.summary-item {
+.strip-metric {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
+  min-width: 76px;
 }
 
-.summary-item span {
+.metric-label {
   color: #94a3b8;
   font-size: 11px;
 }
 
-.summary-item strong {
-  color: var(--ca-ink);
-  font-size: 24px;
-  font-weight: 700;
-  letter-spacing: -0.5px;
+.metric-value {
+  color: #0f172a;
+  font-size: 26px;
+  font-weight: 720;
+  letter-spacing: -0.04em;
+  line-height: 1.1;
 }
 
-.summary-note {
+.metric-value small {
+  margin-left: 1px;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.strip-divider {
+  width: 1px;
+  height: 30px;
+  background: #eef2f7;
+}
+
+.strip-note {
   display: flex;
   align-items: center;
   gap: 7px;
   margin-left: auto;
-  padding: 8px 12px;
-  border-radius: 8px;
-  background: #f8fafc;
+  padding: 8px 11px;
+  border-radius: 7px;
+  background: #f8faff;
   color: #7c869c;
   font-size: 11px;
 }
 
-.summary-note .el-icon {
-  color: #6366f1;
+.strip-note .el-icon {
+  color: #10b981;
 }
 
-.filter-row {
+.filter-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 12px;
+  gap: 16px;
+  margin: 24px 0 12px;
 }
 
-.filter-hint {
+.filter-tabs {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid #e8edf5;
+  border-radius: 9px;
+  background: #fff;
+}
+
+.filter-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #64748b;
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.filter-tab span {
+  min-width: 17px;
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #94a3b8;
+  font-size: 10px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.filter-tab.active {
+  background: #eef2ff;
+  color: #4338ca;
+  font-weight: 600;
+}
+
+.filter-tab.active span {
+  background: #e0e7ff;
+  color: #4f46e5;
+}
+
+.sort-hint {
   color: #a0a9ba;
   font-size: 11px;
+}
+
+.error-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border: 1px solid #fde2e2;
+  border-radius: 8px;
+  background: #fff8f8;
+  color: #b91c1c;
+  font-size: 12px;
+}
+
+.error-banner button {
+  margin-left: auto;
+  border: 0;
+  background: transparent;
+  color: #b91c1c;
+  font-family: inherit;
+  font-size: 12px;
+  text-decoration: underline;
+  cursor: pointer;
 }
 
 .wrong-list {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  min-height: 160px;
 }
 
 .wrong-card {
-  border: 1px solid var(--ca-line);
-  border-radius: var(--ca-radius);
+  border: 1px solid #e8edf5;
+  border-radius: 14px;
   background: #fff;
-  padding: 18px 20px;
+  padding: 18px 20px 16px;
+  transition: border-color 0.16s, box-shadow 0.16s;
 }
 
-.wrong-main {
+.wrong-card:hover {
+  border-color: #d9e0ec;
+  box-shadow: 0 8px 24px rgb(15 23 42 / 4%);
+}
+
+.card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.card-copy {
   min-width: 0;
 }
 
-.wrong-heading {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
+.card-kicker {
+  color: #94a3b8;
+  font-size: 10px;
+  letter-spacing: 0.04em;
 }
 
-.wrong-title {
+.card-title {
+  display: block;
+  margin: 5px 0 7px;
   padding: 0;
   border: 0;
   background: transparent;
   color: #1e293b;
-  font-size: 15px;
+  font-family: inherit;
+  font-size: 16px;
   font-weight: 650;
+  line-height: 1.35;
   text-align: left;
   cursor: pointer;
 }
 
-.wrong-title:hover {
-  color: var(--ca-primary);
+.card-title:hover {
+  color: #4f46e5;
 }
 
-.wrong-meta {
+.card-meta {
   display: flex;
+  align-items: center;
   flex-wrap: wrap;
-  gap: 16px;
-  margin-top: 7px;
+  gap: 13px;
   color: #94a3b8;
   font-size: 11px;
 }
 
-.wrong-actions {
+.difficulty {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.difficulty i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.difficulty.easy {
+  color: #059669;
+}
+
+.difficulty.medium {
+  color: #d97706;
+}
+
+.difficulty.hard {
+  color: #dc2626;
+}
+
+.card-actions {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-top: 14px;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.btn-small {
+  min-height: 31px;
+  padding: 0 11px;
+  border: 1px solid #dbe3ef;
+  border-radius: 7px;
+  background: #fff;
+  color: #4338ca;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.btn-small:hover {
+  border-color: #c7d2fe;
+  background: #f8faff;
+}
+
+.btn-text {
+  min-height: 31px;
+  padding: 0 7px;
+  border-radius: 7px;
+  background: transparent;
+  color: #64748b;
+  font-size: 11.5px;
+}
+
+.btn-text:hover {
+  background: #f8fafc;
+  color: #334155;
+}
+
+.code-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 13px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #818cf8;
+  font-family: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.code-toggle:hover {
+  color: #4f46e5;
+}
+
+.code-status {
+  margin-left: 3px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: #fff1f2;
+  color: #be123c;
+  font-size: 10px;
 }
 
 .code-panel {
-  margin-top: 14px;
+  margin-top: 10px;
   overflow: hidden;
   border: 1px solid #e8edf5;
-  border-radius: 10px;
+  border-radius: 9px;
   background: #fbfcfe;
 }
 
@@ -438,7 +754,7 @@ onMounted(loadRows)
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 12px;
+  padding: 7px 12px;
   border-bottom: 1px solid #eef2f7;
   color: #64748b;
   font-size: 10.5px;
@@ -446,18 +762,21 @@ onMounted(loadRows)
   letter-spacing: 0.04em;
 }
 
-.code-status {
-  color: #b91c1c;
+.code-head span:last-child {
+  color: #a0a9ba;
+  font-weight: 400;
+  letter-spacing: 0;
 }
 
 .code-block {
-  max-height: 280px;
+  max-height: 260px;
   margin: 0;
   padding: 13px 15px;
   overflow: auto;
+  color: #334155;
   font-family: 'JetBrains Mono', Consolas, monospace;
   font-size: 11.5px;
-  line-height: 1.7;
+  line-height: 1.72;
   tab-size: 4;
 }
 
@@ -471,24 +790,33 @@ onMounted(loadRows)
 }
 
 .similar-block {
-  margin-top: 16px;
-  padding-top: 13px;
+  margin-top: 14px;
+  padding-top: 12px;
   border-top: 1px dashed #e8edf5;
 }
 
 .similar-head {
   display: flex;
   align-items: baseline;
-  gap: 10px;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.similar-title {
   color: #475569;
   font-size: 11.5px;
   font-weight: 600;
 }
 
 .similar-sub {
+  margin-left: 7px;
   color: #a0a9ba;
   font-size: 10px;
-  font-weight: 400;
+}
+
+.similar-count {
+  color: #a0a9ba;
+  font-size: 10px;
 }
 
 .similar-loading {
@@ -500,21 +828,23 @@ onMounted(loadRows)
 .similar-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 9px;
-  margin-top: 9px;
+  gap: 8px;
+  margin-top: 8px;
 }
 
 .similar-card {
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 5px;
-  padding: 10px 11px;
+  gap: 3px;
+  min-height: 72px;
+  padding: 9px 11px 9px 30px;
   border: 1px solid #eef2f7;
   border-radius: 8px;
   background: #fcfdff;
   text-align: left;
   cursor: pointer;
-  transition: border-color 0.15s, background 0.15s;
+  transition: border-color 0.16s, background 0.16s;
 }
 
 .similar-card:hover {
@@ -522,7 +852,17 @@ onMounted(loadRows)
   background: #f5f7ff;
 }
 
-.similar-title {
+.similar-index {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  color: #c7d2fe;
+  font-family: 'JetBrains Mono', Consolas, monospace;
+  font-size: 9px;
+  letter-spacing: 0.02em;
+}
+
+.similar-name {
   overflow: hidden;
   color: #334155;
   font-size: 11.5px;
@@ -539,21 +879,128 @@ onMounted(loadRows)
   white-space: nowrap;
 }
 
-.similar-meta em {
-  margin-left: 4px;
+.similar-reason {
+  overflow: hidden;
   color: #818cf8;
-  font-style: normal;
+  font-size: 9.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.similar-arrow {
+  position: absolute;
+  right: 10px;
+  bottom: 8px;
+  color: #c7d2fe;
+  font-size: 12px;
+}
+
+.empty-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 64px 24px 58px;
+  border: 1px solid #e8edf5;
+  border-radius: 14px;
+  background: #fff;
+  text-align: center;
+}
+
+.empty-mark {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border-radius: 50%;
+  background: #ecfdf5;
+  color: #10b981;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.empty-card h2 {
+  margin: 14px 0 7px;
+  color: #1e293b;
+  font-size: 16px;
+  font-weight: 650;
+}
+
+.empty-card p {
+  max-width: 420px;
+  margin: 0 0 18px;
+  color: #94a3b8;
+  font-size: 12px;
+  line-height: 1.8;
 }
 
 @media (max-width: 900px) {
-  .summary-strip {
+  .review-strip {
     flex-wrap: wrap;
-    gap: 20px;
+    gap: 18px;
   }
 
-  .summary-note {
+  .strip-note {
     width: 100%;
     margin-left: 0;
+  }
+}
+
+@media (max-width: 760px) {
+  .wrong-page {
+    padding: 24px 14px 52px;
+  }
+
+  .page-head {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 14px;
+    padding-bottom: 20px;
+  }
+
+  .page-title {
+    font-size: 36px;
+  }
+
+  .page-subtitle {
+    font-size: 12.5px;
+  }
+
+  .review-strip {
+    gap: 14px;
+    padding: 15px 16px;
+  }
+
+  .strip-metric {
+    min-width: 62px;
+  }
+
+  .metric-value {
+    font-size: 22px;
+  }
+
+  .strip-divider {
+    height: 26px;
+  }
+
+  .filter-bar {
+    margin-top: 18px;
+  }
+
+  .sort-hint {
+    display: none;
+  }
+
+  .card-top {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .card-actions {
+    width: 100%;
+  }
+
+  .btn-small {
+    flex: 1;
   }
 
   .similar-grid {

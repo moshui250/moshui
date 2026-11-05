@@ -40,6 +40,18 @@ const routes = [
     ]
   },
   {
+    path: '/wrong-book',
+    component: () => import('@/layouts/PublicLayout.vue'),
+    children: [
+      {
+        path: '',
+        name: 'wrong-book',
+        component: () => import('@/views/WrongBookView.vue'),
+        meta: { title: '错题本' }
+      }
+    ]
+  },
+  {
     path: '/question',
     component: () => import('@/layouts/PublicLayout.vue'),
     children: [
@@ -78,12 +90,6 @@ const routes = [
         name: 'question-import',
         component: () => import('@/views/QuestionImportView.vue'),
         meta: { title: '图片录题', section: '练习' }
-      },
-      {
-        path: 'wrong-book',
-        name: 'wrong-book',
-        component: () => import('@/views/WrongBookView.vue'),
-        meta: { title: '错题本', section: '复习' }
       },
       {
         path: 'dashboard',
