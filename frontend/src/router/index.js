@@ -40,6 +40,18 @@ const routes = [
     ]
   },
   {
+    path: '/dashboard',
+    component: () => import('@/layouts/PublicLayout.vue'),
+    children: [
+      {
+        path: '',
+        name: 'dashboard',
+        component: () => import('@/views/DashboardView.vue'),
+        meta: { title: '学习看板' }
+      }
+    ]
+  },
+  {
     path: '/wrong-book',
     component: () => import('@/layouts/PublicLayout.vue'),
     children: [
@@ -90,12 +102,6 @@ const routes = [
         name: 'question-import',
         component: () => import('@/views/QuestionImportView.vue'),
         meta: { title: '图片录题', section: '练习' }
-      },
-      {
-        path: 'dashboard',
-        name: 'dashboard',
-        component: () => import('@/views/DashboardView.vue'),
-        meta: { title: '数据看板', section: '成长' }
       },
       {
         path: 'profile',

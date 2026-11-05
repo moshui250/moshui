@@ -1,67 +1,22 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import * as echarts from 'echarts/core'
 import { BarChart } from 'echarts/charts'
 import { GridComponent, TooltipComponent } from 'echarts/components'
 import { CanvasRenderer } from 'echarts/renderers'
-import {
-  Collection,
-  DataAnalysis,
-  InfoFilled,
-  TrendCharts
-} from '@element-plus/icons-vue'
+import { ArrowRight, InfoFilled } from '@element-plus/icons-vue'
 import { getProfileStat } from '@/api/profile'
 import { emptyProfileStat } from '@/data/demo'
 
 echarts.use([BarChart, GridComponent, TooltipComponent, CanvasRenderer])
 
+const router = useRouter()
 const stat = reactive({ ...emptyProfileStat, knowledgeStats: [], recentSubmits: [] })
 const loading = ref(true)
 const statError = ref('')
 const chartRef = ref(null)
-
 let chartInstance = null
-
-const accuracyText = computed(() => `${(Number(stat.accuracy || 0) * 100).toFixed(1)}%`)
-
-const metrics = computed(() => [
-  {
-    label: '总提交',
-    value: stat.totalSubmit,
-    unit: '次',
-    icon: DataAnalysis,
-    tone: 'indigo',
-    foot: '全部提交记录，按提交口径'
-  },
-  {
-    label: '正确率',
-    value: accuracyText.value,
-    unit: '',
-    icon: TrendCharts,
-    tone: 'amber',
-    foot: `AC ${stat.acSubmit} / 总提交 ${stat.totalSubmit}`
-  },
-  {
-    label: '错题数',
-    value: stat.wrongCount,
-    unit: '道',
-    icon: Collection,
-    tone: 'rose',
-    foot: '仅统计未掌握的错题'
-  }
-])
-
-const statusMeta = {
-  AC: { label: '通过', type: 'success' },
-  WA: { label: '答案错误', type: 'danger' },
-  TLE: { label: '超时', type: 'warning' },
-  MLE: { label: '内存超限', type: 'warning' },
-  RE: { label: '运行错误', type: 'danger' },
-  CE: { label: '编译错误', type: 'danger' },
-  SE: { label: '系统错误', type: 'info' },
-  PENDING: { label: '排队中', type: 'info' },
-  JUDGING: { label: '判题中', type: 'info' }
-}
 
 const today = new Intl.DateTimeFormat('zh-CN', {
   month: 'long',
@@ -69,16 +24,79 @@ const today = new Intl.DateTimeFormat('zh-CN', {
   weekday: 'long'
 }).format(new Date())
 
+const hasSubmit = computed(() => Number(stat.totalSubmit || 0) > 0)
+const accuracyText = computed(() =>
+  hasSubmit.value ? `${(Number(stat.accuracy || 0) * 100).toFixed(1)}%` : '—'
+)
+
+const metrics = computed(() => [
+  {
+    label: '总提交',
+    value: stat.totalSubmit,
+    unit: '次',
+    foot: '全部判题记录',
+    tone: 'indigo'
+  },
+  {
+    label: '正确率',
+    value: accuracyText.value,
+    unit: '',
+    foot: `AC ${stat.acSubmit} / 提交 ${stat.totalSubmit}`,
+    tone: 'mint'
+  },
+  {
+    label: '未掌握错题',
+    value: stat.wrongCount,
+    unit: '道',
+    foot: '仅统计待复习',
+    tone: 'rose'
+  }
+])
+
+const activeKnowledge = computed(() =>
+  (stat.knowledgeStats || [])
+    .filter((item) => item.hasData)
+    .sort((a, b) => Number(b.errorRate) - Number(a.errorRate))
+)
+
+const weakPoints = computed(() => activeKnowledge.value.slice(0, 3))
+const weakest = computed(() => activeKnowledge.value[0] || null)
+
+const statusMeta = {
+  AC: { label: '通过', className: 'ok' },
+  WA: { label: '答案错误', className: 'danger' },
+  TLE: { label: '运行超时', className: 'warn' },
+  MLE: { label: '内存超限', className: 'warn' },
+  RE: { label: '运行错误', className: 'danger' },
+  CE: { label: '编译错误', className: 'danger' },
+  SE: { label: '系统错误', className: 'muted' },
+  PENDING: { label: '排队中', className: 'muted' },
+  JUDGING: { label: '判题中', className: 'muted' }
+}
+
+function statusOf(row) {
+  return statusMeta[row.status] || { label: row.status || '未知', className: 'muted' }
+}
+
+function formatTime(value) {
+  if (!value) return '—'
+  return String(value).slice(5, 16)
+}
+
+function goRecent(row) {
+  router.push(`/question/${row.questionId}`)
+}
+
 async function loadStat() {
   loading.value = true
   statError.value = ''
   try {
     const data = await getProfileStat()
     Object.assign(stat, emptyProfileStat, data || {})
-    stat.knowledgeStats = data?.knowledgeStats || []
-    stat.recentSubmits = data?.recentSubmits || []
+    stat.knowledgeStats = Array.isArray(data?.knowledgeStats) ? data.knowledgeStats : []
+    stat.recentSubmits = Array.isArray(data?.recentSubmits) ? data.recentSubmits : []
   } catch (error) {
-    statError.value = error.message || '数据看板加载失败，请稍后重试'
+    statError.value = error.message || '学习看板加载失败，请稍后重试'
     Object.assign(stat, emptyProfileStat)
   } finally {
     loading.value = false
@@ -113,8 +131,8 @@ function renderChart() {
   })
 
   chartInstance.setOption({
-    animationDuration: 350,
-    grid: { left: 42, right: 18, top: 28, bottom: 34 },
+    animationDuration: 300,
+    grid: { left: 42, right: 16, top: 24, bottom: 32 },
     tooltip: {
       trigger: 'axis',
       axisPointer: { type: 'shadow' },
@@ -135,8 +153,7 @@ function renderChart() {
       type: 'value',
       min: 0,
       max: 100,
-      name: '错误率',
-      nameTextStyle: { color: '#a0a9ba', fontSize: 10, padding: [0, 0, 4, 0] },
+      interval: 25,
       axisLabel: {
         color: '#a0a9ba',
         fontSize: 10,
@@ -149,7 +166,7 @@ function renderChart() {
         name: '错误率',
         type: 'bar',
         data: values,
-        barWidth: 28,
+        barWidth: 34,
         showBackground: true,
         backgroundStyle: { color: '#f4f6fb', borderRadius: [6, 6, 0, 0] },
         itemStyle: {
@@ -166,10 +183,6 @@ function handleResize() {
   chartInstance?.resize()
 }
 
-function statusOf(row) {
-  return statusMeta[row.status] || { label: row.status || '未知', type: 'info' }
-}
-
 onMounted(async () => {
   await loadStat()
   window.addEventListener('resize', handleResize)
@@ -184,159 +197,298 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="dashboard-page">
-    <div class="page-head">
-      <div>
-        <div class="page-eyebrow">Learning Analytics</div>
-        <h1 class="page-title">数据看板</h1>
+    <header class="page-head">
+      <div class="head-copy">
+        <div class="page-eyebrow">LEARNING / 学习复盘</div>
+        <h1 class="page-title">学习看板</h1>
         <p class="page-subtitle">
-          按提交口径还原学习轨迹：正确率、薄弱知识点和最近 5 次练习状态。
+          按真实提交还原练习轨迹：先看整体正确率，再找到最该补的知识点。
         </p>
       </div>
-      <div class="date-chip">{{ today }}</div>
-    </div>
+      <div class="head-actions">
+        <span class="date-chip">{{ today }}</span>
+        <button class="btn-primary" type="button" @click="router.push('/question')">
+          去题库
+          <el-icon><ArrowRight /></el-icon>
+        </button>
+      </div>
+    </header>
 
-    <div v-if="statError" class="demo-banner">
+    <div v-if="statError" class="error-banner">
       <el-icon><InfoFilled /></el-icon>
       <span>{{ statError }}</span>
+      <button type="button" @click="loadStat">重试</button>
     </div>
 
-    <section v-loading="loading" class="metric-grid">
-      <article v-for="metric in metrics" :key="metric.label" class="panel metric-card">
-        <div class="metric-top">
-          <span>{{ metric.label }}</span>
-          <div class="metric-icon" :class="`tone-${metric.tone}`">
-            <el-icon><component :is="metric.icon" /></el-icon>
-          </div>
+    <section v-loading="loading" class="metric-grid" aria-label="学习概览">
+      <article v-for="metric in metrics" :key="metric.label" class="metric-card">
+        <div class="metric-label">
+          <span class="metric-dot" :class="`tone-${metric.tone}`" />
+          {{ metric.label }}
         </div>
-        <div class="metric-value">
-          {{ metric.value }}<span v-if="metric.unit">{{ metric.unit }}</span>
+        <div class="metric-number">
+          {{ metric.value }}<small v-if="metric.unit">{{ metric.unit }}</small>
         </div>
         <div class="metric-foot">{{ metric.foot }}</div>
       </article>
     </section>
 
-    <section class="panel chart-panel">
-      <div class="panel-head">
-        <div>
-          <div class="panel-title">知识点错误率</div>
-          <div class="panel-subtitle">错误率 = 1 - AC 提交数 / 总提交数；无提交的点显示“—”</div>
+    <section class="dashboard-grid">
+      <article class="panel chart-card">
+        <div class="panel-head">
+          <div>
+            <h2 class="panel-title">知识点错误率</h2>
+            <p class="panel-subtitle">按提交口径计算，没有提交的知识点显示“—”</p>
+          </div>
+          <span class="panel-chip">错误率</span>
         </div>
-        <el-tag type="info" effect="plain" round size="small">按提交口径</el-tag>
-      </div>
-      <div class="chart-wrap">
-        <div ref="chartRef" class="chart"></div>
-      </div>
+        <div class="chart-wrap">
+          <div ref="chartRef" class="chart" />
+        </div>
+      </article>
+
+      <aside class="panel insight-card">
+        <div class="panel-head">
+          <div>
+            <h2 class="panel-title">薄弱知识点</h2>
+            <p class="panel-subtitle">错误率从高到低</p>
+          </div>
+        </div>
+
+        <div v-if="weakPoints.length" class="weak-list">
+          <div v-for="item in weakPoints" :key="item.name" class="weak-row">
+            <div class="weak-line">
+              <span class="weak-name">{{ item.name }}</span>
+              <span class="weak-value">{{ Math.round(Number(item.errorRate) * 100) }}%</span>
+            </div>
+            <div class="weak-track">
+              <span :style="{ width: `${Number(item.errorRate) * 100}%` }" />
+            </div>
+            <span class="weak-foot">{{ item.acCount }} / {{ item.submitCount }} 次通过</span>
+          </div>
+        </div>
+        <div v-else class="weak-empty">
+          <span>完成首次提交后，这里会生成你的薄弱知识点。</span>
+        </div>
+
+        <div class="insight-note">
+          <span v-if="weakest">
+            优先复习「{{ weakest.name }}」，再去错题本做同类题。
+          </span>
+          <span v-else>先完成一次判题，再看复盘建议。</span>
+        </div>
+
+        <button class="panel-link" type="button" @click="router.push('/wrong-book')">
+          去错题本复盘
+          <span>→</span>
+        </button>
+      </aside>
     </section>
 
-    <section class="panel recent-panel">
+    <section class="panel recent-card">
       <div class="panel-head">
         <div>
-          <div class="panel-title">最近提交</div>
-          <div class="panel-subtitle">最近 5 次判题记录</div>
+          <h2 class="panel-title">最近提交</h2>
+          <p class="panel-subtitle">最近 5 次判题记录</p>
         </div>
-        <span class="recent-count">{{ stat.recentSubmits.length }} 条</span>
+        <span class="panel-chip">{{ stat.recentSubmits.length }} 条</span>
       </div>
 
-      <el-table v-if="stat.recentSubmits.length" :data="stat.recentSubmits" row-key="id">
-        <el-table-column label="题目" min-width="260">
-          <template #default="{ row }">
-            <span class="recent-title">{{ row.questionTitle || `题目 ${row.questionId}` }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="语言" width="90">
-          <template #default="{ row }">{{ row.language === 'JAVA' ? 'Java' : 'C++' }}</template>
-        </el-table-column>
-        <el-table-column label="状态" width="120">
-          <template #default="{ row }">
-            <el-tag :type="statusOf(row).type" effect="light" round size="small">
+      <div v-if="stat.recentSubmits.length" class="recent-table">
+        <div class="recent-head">
+          <span>题目</span>
+          <span>语言</span>
+          <span>状态</span>
+          <span>耗时</span>
+          <span>提交时间</span>
+        </div>
+        <button
+          v-for="row in stat.recentSubmits"
+          :key="row.id"
+          class="recent-row"
+          type="button"
+          @click="goRecent(row)"
+        >
+          <span class="recent-title">{{ row.questionTitle || `题目 ${row.questionId}` }}</span>
+          <span class="recent-lang">{{ row.language === 'JAVA' ? 'Java' : 'C++' }}</span>
+          <span>
+            <span class="status-pill" :class="statusOf(row).className">
               {{ statusOf(row).label }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="耗时" width="100">
-          <template #default="{ row }">
+            </span>
+          </span>
+          <span class="recent-time">
             {{ row.runTimeMs == null ? '—' : `${row.runTimeMs} ms` }}
-          </template>
-        </el-table-column>
-        <el-table-column label="提交时间" width="170">
-          <template #default="{ row }">{{ row.createTime || '—' }}</template>
-        </el-table-column>
-      </el-table>
+          </span>
+          <span class="recent-date">{{ formatTime(row.createTime) }}</span>
+        </button>
+      </div>
 
-      <el-empty
-        v-else
-        description="暂无提交记录，去题库开始第一道练习"
-        :image-size="80"
-      >
-        <el-button type="primary" plain @click="$router.push('/question')">去题库</el-button>
-      </el-empty>
+      <div v-else class="recent-empty">
+        <span class="empty-mark">◎</span>
+        <h3>还没有提交记录</h3>
+        <p>从题库开始第一道练习，提交后这里会出现判题结果。</p>
+        <button class="btn-primary" type="button" @click="router.push('/question')">
+          去挑一道题
+          <el-icon><ArrowRight /></el-icon>
+        </button>
+      </div>
     </section>
   </div>
 </template>
 
 <style scoped>
+.dashboard-page {
+  width: 100%;
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 34px 24px 76px;
+}
+
+.page-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  padding-bottom: 26px;
+}
+
+.page-eyebrow {
+  color: #6366f1;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+}
+
+.page-title {
+  margin: 8px 0 10px;
+  color: #0f172a;
+  font-size: 44px;
+  font-weight: 750;
+  letter-spacing: -0.04em;
+  line-height: 1.08;
+}
+
+.page-subtitle {
+  max-width: 620px;
+  margin: 0;
+  color: #64748b;
+  font-size: 13.5px;
+  line-height: 1.8;
+}
+
+.head-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
 .date-chip {
-  padding: 8px 12px;
-  border: 1px solid var(--ca-line);
-  border-radius: 8px;
+  padding: 8px 11px;
+  border: 1px solid #e8edf5;
+  border-radius: 7px;
   background: #fff;
   color: #7c869c;
   font-size: 11.5px;
+  white-space: nowrap;
+}
+
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 15px;
+  border: 0;
+  border-radius: 8px;
+  background: #4f46e5;
+  color: #fff;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.btn-primary:hover {
+  background: #4338ca;
+}
+
+.error-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border: 1px solid #fde2e2;
+  border-radius: 8px;
+  background: #fff8f8;
+  color: #b91c1c;
+  font-size: 12px;
+}
+
+.error-banner button {
+  margin-left: auto;
+  border: 0;
+  background: transparent;
+  color: #b91c1c;
+  font-family: inherit;
+  font-size: 12px;
+  text-decoration: underline;
+  cursor: pointer;
 }
 
 .metric-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 14px;
-  margin-bottom: 16px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
 }
 
 .metric-card {
-  padding: 17px 18px 15px;
+  padding: 17px 18px 14px;
+  border: 1px solid #e8edf5;
+  border-radius: 13px;
+  background: #fff;
 }
 
-.metric-top {
+.metric-label {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 7px;
   color: #7c869c;
   font-size: 11.5px;
 }
 
-.metric-icon {
-  display: grid;
-  place-items: center;
-  width: 29px;
-  height: 29px;
-  border-radius: 8px;
-  font-size: 15px;
+.metric-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
 }
 
 .tone-indigo {
-  background: #eef2ff;
-  color: #4f46e5;
+  background: #6366f1;
 }
 
-.tone-amber {
-  background: #fffbeb;
-  color: #d97706;
+.tone-mint {
+  background: #10b981;
 }
 
 .tone-rose {
-  background: #fff1f2;
-  color: #e11d48;
+  background: #f43f5e;
 }
 
-.metric-value {
-  margin-top: 12px;
-  color: var(--ca-ink);
-  font-size: 28px;
-  font-weight: 700;
-  letter-spacing: -0.9px;
+.metric-number {
+  margin-top: 11px;
+  color: #0f172a;
+  font-size: 30px;
+  font-weight: 740;
+  letter-spacing: -0.04em;
   line-height: 1;
 }
 
-.metric-value span {
+.metric-number small {
   margin-left: 3px;
   color: #94a3b8;
   font-size: 12px;
@@ -345,53 +497,351 @@ onBeforeUnmount(() => {
 }
 
 .metric-foot {
-  margin-top: 9px;
-  color: #a3adc2;
+  margin-top: 8px;
+  color: #a0a9ba;
   font-size: 10px;
 }
 
-.chart-panel {
-  margin-bottom: 16px;
-  overflow: hidden;
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.65fr) minmax(280px, 0.7fr);
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.panel {
+  border: 1px solid #e8edf5;
+  border-radius: 13px;
+  background: #fff;
+}
+
+.chart-card {
+  min-width: 0;
+  padding: 17px 18px 10px;
+}
+
+.panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.panel-title {
+  margin: 0;
+  color: #1e293b;
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.panel-subtitle {
+  margin: 5px 0 0;
+  color: #94a3b8;
+  font-size: 10.5px;
+}
+
+.panel-chip {
+  padding: 3px 8px;
+  border: 1px solid #eef2f7;
+  border-radius: 999px;
+  color: #a0a9ba;
+  font-size: 10px;
+  white-space: nowrap;
 }
 
 .chart-wrap {
-  padding: 8px 8px 12px;
+  padding-top: 4px;
 }
 
 .chart {
   width: 100%;
-  height: 300px;
+  height: 292px;
 }
 
-.recent-panel {
+.insight-card {
+  display: flex;
+  flex-direction: column;
+  padding: 17px 18px 16px;
+}
+
+.weak-list {
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+  margin-top: 18px;
+}
+
+.weak-row {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.weak-line {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.weak-name {
+  color: #334155;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.weak-value {
+  color: #4f46e5;
+  font-family: 'JetBrains Mono', Consolas, monospace;
+  font-size: 11px;
+}
+
+.weak-track {
+  height: 4px;
   overflow: hidden;
-  padding-bottom: 8px;
+  border-radius: 999px;
+  background: #f1f4f9;
 }
 
-.recent-count {
+.weak-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #818cf8;
+}
+
+.weak-foot {
+  color: #a0a9ba;
+  font-size: 9.5px;
+}
+
+.weak-empty {
+  margin-top: 18px;
+  padding: 16px 0;
+  color: #a0a9ba;
+  font-size: 11px;
+  line-height: 1.7;
+}
+
+.insight-note {
+  margin-top: auto;
+  padding-top: 18px;
+  color: #64748b;
+  font-size: 11px;
+  line-height: 1.7;
+}
+
+.panel-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 8px 0 0;
+  border: 0;
+  border-top: 1px solid #f1f4f9;
+  background: transparent;
+  color: #4f46e5;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.panel-link:hover {
+  color: #4338ca;
+}
+
+.recent-card {
+  overflow: hidden;
+  padding: 17px 18px 8px;
+}
+
+.recent-table {
+  margin-top: 14px;
+}
+
+.recent-head,
+.recent-row {
+  display: grid;
+  grid-template-columns: minmax(200px, 1.8fr) 70px 100px 80px 110px;
+  align-items: center;
+  gap: 12px;
+}
+
+.recent-head {
+  padding: 0 10px 8px;
+  color: #a0a9ba;
+  font-size: 10px;
+}
+
+.recent-row {
+  width: 100%;
+  min-height: 42px;
+  padding: 0 10px;
+  border: 0;
+  border-top: 1px solid #f4f6fa;
+  background: transparent;
+  color: #475569;
+  font-family: inherit;
+  font-size: 11.5px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.recent-row:hover {
+  background: #fbfcff;
+}
+
+.recent-title {
+  overflow: hidden;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recent-lang,
+.recent-time,
+.recent-date {
+  color: #94a3b8;
+  font-size: 10.5px;
+}
+
+.status-pill {
+  display: inline-flex;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.status-pill.ok {
+  background: #ecfdf5;
+  color: #059669;
+}
+
+.status-pill.danger {
+  background: #fff1f2;
+  color: #be123c;
+}
+
+.status-pill.warn {
+  background: #fffbeb;
+  color: #b45309;
+}
+
+.status-pill.muted {
+  background: #f8fafc;
+  color: #64748b;
+}
+
+.recent-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 42px 20px 38px;
+  text-align: center;
+}
+
+.empty-mark {
+  color: #c7d2fe;
+  font-size: 28px;
+}
+
+.recent-empty h3 {
+  margin: 9px 0 5px;
+  color: #334155;
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.recent-empty p {
+  margin: 0 0 14px;
   color: #94a3b8;
   font-size: 11px;
 }
 
-.recent-title {
-  color: #334155;
-  font-size: 12.5px;
-  font-weight: 550;
-}
-
 @media (max-width: 1000px) {
-  .metric-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-@media (max-width: 560px) {
-  .metric-grid {
+  .dashboard-grid {
     grid-template-columns: 1fr;
   }
 
+  .insight-card {
+    min-height: 230px;
+  }
+}
+
+@media (max-width: 760px) {
+  .dashboard-page {
+    padding: 24px 14px 52px;
+  }
+
+  .page-head {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 16px;
+    padding-bottom: 20px;
+  }
+
+  .page-title {
+    font-size: 36px;
+  }
+
+  .page-subtitle {
+    font-size: 12.5px;
+  }
+
+  .head-actions {
+    width: 100%;
+  }
+
   .date-chip {
+    flex: 1;
+  }
+
+  .metric-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .metric-card {
+    padding: 14px 12px 12px;
+  }
+
+  .metric-number {
+    font-size: 23px;
+  }
+
+  .metric-foot {
+    line-height: 1.5;
+  }
+
+  .chart-card,
+  .insight-card,
+  .recent-card {
+    padding-right: 14px;
+    padding-left: 14px;
+  }
+
+  .chart {
+    height: 250px;
+  }
+
+  .recent-head {
+    display: none;
+  }
+
+  .recent-row {
+    grid-template-columns: minmax(0, 1fr) 58px 92px;
+    gap: 8px;
+    padding: 10px 0;
+  }
+
+  .recent-row > span:nth-child(4),
+  .recent-row > span:nth-child(5) {
     display: none;
   }
 }
