@@ -1,9 +1,12 @@
 package com.codeagent.dto;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
+
+import java.util.List;
 
 /**
  * 判题提交请求。
@@ -26,4 +29,9 @@ public class JudgeSubmitRequest {
 
     /** 竞赛 ID；普通练习提交时为空。 */
     private Long contestId;
+
+    /** 运行样例时临时附加的样例；正式提交会忽略。 */
+    @Valid
+    @Size(max = 5, message = "自定义样例最多 5 条")
+    private List<JudgeCustomCaseRequest> customCases;
 }

@@ -6,6 +6,7 @@ import com.codeagent.ai.PistonExecuteResponse;
 import com.codeagent.common.ErrorCode;
 import com.codeagent.common.PageResult;
 import com.codeagent.dto.JudgeCaseResult;
+import com.codeagent.dto.JudgeCustomCaseRequest;
 import com.codeagent.dto.QuestionDetailRow;
 import com.codeagent.entity.QuestionTestCase;
 import com.codeagent.entity.SubmitRecord;
@@ -146,7 +147,8 @@ public class JudgeServiceImpl implements JudgeService {
      * @return 样例运行结果
      */
     @Override
-    public JudgeRunSampleVO runSample(Long userId, Long questionId, String language, String code) {
+    public JudgeRunSampleVO runSample(Long userId, Long questionId, String language, String code,
+                                      List<JudgeCustomCaseRequest> customCases) {
         if (userId == null) {
             throw new BizException(ErrorCode.UNAUTHORIZED);
         }
@@ -170,8 +172,26 @@ public class JudgeServiceImpl implements JudgeService {
         List<QuestionTestCase> samples = allCases == null ? List.of() : allCases.stream()
                 .filter(item -> Integer.valueOf(1).equals(item.getIsSample()))
                 .toList();
-        if (samples.isEmpty()) {
-            throw new BizException(ErrorCode.PARAM_ERROR, "题目没有公开样例，暂时无法运行");
+
+        // 官方样例在前，用户临时添加的样例在后；两者都只用于本次运行。
+        List<QuestionTestCase> cases = new ArrayList<>(samples);
+        if (customCases != null) {
+            for (JudgeCustomCaseRequest customCase : customCases) {
+                if (customCase == null) {
+                    continue;
+                }
+                QuestionTestCase item = new QuestionTestCase();
+                item.setQuestionId(questionId);
+                item.setInputData(customCase.getInput());
+                item.setExpectedOutput(customCase.getExpectedOutput());
+                item.setIsSample(1);
+                item.setScore(0);
+                item.setSortNo(cases.size() + 1);
+                cases.add(item);
+            }
+        }
+        if (cases.isEmpty()) {
+            throw new BizException(ErrorCode.PARAM_ERROR, "题目没有样例，暂时无法运行");
         }
 
         SubmitRecord record = new SubmitRecord();
@@ -181,18 +201,22 @@ public class JudgeServiceImpl implements JudgeService {
         record.setCode(code);
         record.setStatus(PENDING);
         record.setPassedCount(0);
-        record.setTotalCount(samples.size());
+        record.setTotalCount(cases.size());
         record.setRunTimeMs(0L);
 
-        SubmitRecord result = executeCases(record, samples);
+        SubmitRecord result = executeCases(record, cases);
         JudgeRunSampleVO vo = new JudgeRunSampleVO();
         vo.setStatus(result.getStatus());
         vo.setPassedCount(result.getPassedCount() == null ? 0 : result.getPassedCount());
-        vo.setTotalCount(result.getTotalCount() == null ? samples.size() : result.getTotalCount());
+        vo.setTotalCount(result.getTotalCount() == null ? cases.size() : result.getTotalCount());
         vo.setRunTimeMs(result.getRunTimeMs() == null ? 0L : result.getRunTimeMs());
         vo.setCompileOutput(result.getCompileOutput());
         vo.setErrorMessage(result.getErrorMessage());
-        vo.setCaseResults(parseCaseResults(result.getCaseResultJson()));
+        List<JudgeCaseResultVO> caseResults = parseCaseResults(result.getCaseResultJson());
+        for (int i = samples.size(); i < caseResults.size(); i++) {
+            caseResults.get(i).setCustom(true);
+        }
+        vo.setCaseResults(caseResults);
         log.info("[monitor] type=run-sample userId={} questionId={} status={} passed={}/{} durationMs={}",
                 userId, questionId, vo.getStatus(), vo.getPassedCount(), vo.getTotalCount(), vo.getRunTimeMs());
         return vo;

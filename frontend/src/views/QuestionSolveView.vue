@@ -6,6 +6,7 @@ import {
   ArrowLeft,
   CircleCheck,
   Clock,
+  Delete,
   MagicStick,
   RefreshRight,
   VideoPlay,
@@ -93,6 +94,35 @@ const samples = computed(() =>
     output: sample.expectedOutput ?? sample.output ?? ''
   }))
 )
+
+const customCases = ref([])
+const CUSTOM_CASE_LIMIT = 5
+
+function addCustomCase() {
+  if (customCases.value.length >= CUSTOM_CASE_LIMIT) {
+    ElMessage.warning(`最多添加 ${CUSTOM_CASE_LIMIT} 条自定义样例`)
+    return
+  }
+  customCases.value.push({ input: '', expectedOutput: '' })
+}
+
+function removeCustomCase(index) {
+  customCases.value.splice(index, 1)
+}
+
+function collectCustomCases() {
+  const filled = customCases.value.filter(
+    (item) => item.input.trim() || item.expectedOutput.trim()
+  )
+  if (filled.some((item) => !item.input.trim() || !item.expectedOutput.trim())) {
+    ElMessage.warning('请补全自定义样例的输入和期望输出')
+    return null
+  }
+  return filled.map((item) => ({
+    input: item.input,
+    expectedOutput: item.expectedOutput
+  }))
+}
 
 // 题面描述通常已包含输入/输出小节；只补缺失部分，避免左栏出现重复标题。
 const statementMarkdown = computed(() => {
@@ -210,6 +240,15 @@ function readStoredCode(id, lang) {
   }
 }
 
+function clearStoredCode(id) {
+  if (id == null) return
+  try {
+    LANGUAGES.forEach(({ value }) => localStorage.removeItem(codeStorageKey(id, value)))
+  } catch {
+    // localStorage 不可用时没有草稿需要清理。
+  }
+}
+
 function saveCurrentCode() {
   if (!question.value) return
   try {
@@ -250,10 +289,17 @@ async function loadQuestion() {
     const data = await getQuestion(questionId.value)
     if (!data) throw new Error('题目不存在')
     question.value = data
+    customCases.value = []
 
     language.value = readInitialLanguage()
     baselineCode.value = templateFor(language.value)
-    code.value = readStoredCode(data.id, language.value) ?? baselineCode.value
+    if (data.solved) {
+      // 已通过的题重新进入时回到空白模板，不沿用旧代码。
+      clearStoredCode(data.id)
+      code.value = baselineCode.value
+    } else {
+      code.value = readStoredCode(data.id, language.value) ?? baselineCode.value
+    }
     loadAgentHistory()
   } catch (error) {
     question.value = null
@@ -428,6 +474,7 @@ function goBack() {
 async function showPassNotice() {
   if (passNoticeShown || disposed) return
   passNoticeShown = true
+  clearStoredCode(question.value?.id)
   const title = question.value?.title || '这道题'
   try {
     await ElMessageBox.alert(
@@ -517,6 +564,9 @@ async function runSample() {
     return
   }
 
+  const customPayload = collectCustomCases()
+  if (customPayload == null) return
+
   saveCurrentCode()
   clearTimers()
   judging.value = true
@@ -530,7 +580,8 @@ async function runSample() {
     const data = await runSampleCode({
       questionId: question.value.id,
       language: language.value,
-      code: code.value
+      code: code.value,
+      customCases: customPayload
     })
     judgeResult.value = data
   } catch (error) {
@@ -725,13 +776,14 @@ onBeforeUnmount(() => {
     agentController.abort()
     agentController = null
   }
-  saveCurrentCode()
+  // 只有刷新页面（beforeunload）保留草稿；离开页面即恢复模板。
+  clearStoredCode(question.value?.id)
   clearTimers()
   window.removeEventListener('beforeunload', handleBeforeUnload)
 })
 
 onBeforeRouteLeave(() => {
-  saveCurrentCode()
+  clearStoredCode(question.value?.id)
   return true
 })
 </script>
@@ -787,6 +839,54 @@ onBeforeRouteLeave(() => {
           <div class="problem-scroll">
             <section class="problem-section problem-statement">
               <MarkdownBody :content="statementMarkdown" />
+            </section>
+
+            <section class="custom-samples">
+              <div class="custom-samples-head">
+                <div>
+                  <strong>自定义样例</strong>
+                  <span>只在本机本次运行中使用</span>
+                </div>
+                <button type="button" class="custom-add" @click="addCustomCase">+ 添加</button>
+              </div>
+
+              <p v-if="!customCases.length" class="custom-empty">
+                可以给这道题补一条自己的输入和期望输出，运行样例时会一起执行。
+              </p>
+
+              <div
+                v-for="(customCase, index) in customCases"
+                :key="index"
+                class="custom-case"
+              >
+                <div class="custom-case-head">
+                  <span>样例 {{ index + 1 }}</span>
+                  <button
+                    type="button"
+                    class="custom-remove"
+                    aria-label="删除样例"
+                    @click="removeCustomCase(index)"
+                  >
+                    <el-icon><Delete /></el-icon>
+                  </button>
+                </div>
+                <div class="custom-case-fields">
+                  <el-input
+                    v-model="customCase.input"
+                    type="textarea"
+                    :rows="2"
+                    resize="none"
+                    placeholder="输入"
+                  />
+                  <el-input
+                    v-model="customCase.expectedOutput"
+                    type="textarea"
+                    :rows="2"
+                    resize="none"
+                    placeholder="期望输出"
+                  />
+                </div>
+              </div>
             </section>
           </div>
         </aside>
@@ -888,7 +988,7 @@ onBeforeRouteLeave(() => {
               </button>
 
               <span class="lower-tip">
-                {{ activePane === 'result' ? (sampleOnly ? '仅运行公开样例，不写入提交记录' : '按用例逐项比对，失败时显示期望与实际输出') : '工具调用会实时显示在时间线上' }}
+                {{ activePane === 'result' ? (sampleOnly ? '仅运行样例，不写入提交记录' : '按用例逐项比对，失败时显示期望与实际输出') : '工具调用会实时显示在时间线上' }}
               </span>
             </div>
 
@@ -914,7 +1014,7 @@ onBeforeRouteLeave(() => {
               <div v-else-if="judgeResult" class="judge-result">
                 <div v-if="sampleOnly" class="demo-banner sample-banner">
                   <el-icon><Warning /></el-icon>
-                  <span>仅运行公开样例，不会写入提交记录，也不会自动触发 AI 调试。</span>
+                  <span>仅运行样例（含自定义），不会写入提交记录，也不会自动触发 AI 调试。</span>
                 </div>
 
                 <div v-if="usingDemoJudge" class="demo-banner">
@@ -956,7 +1056,8 @@ onBeforeRouteLeave(() => {
                     <div class="case-row-head">
                       <div class="case-title">
                         <span class="case-index">用例 {{ item.index }}</span>
-                        <el-tag v-if="item.sample" size="small" effect="plain">样例</el-tag>
+                        <el-tag v-if="item.custom" size="small" effect="plain">自定义</el-tag>
+                        <el-tag v-else-if="item.sample" size="small" effect="plain">样例</el-tag>
                         <el-tag :type="item.passed ? 'success' : 'danger'" size="small" effect="light">
                           {{ item.passed ? '通过' : '未通过' }}
                         </el-tag>
@@ -964,7 +1065,7 @@ onBeforeRouteLeave(() => {
                       <span v-if="item.runTimeMs != null" class="case-time">{{ item.runTimeMs }} ms</span>
                     </div>
 
-                    <div v-if="!item.passed" class="case-detail">
+                    <div v-if="!item.passed || item.custom" class="case-detail">
                       <div v-if="caseInput(item)" class="case-block">
                         <span>输入</span>
                         <pre>{{ caseInput(item) }}</pre>
@@ -1142,6 +1243,91 @@ onBeforeRouteLeave(() => {
   color: #1e293b;
   font-size: 13px;
   font-weight: 650;
+}
+
+.custom-samples {
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px solid #eef2f7;
+}
+
+.custom-samples-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.custom-samples-head strong {
+  display: block;
+  color: #1e293b;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.custom-samples-head span {
+  display: block;
+  margin-top: 3px;
+  color: #8a93a6;
+  font-size: 11px;
+}
+
+.custom-add {
+  flex: none;
+  padding: 4px 0;
+  border: 0;
+  background: transparent;
+  color: #1f3a5f;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.custom-empty {
+  margin: 10px 0 0;
+  color: #8a93a6;
+  font-size: 11.5px;
+  line-height: 1.7;
+}
+
+.custom-case {
+  margin-top: 12px;
+  padding: 10px;
+  border: 1px solid #e8edf5;
+  border-radius: 8px;
+  background: #fbfcfe;
+}
+
+.custom-case-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  color: #7c869c;
+  font-size: 11px;
+}
+
+.custom-remove {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px;
+  border: 0;
+  background: transparent;
+  color: #a0a9b8;
+  cursor: pointer;
+}
+
+.custom-case-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.custom-case-fields :deep(.el-textarea__inner) {
+  padding: 7px 9px;
+  border-radius: 7px;
+  font-family: 'JetBrains Mono', Consolas, monospace;
+  font-size: 11px;
+  line-height: 1.6;
 }
 
 .sample-list {
@@ -1914,6 +2100,10 @@ onBeforeRouteLeave(() => {
 
   .lower-body {
     max-height: 460px;
+  }
+
+  .custom-case-fields {
+    grid-template-columns: 1fr;
   }
 
   .action-bar {

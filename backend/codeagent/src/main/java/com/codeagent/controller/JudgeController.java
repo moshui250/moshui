@@ -47,13 +47,14 @@ public class JudgeController {
     /**
      * 只运行公开样例，不创建提交记录，用于答题页的“运行样例”按钮。
      *
-     * @param request 题目 ID、语言和完整代码
+     * @param request 题目 ID、语言、完整代码和可选自定义样例
      * @return 样例运行结果
      */
     @PostMapping("/run-sample")
     public R<JudgeRunSampleVO> runSample(@Valid @RequestBody JudgeSubmitRequest request) {
         return R.ok(judgeService.runSample(
-                requireUserId(), request.getQuestionId(), request.getLanguage(), request.getCode()));
+                requireUserId(), request.getQuestionId(), request.getLanguage(), request.getCode(),
+                request.getCustomCases()));
     }
 
     /**

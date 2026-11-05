@@ -1,9 +1,12 @@
 package com.codeagent.service;
 
 import com.codeagent.common.PageResult;
+import com.codeagent.dto.JudgeCustomCaseRequest;
 import com.codeagent.vo.JudgeHistoryVO;
 import com.codeagent.vo.JudgeResultVO;
 import com.codeagent.vo.JudgeRunSampleVO;
+
+import java.util.List;
 
 /**
  * 异步判题服务。
@@ -28,10 +31,12 @@ public interface JudgeService {
      * @param userId     当前登录用户 ID
      * @param questionId 题目 ID
      * @param language   语言代码 CPP / JAVA
-     * @param code       完整源代码
-     * @return 样例运行结果，仅包含公开样例
+     * @param code        完整源代码
+     * @param customCases 用户临时添加的样例，可为空
+     * @return 样例运行结果，包含公开样例和自定义样例
      */
-    JudgeRunSampleVO runSample(Long userId, Long questionId, String language, String code);
+    JudgeRunSampleVO runSample(Long userId, Long questionId, String language, String code,
+                               List<JudgeCustomCaseRequest> customCases);
 
     /**
      * 查询某次提交的判题结果，只能查询自己的提交。

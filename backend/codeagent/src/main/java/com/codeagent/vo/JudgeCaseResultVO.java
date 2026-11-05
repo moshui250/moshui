@@ -19,6 +19,9 @@ public class JudgeCaseResultVO {
     /** 是否通过。 */
     private boolean passed;
 
+    /** 是否为用户临时添加的样例。 */
+    private Boolean custom;
+
     /** 用例输入；隐藏用例通过时为 null。 */
     private String input;
 
