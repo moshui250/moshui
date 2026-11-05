@@ -89,7 +89,7 @@ public class AgentTools {
                 return finish(context, "缺少代码", json(Map.of("error", "缺少代码，无法判题")));
             }
 
-            Long submitId = judgeService.submit(context.getUserId(), targetQuestionId,
+            Long submitId = judgeService.submit(context.getUserId(), targetQuestionId, null,
                     targetLanguage, targetCode);
             context.markJudged(submitId);
             JudgeResultVO result = waitForResult(context, submitId);

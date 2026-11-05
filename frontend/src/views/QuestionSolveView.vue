@@ -39,6 +39,13 @@ const STATUS_META = {
 const CODE_PREFIX = 'codeagent_code_'
 const LANGUAGE_KEY = 'codeagent_last_language'
 
+const contestId = computed(() => {
+  const raw = Number(route.name === 'contest-solve' ? route.params.id : route.query.contestId)
+  return Number.isFinite(raw) && raw > 0 ? raw : null
+})
+
+const questionId = computed(() => Number(route.params.questionId || route.params.id))
+
 const loading = ref(true)
 const loadError = ref('')
 const question = ref(null)
@@ -232,7 +239,7 @@ async function loadQuestion() {
   loading.value = true
   loadError.value = ''
   try {
-    const data = await getQuestion(route.params.id)
+    const data = await getQuestion(questionId.value)
     if (!data) throw new Error('题目不存在')
     question.value = data
 
@@ -401,6 +408,14 @@ function clearTimers() {
  * S7 判题接口尚未接入时，使用明确标注的本地演示结果。
  * @returns {Promise<void>} 提交和结果加载结束后完成
  */
+function goBack() {
+  if (contestId.value) {
+    router.push({ name: 'contest-detail', params: { id: contestId.value } })
+    return
+  }
+  router.push({ name: 'question-detail', params: { id: question.value.id } })
+}
+
 async function submit() {
   if (!question.value || judging.value) return
   if (!code.value.trim()) {
@@ -417,16 +432,18 @@ async function submit() {
   sampleOnly.value = false
 
   try {
-    const data = await submitCode({
+    const payload = {
       questionId: question.value.id,
       language: language.value,
       code: code.value
-    })
+    }
+    if (contestId.value) payload.contestId = contestId.value
+    const data = await submitCode(payload)
     const submitId = data?.submitId ?? data?.id
     if (!submitId) throw new Error('判题服务未返回 submitId')
     await pollJudge(submitId)
     const status = String(judgeResult.value?.status || '').toUpperCase()
-    if (status && status !== 'AC') {
+    if (status && status !== 'AC' && !contestId.value) {
       startAgent('HINT')
     }
   } catch (error) {
@@ -685,7 +702,7 @@ onBeforeRouteLeave(() => {
 </script>
 
 <template>
-  <div v-loading="loading" class="solve-page">
+  <div v-loading="loading" :class="['solve-page', { 'contest-solve': contestId }]">
     <div v-if="!loading && !question" class="panel empty-panel">
       <el-empty :description="loadError || '题目不存在，或已被删除'" :image-size="100">
         <el-button type="primary" @click="router.push('/question')">回到题库</el-button>
@@ -695,9 +712,9 @@ onBeforeRouteLeave(() => {
 
     <template v-else-if="question">
       <header class="solve-head">
-        <button class="back-link" @click="router.push({ name: 'question-detail', params: { id: question.id } })">
+        <button class="back-link" @click="goBack">
           <el-icon><ArrowLeft /></el-icon>
-          返回题面
+          {{ contestId ? '返回竞赛' : '返回题面' }}
         </button>
 
         <div class="head-main">
@@ -708,6 +725,9 @@ onBeforeRouteLeave(() => {
               {{ difficulty.label }}
             </el-tag>
             <span class="meta-chip">{{ knowledgeName }}</span>
+            <el-tag v-if="contestId" type="warning" effect="light" round size="small">
+              竞赛提交
+            </el-tag>
             <span v-if="question.solved" class="meta-solved">
               <el-icon><CircleCheck /></el-icon>
               已通过
@@ -715,7 +735,7 @@ onBeforeRouteLeave(() => {
           </div>
         </div>
 
-        <el-button class="statement-link" text @click="router.push({ name: 'question-detail', params: { id: question.id } })">
+        <el-button v-if="!contestId" class="statement-link" text @click="router.push({ name: 'question-detail', params: { id: question.id } })">
           查看完整题面
         </el-button>
       </header>
@@ -780,7 +800,8 @@ onBeforeRouteLeave(() => {
                   type="primary"
                   plain
                   :loading="agentRunning"
-                  :disabled="!question"
+                  :disabled="!question || !!contestId"
+                  :title="contestId ? '竞赛模式下不提供 AI 调试' : ''"
                   @click="startAgent('HINT')"
                 >
                   <el-icon><MagicStick /></el-icon>
@@ -931,6 +952,16 @@ onBeforeRouteLeave(() => {
 <style scoped>
 .solve-page {
   min-height: 300px;
+}
+
+.contest-solve {
+  padding: 18px 24px 40px;
+}
+
+@media (max-width: 720px) {
+  .contest-solve {
+    padding: 14px 14px 28px;
+  }
 }
 
 .empty-panel {

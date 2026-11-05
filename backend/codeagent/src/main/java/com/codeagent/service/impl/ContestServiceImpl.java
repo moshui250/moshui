@@ -1,0 +1,278 @@
+package com.codeagent.service.impl;
+
+import com.codeagent.common.ErrorCode;
+import com.codeagent.common.PageResult;
+import com.codeagent.dto.ContestParticipantRow;
+import com.codeagent.dto.ContestProblemRow;
+import com.codeagent.dto.ContestRow;
+import com.codeagent.dto.ContestSubmitRow;
+import com.codeagent.entity.Contest;
+import com.codeagent.exception.BizException;
+import com.codeagent.mapper.ContestMapper;
+import com.codeagent.service.ContestService;
+import com.codeagent.vo.ContestDetailVO;
+import com.codeagent.vo.ContestListItemVO;
+import com.codeagent.vo.ContestProblemVO;
+import com.codeagent.vo.ContestRankVO;
+import com.codeagent.vo.ContestRegisterVO;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+
+/**
+ * 竞赛服务实现：列表/详情、报名、基于提交记录的实时排名。
+ */
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class ContestServiceImpl implements ContestService {
+
+    private static final Set<String> STATUSES = Set.of("UPCOMING", "RUNNING", "ENDED");
+    private static final Set<String> WRONG_STATUSES = Set.of("WA", "TLE", "MLE", "RE", "CE");
+    private static final int DEFAULT_PAGE_SIZE = 10;
+    private static final int MAX_PAGE_SIZE = 50;
+    private static final long WRONG_PENALTY_SECONDS = 20L * 60L;
+
+    private final ContestMapper contestMapper;
+
+    @Override
+    public PageResult<ContestListItemVO> list(Long userId, String status, long page, long size) {
+        long safePage = Math.max(page, 1L);
+        long safeSize = size < 1 ? DEFAULT_PAGE_SIZE : Math.min(size, MAX_PAGE_SIZE);
+        String normalizedStatus = normalizeStatus(status);
+        long total = contestMapper.countList(normalizedStatus);
+        if (total == 0) {
+            return PageResult.empty(safePage, safeSize);
+        }
+        long offset = (safePage - 1L) * safeSize;
+        List<ContestRow> rows = contestMapper.selectList(normalizedStatus, userId, offset, safeSize);
+        List<ContestListItemVO> records = rows == null ? List.of() : rows.stream()
+                .map(this::toListItem)
+                .toList();
+        return PageResult.of(records, total, safePage, safeSize);
+    }
+
+    @Override
+    public ContestDetailVO detail(Long contestId, Long userId) {
+        if (contestId == null) {
+            throw new BizException(ErrorCode.PARAM_ERROR, "竞赛 ID 不能为空");
+        }
+        ContestRow row = contestMapper.selectById(contestId, userId);
+        if (row == null) {
+            throw new BizException(ErrorCode.NOT_FOUND, "竞赛不存在");
+        }
+        ContestDetailVO vo = new ContestDetailVO();
+        vo.setId(row.getId());
+        vo.setTitle(row.getTitle());
+        vo.setDescription(row.getDescription());
+        vo.setStartTime(row.getStartTime());
+        vo.setEndTime(row.getEndTime());
+        vo.setStatus(row.getStatus());
+        vo.setServerTime(LocalDateTime.now());
+        vo.setProblemCount(row.getProblemCount());
+        vo.setParticipantCount(row.getParticipantCount());
+        vo.setRegistered(Boolean.TRUE.equals(row.getRegistered()));
+        List<ContestProblemRow> problems = contestMapper.selectProblems(contestId);
+        vo.setProblems(problems == null ? List.of() : problems.stream()
+                .map(this::toProblem)
+                .toList());
+        return vo;
+    }
+
+    @Override
+    @Transactional
+    public ContestRegisterVO register(Long contestId, Long userId) {
+        if (userId == null) {
+            throw new BizException(ErrorCode.UNAUTHORIZED);
+        }
+        ContestRow row = contestMapper.selectById(contestId, userId);
+        if (row == null) {
+            throw new BizException(ErrorCode.NOT_FOUND, "竞赛不存在");
+        }
+        if ("ENDED".equals(row.getStatus())) {
+            throw new BizException(ErrorCode.PARAM_ERROR, "竞赛已结束，不能报名");
+        }
+        contestMapper.insertRegistration(contestId, userId);
+        long count = contestMapper.countParticipants(contestId);
+        log.info("[monitor] type=contest-register contestId={} userId={} participants={}",
+                contestId, userId, count);
+        return new ContestRegisterVO(true, Math.toIntExact(count));
+    }
+
+    @Override
+    public PageResult<ContestRankVO> rank(Long contestId, Long userId, long page, long size) {
+        if (contestId == null) {
+            throw new BizException(ErrorCode.PARAM_ERROR, "竞赛 ID 不能为空");
+        }
+        ContestRow contestRow = contestMapper.selectById(contestId, userId);
+        if (contestRow == null) {
+            throw new BizException(ErrorCode.NOT_FOUND, "竞赛不存在");
+        }
+        long safePage = Math.max(page, 1L);
+        long safeSize = size < 1 ? 20L : Math.min(size, MAX_PAGE_SIZE);
+
+        Map<Long, Integer> problemScores = new HashMap<>();
+        List<ContestProblemRow> problems = contestMapper.selectProblems(contestId);
+        if (problems != null) {
+            for (ContestProblemRow problem : problems) {
+                problemScores.put(problem.getQuestionId(), problem.getScore() == null ? 100 : problem.getScore());
+            }
+        }
+
+        Map<Long, RankAccumulator> participants = new HashMap<>();
+        List<ContestParticipantRow> registered = contestMapper.selectParticipants(contestId);
+        if (registered != null) {
+            for (ContestParticipantRow participant : registered) {
+                RankAccumulator item = new RankAccumulator();
+                item.userId = participant.getUserId();
+                item.username = participant.getUsername();
+                item.nickname = participant.getNickname();
+                participants.put(item.userId, item);
+            }
+        }
+
+        List<ContestSubmitRow> submissions = contestMapper.selectSubmissions(contestId);
+        if (submissions != null) {
+            for (ContestSubmitRow submission : submissions) {
+                RankAccumulator item = participants.get(submission.getUserId());
+                if (item == null) {
+                    continue;
+                }
+                Long questionId = submission.getQuestionId();
+                if ("AC".equals(submission.getStatus())) {
+                    if (!item.solved.contains(questionId)) {
+                        item.solved.add(questionId);
+                        item.solvedCount++;
+                        item.score += problemScores.getOrDefault(questionId, 0);
+                        long baseSeconds = Math.max(0L,
+                                Duration.between(contestRow.getStartTime(), submission.getCreateTime()).getSeconds());
+                        int wrong = item.wrong.getOrDefault(questionId, 0);
+                        item.penaltySeconds += baseSeconds + wrong * WRONG_PENALTY_SECONDS;
+                        if (item.lastAcTime == null || submission.getCreateTime().isAfter(item.lastAcTime)) {
+                            item.lastAcTime = submission.getCreateTime();
+                        }
+                    }
+                } else if (WRONG_STATUSES.contains(submission.getStatus()) && !item.solved.contains(questionId)) {
+                    item.wrong.merge(questionId, 1, Integer::sum);
+                }
+            }
+        }
+
+        List<RankAccumulator> ordered = new ArrayList<>(participants.values());
+        ordered.sort(Comparator
+                .comparingInt((RankAccumulator item) -> item.score).reversed()
+                .thenComparing(Comparator.comparingInt((RankAccumulator item) -> item.solvedCount).reversed())
+                .thenComparingLong(item -> item.penaltySeconds)
+                .thenComparingLong(item -> item.userId));
+
+        long total = ordered.size();
+        long offset = (safePage - 1L) * safeSize;
+        if (offset >= total) {
+            return PageResult.empty(safePage, safeSize);
+        }
+        int from = (int) offset;
+        int to = (int) Math.min(offset + safeSize, total);
+        List<ContestRankVO> records = new ArrayList<>();
+        for (int i = from; i < to; i++) {
+            RankAccumulator item = ordered.get(i);
+            ContestRankVO vo = new ContestRankVO();
+            vo.setRank((long) (i + 1));
+            vo.setUserId(item.userId);
+            vo.setUsername(item.username);
+            vo.setNickname(item.nickname == null || item.nickname.isBlank() ? item.username : item.nickname);
+            vo.setSolvedCount(item.solvedCount);
+            vo.setScore(item.score);
+            vo.setPenaltyMinutes(item.penaltySeconds / 60L);
+            vo.setLastAcTime(item.lastAcTime);
+            vo.setMe(userId != null && userId.equals(item.userId));
+            records.add(vo);
+        }
+        return PageResult.of(records, total, safePage, safeSize);
+    }
+
+    @Override
+    public void validateSubmission(Long contestId, Long questionId, Long userId) {
+        if (contestId == null) {
+            return;
+        }
+        if (userId == null) {
+            throw new BizException(ErrorCode.UNAUTHORIZED);
+        }
+        ContestRow contest = contestMapper.selectById(contestId, userId);
+        if (contest == null) {
+            throw new BizException(ErrorCode.NOT_FOUND, "竞赛不存在");
+        }
+        if (!"RUNNING".equals(contest.getStatus())) {
+            throw new BizException(ErrorCode.PARAM_ERROR, "竞赛不在进行中");
+        }
+        if (!Boolean.TRUE.equals(contest.getRegistered())) {
+            throw new BizException(ErrorCode.FORBIDDEN, "请先报名竞赛");
+        }
+        List<ContestProblemRow> problems = contestMapper.selectProblems(contestId);
+        boolean exists = problems != null && problems.stream()
+                .anyMatch(problem -> questionId.equals(problem.getQuestionId()));
+        if (!exists) {
+            throw new BizException(ErrorCode.PARAM_ERROR, "题目不属于该竞赛");
+        }
+    }
+
+    private ContestListItemVO toListItem(ContestRow row) {
+        ContestListItemVO vo = new ContestListItemVO();
+        vo.setId(row.getId());
+        vo.setTitle(row.getTitle());
+        vo.setDescription(row.getDescription());
+        vo.setStartTime(row.getStartTime());
+        vo.setEndTime(row.getEndTime());
+        vo.setStatus(row.getStatus());
+        vo.setProblemCount(row.getProblemCount());
+        vo.setParticipantCount(row.getParticipantCount());
+        vo.setRegistered(Boolean.TRUE.equals(row.getRegistered()));
+        return vo;
+    }
+
+    private ContestProblemVO toProblem(ContestProblemRow row) {
+        ContestProblemVO vo = new ContestProblemVO();
+        vo.setLabel(row.getLabel());
+        vo.setQuestionId(row.getQuestionId());
+        vo.setTitle(row.getTitle());
+        vo.setDifficulty(row.getDifficulty());
+        vo.setKnowledgePoint(row.getKnowledgePointName());
+        vo.setScore(row.getScore());
+        return vo;
+    }
+
+    private String normalizeStatus(String status) {
+        if (status == null || status.isBlank()) {
+            return null;
+        }
+        String value = status.trim().toUpperCase(Locale.ROOT);
+        if (!STATUSES.contains(value)) {
+            throw new BizException(ErrorCode.PARAM_ERROR, "竞赛状态不合法");
+        }
+        return value;
+    }
+
+    private static final class RankAccumulator {
+        private Long userId;
+        private String username;
+        private String nickname;
+        private int solvedCount;
+        private int score;
+        private long penaltySeconds;
+        private LocalDateTime lastAcTime;
+        private final Set<Long> solved = new HashSet<>();
+        private final Map<Long, Integer> wrong = new HashMap<>();
+    }
+}

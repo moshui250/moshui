@@ -13,6 +13,7 @@ import com.codeagent.exception.BizException;
 import com.codeagent.mapper.QuestionMapper;
 import com.codeagent.mapper.QuestionTestCaseMapper;
 import com.codeagent.mapper.SubmitRecordMapper;
+import com.codeagent.service.ContestService;
 import com.codeagent.service.JudgeRateLimiter;
 import com.codeagent.service.JudgeService;
 import com.codeagent.service.ProfileStatService;
@@ -68,6 +69,7 @@ public class JudgeServiceImpl implements JudgeService {
     private final PistonCircuitBreaker pistonCircuitBreaker;
     private final WrongBookService wrongBookService;
     private final ProfileStatService profileStatService;
+    private final ContestService contestService;
     private final ObjectMapper objectMapper;
 
     @Resource(name = "judgeExecutor")
@@ -78,12 +80,13 @@ public class JudgeServiceImpl implements JudgeService {
      *
      * @param userId     当前登录用户 ID
      * @param questionId 题目 ID
+     * @param contestId  竞赛 ID；普通练习为 null
      * @param language   语言代码 CPP / JAVA
      * @param code       完整源代码
      * @return 新建的提交记录 ID
      */
     @Override
-    public Long submit(Long userId, Long questionId, String language, String code) {
+    public Long submit(Long userId, Long questionId, Long contestId, String language, String code) {
         if (userId == null) {
             throw new BizException(ErrorCode.UNAUTHORIZED);
         }
@@ -101,6 +104,7 @@ public class JudgeServiceImpl implements JudgeService {
             throw new BizException(ErrorCode.PARAM_ERROR, "代码长度不能超过 100000 个字符");
         }
         requireAccessible(questionId, userId);
+        contestService.validateSubmission(contestId, questionId, userId);
 
         List<QuestionTestCase> cases = testCaseMapper.selectAllByQuestionId(questionId);
         if (cases == null || cases.isEmpty()) {
@@ -110,6 +114,7 @@ public class JudgeServiceImpl implements JudgeService {
         SubmitRecord record = new SubmitRecord();
         record.setUserId(userId);
         record.setQuestionId(questionId);
+        record.setContestId(contestId);
         record.setLanguage(normalizedLanguage);
         record.setCode(code);
         record.setStatus(PENDING);
@@ -281,7 +286,8 @@ public class JudgeServiceImpl implements JudgeService {
                     result.getPassedCount(), result.getTotalCount(),
                     System.currentTimeMillis() - startedAt);
 
-            if (!AC.equals(result.getStatus()) && !SE.equals(result.getStatus())) {
+            if (result.getContestId() == null
+                    && !AC.equals(result.getStatus()) && !SE.equals(result.getStatus())) {
                 try {
                     wrongBookService.recordWrong(result.getUserId(), result.getQuestionId(), submitId);
                 } catch (Exception e) {

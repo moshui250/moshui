@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.codeagent.mapper.ContestMapper">
+
+    <sql id="statusExpr">
+        CASE
+            WHEN c.start_time &gt; NOW() THEN 'UPCOMING'
+            WHEN c.end_time &lt; NOW() THEN 'ENDED'
+            ELSE 'RUNNING'
+        END
+    </sql>
+
+    <sql id="columns">
+        c.id, c.title, c.description, c.start_time, c.end_time,
+        <include refid="statusExpr"/> AS status,
+        (SELECT COUNT(*) FROM contest_problem cp WHERE cp.contest_id = c.id) AS problem_count,
+        (SELECT COUNT(*) FROM contest_registration cr WHERE cr.contest_id = c.id) AS participant_count
+    </sql>
+
+    <select id="selectById" resultType="com.codeagent.dto.ContestRow">
+        SELECT
+        <include refid="columns"/>,
+        <choose>
+            <when test="userId != null">
+                EXISTS(SELECT 1 FROM contest_registration cr
+                       WHERE cr.contest_id = c.id AND cr.user_id = #{userId}) AS registered
+            </when>
+            <otherwise>FALSE AS registered</otherwise>
+        </choose>
+        FROM contest c
+        WHERE c.id = #{id} AND c.deleted = 0
+        LIMIT 1
+    </select>
+
+    <select id="selectList" resultType="com.codeagent.dto.ContestRow">
+        SELECT
+        <include refid="columns"/>,
+        <choose>
+            <when test="userId != null">
+                EXISTS(SELECT 1 FROM contest_registration cr
+                       WHERE cr.contest_id = c.id AND cr.user_id = #{userId}) AS registered
+            </when>
+            <otherwise>FALSE AS registered</otherwise>
+        </choose>
+        FROM contest c
+        <where>
+            c.deleted = 0
+            <if test="status != null and status != ''">
+                AND <include refid="statusExpr"/> = #{status}
+            </if>
+        </where>
+        ORDER BY CASE
+                     WHEN c.start_time &gt; NOW() THEN 1
+                     WHEN c.end_time &lt; NOW() THEN 2
+                     ELSE 0
+                 END, c.start_time ASC, c.id DESC
+        LIMIT #{offset}, #{size}
+    </select>
+
+    <select id="countList" resultType="long">
+        SELECT COUNT(*) FROM contest c
+        <where>
+            c.deleted = 0
+            <if test="status != null and status != ''">
+                AND <include refid="statusExpr"/> = #{status}
+            </if>
+        </where>
+    </select>
+
+    <select id="selectProblems" resultType="com.codeagent.dto.ContestProblemRow">
+        SELECT cp.label, cp.question_id, q.title, q.difficulty,
+               kp.name AS knowledge_point_name, cp.score, cp.sort_no
+        FROM contest_problem cp
+        JOIN question q ON q.id = cp.question_id AND q.deleted = 0
+        LEFT JOIN knowledge_point kp ON kp.id = q.knowledge_point_id
+        WHERE cp.contest_id = #{contestId}
+        ORDER BY cp.sort_no ASC, cp.id ASC
+    </select>
+
+    <select id="selectParticipants" resultType="com.codeagent.dto.ContestParticipantRow">
+        SELECT u.id AS user_id, u.username, u.nickname
+        FROM contest_registration cr
+        JOIN sys_user u ON u.id = cr.user_id
+        WHERE cr.contest_id = #{contestId}
+        ORDER BY cr.create_time ASC, u.id ASC
+    </select>
+
+    <select id="selectSubmissions" resultType="com.codeagent.dto.ContestSubmitRow">
+        SELECT user_id, question_id, status, create_time
+        FROM submit_record
+        WHERE contest_id = #{contestId}
+        ORDER BY create_time ASC, id ASC
+    </select>
+
+    <select id="countParticipants" resultType="long">
+        SELECT COUNT(*) FROM contest_registration WHERE contest_id = #{contestId}
+    </select>
+
+    <select id="selectRegistration" resultType="int">
+        SELECT COUNT(*) FROM contest_registration
+        WHERE contest_id = #{contestId} AND user_id = #{userId}
+    </select>
+
+    <insert id="insertRegistration">
+        INSERT IGNORE INTO contest_registration (contest_id, user_id, create_time)
+        VALUES (#{contestId}, #{userId}, NOW())
+    </insert>
+
+</mapper>

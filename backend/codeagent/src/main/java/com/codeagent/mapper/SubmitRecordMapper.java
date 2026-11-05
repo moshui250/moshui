@@ -35,9 +35,9 @@ public interface SubmitRecordMapper {
      * @return 插入行数
      */
     @Insert("INSERT INTO submit_record " +
-            "(user_id, question_id, language, code, status, passed_count, total_count, " +
+            "(user_id, question_id, contest_id, language, code, status, passed_count, total_count, " +
             " run_time_ms, create_time) " +
-            "VALUES (#{userId}, #{questionId}, #{language}, #{code}, #{status}, #{passedCount}, " +
+            "VALUES (#{userId}, #{questionId}, #{contestId}, #{language}, #{code}, #{status}, #{passedCount}, " +
             " #{totalCount}, #{runTimeMs}, NOW())")
     @Options(useGeneratedKeys = true, keyProperty = "id")
     int insert(SubmitRecord record);
@@ -84,7 +84,7 @@ public interface SubmitRecordMapper {
      * @param id 提交记录 ID
      * @return 提交记录；不存在时返回 null
      */
-    @Select("SELECT id, user_id, question_id, language, code, status, passed_count, total_count, " +
+    @Select("SELECT id, user_id, question_id, contest_id, language, code, status, passed_count, total_count, " +
             "run_time_ms, compile_output, error_message, case_result_json, create_time " +
             "FROM submit_record WHERE id = #{id} LIMIT 1")
     SubmitRecord selectById(@Param("id") Long id);

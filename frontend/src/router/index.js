@@ -16,6 +16,30 @@ const routes = [
     meta: { title: '注册', public: true }
   },
   {
+    path: '/contests',
+    component: () => import('@/layouts/PublicLayout.vue'),
+    children: [
+      {
+        path: '',
+        name: 'contest-list',
+        component: () => import('@/views/ContestListView.vue'),
+        meta: { title: '竞赛' }
+      },
+      {
+        path: ':id',
+        name: 'contest-detail',
+        component: () => import('@/views/ContestDetailView.vue'),
+        meta: { title: '竞赛详情' }
+      },
+      {
+        path: ':id/solve/:questionId',
+        name: 'contest-solve',
+        component: () => import('@/views/QuestionSolveView.vue'),
+        meta: { title: '竞赛答题' }
+      }
+    ]
+  },
+  {
     path: '/',
     component: () => import('@/layouts/MainLayout.vue'),
     children: [

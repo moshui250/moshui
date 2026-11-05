@@ -23,4 +23,7 @@ public class JudgeSubmitRequest {
     @NotBlank(message = "代码不能为空")
     @Size(max = 100000, message = "代码长度不能超过 100000 个字符")
     private String code;
+
+    /** 竞赛 ID；普通练习提交时为空。 */
+    private Long contestId;
 }

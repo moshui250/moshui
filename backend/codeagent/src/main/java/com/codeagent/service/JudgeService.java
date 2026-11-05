@@ -15,11 +15,12 @@ public interface JudgeService {
      *
      * @param userId     当前登录用户 ID
      * @param questionId 题目 ID
+     * @param contestId  竞赛 ID；普通练习为 null
      * @param language   语言代码 CPP / JAVA
      * @param code       完整源代码
      * @return 新建的提交记录 ID
      */
-    Long submit(Long userId, Long questionId, String language, String code);
+    Long submit(Long userId, Long questionId, Long contestId, String language, String code);
 
     /**
      * 只运行题目的公开样例，不写提交记录、不记错题、不触发统计缓存。

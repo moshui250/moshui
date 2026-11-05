@@ -18,6 +18,9 @@ public class SubmitRecord implements Serializable {
 
     private Long questionId;
 
+    /** 竞赛 ID；普通练习提交为 null。 */
+    private Long contestId;
+
     private String language;
 
     private String code;

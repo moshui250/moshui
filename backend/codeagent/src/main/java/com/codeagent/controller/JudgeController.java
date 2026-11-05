@@ -39,8 +39,8 @@ public class JudgeController {
      */
     @PostMapping("/submit")
     public R<JudgeSubmitVO> submit(@Valid @RequestBody JudgeSubmitRequest request) {
-        Long submitId = judgeService.submit(
-                requireUserId(), request.getQuestionId(), request.getLanguage(), request.getCode());
+        Long submitId = judgeService.submit(requireUserId(), request.getQuestionId(),
+                request.getContestId(), request.getLanguage(), request.getCode());
         return R.ok(new JudgeSubmitVO(submitId, "PENDING"));
     }
 

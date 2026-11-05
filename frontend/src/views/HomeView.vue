@@ -11,7 +11,8 @@ import {
   DataAnalysis,
   MagicStick,
   Picture,
-  Reading
+  Reading,
+  Trophy
 } from '@element-plus/icons-vue'
 import { getHealth } from '@/api/health'
 import { getHomeSummary } from '@/api/home'
@@ -46,6 +47,7 @@ const health = reactive({
 
 const navItems = [
   { label: '题库', path: '/question', icon: Reading },
+  { label: '竞赛', path: '/contests', icon: Trophy },
   { label: '错题本', path: '/wrong-book', icon: Collection },
   { label: '数据看板', path: '/dashboard', icon: DataAnalysis },
   { label: '图片录题', path: '/question/import', icon: Picture }
