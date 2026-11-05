@@ -3,7 +3,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'v
 import { useRouter } from 'vue-router'
 import * as echarts from 'echarts/core'
 import { BarChart } from 'echarts/charts'
-import { GridComponent, TooltipComponent } from 'echarts/components'
+import { GridComponent, LegendComponent, TooltipComponent } from 'echarts/components'
 import { CanvasRenderer } from 'echarts/renderers'
 import {
   ArrowRight,
@@ -19,7 +19,7 @@ import { getHomeSummary } from '@/api/home'
 import { listKnowledgePoints } from '@/api/question'
 import { useUserStore } from '@/store/user'
 
-echarts.use([BarChart, GridComponent, TooltipComponent, CanvasRenderer])
+echarts.use([BarChart, GridComponent, LegendComponent, TooltipComponent, CanvasRenderer])
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -44,6 +44,50 @@ const health = reactive({
   status: 'CHECKING',
   db: 'UNKNOWN'
 })
+
+const counts = reactive({
+  publicQuestions: 0,
+  knowledgePoints: 0,
+  totalSubmits: 0
+})
+
+const coachStates = [
+  {
+    text: '第 3 行：循环从 i = 1 开始，条件写到 i <= n，会访问 a[n]，导致数组越界。',
+    tools: ['locate_error'],
+    foot: '先定位错误，不直接给代码。'
+  },
+  {
+    text: '错误集中在数组边界。先确认下标范围，再看第一个失败用例的输入和期望输出。',
+    tools: ['retrieve_knowledge'],
+    foot: '补一条边界知识，再改代码。'
+  },
+  {
+    text: '先检查循环起点和终止条件。改成 i = 0 且 i < n，再重新运行样例。',
+    tools: ['hint_level_1'],
+    foot: '需要时再看参考代码。'
+  }
+]
+
+const coachIndex = ref(0)
+const coachPaused = ref(false)
+const reducedMotion = ref(false)
+const tilt = reactive({ x: 0, y: 0 })
+const tiltVisual = ref(null)
+const tiltActive = ref(false)
+const coachCount = computed(() => `${String(coachIndex.value + 1).padStart(2, '0')} / 03`)
+const tiltStyle = computed(() => ({
+  '--tilt-x': `${tilt.x}deg`,
+  '--tilt-y': `${tilt.y}deg`
+}))
+
+let coachTimer = null
+let countRaf = 0
+let tiltRaf = 0
+let tiltRect = null
+let tiltEnabled = false
+let tiltPointer = { x: 0, y: 0 }
+
 
 const navItems = [
   { label: '题库', path: '/question', icon: Reading },
@@ -90,7 +134,96 @@ const weeklyTotal = computed(() =>
   (summary.weekly || []).reduce((sum, item) => sum + Number(item.submitCount || 0), 0)
 )
 
-const statValue = (value) => (loading.value ? '—' : value)
+function statDisplay(key) {
+  return loading.value ? '—' : counts[key]
+}
+
+function animateCounts() {
+  const targets = {
+    publicQuestions: Number(summary.publicQuestions || 0),
+    knowledgePoints: Number(summary.knowledgePoints || 0),
+    totalSubmits: Number(summary.totalSubmits || 0)
+  }
+  cancelAnimationFrame(countRaf)
+  if (reducedMotion.value) {
+    Object.assign(counts, targets)
+    return
+  }
+
+  const from = { ...counts }
+  const startedAt = performance.now()
+  const duration = 700
+  const tick = (now) => {
+    const progress = Math.min(1, (now - startedAt) / duration)
+    const eased = 1 - Math.pow(1 - progress, 3)
+    counts.publicQuestions = Math.round(from.publicQuestions + (targets.publicQuestions - from.publicQuestions) * eased)
+    counts.knowledgePoints = Math.round(from.knowledgePoints + (targets.knowledgePoints - from.knowledgePoints) * eased)
+    counts.totalSubmits = Math.round(from.totalSubmits + (targets.totalSubmits - from.totalSubmits) * eased)
+    if (progress < 1) countRaf = requestAnimationFrame(tick)
+  }
+  countRaf = requestAnimationFrame(tick)
+}
+
+function stopCoachAuto() {
+  if (coachTimer) {
+    window.clearInterval(coachTimer)
+    coachTimer = null
+  }
+}
+
+function startCoachAuto() {
+  if (reducedMotion.value || coachPaused.value || coachTimer) return
+  coachTimer = window.setInterval(() => {
+    coachIndex.value = (coachIndex.value + 1) % coachStates.length
+  }, 4200)
+}
+
+function pauseCoach() {
+  coachPaused.value = true
+  stopCoachAuto()
+}
+
+function resumeCoach() {
+  coachPaused.value = false
+  startCoachAuto()
+}
+
+function selectCoach(index) {
+  coachIndex.value = index
+  stopCoachAuto()
+  if (!coachPaused.value) startCoachAuto()
+}
+
+function handleTiltEnter() {
+  if (!tiltEnabled) return
+  tiltRect = tiltVisual.value?.getBoundingClientRect() || null
+  tiltActive.value = true
+}
+
+function handleTiltMove(event) {
+  if (!tiltEnabled || !tiltRect || tiltRaf) return
+  tiltPointer = { x: event.clientX, y: event.clientY }
+  tiltRaf = requestAnimationFrame(() => {
+    tiltRaf = 0
+    if (!tiltRect) return
+    const px = (tiltPointer.x - tiltRect.left) / tiltRect.width
+    const py = (tiltPointer.y - tiltRect.top) / tiltRect.height
+    tilt.y = (px - 0.5) * 12
+    tilt.x = -(py - 0.5) * 12
+  })
+}
+
+function handleTiltLeave() {
+  tiltActive.value = false
+  tiltRect = null
+  if (tiltRaf) {
+    cancelAnimationFrame(tiltRaf)
+    tiltRaf = 0
+  }
+  tilt.x = 0
+  tilt.y = 0
+}
+
 
 async function loadHealth() {
   try {
@@ -121,6 +254,7 @@ async function loadSummary() {
     summaryError.value = error.message || '首页统计加载失败'
   } finally {
     loading.value = false
+    animateCounts()
     await nextTick()
     renderChart()
   }
@@ -196,6 +330,7 @@ function renderChart() {
 
 function handleResize() {
   chartInstance?.resize()
+  tiltRect = null
 }
 
 function go(path) {
@@ -219,6 +354,9 @@ onMounted(async () => {
   if (userStore.token && !userStore.user) {
     userStore.fetchMe().catch(() => {})
   }
+  reducedMotion.value = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
+  tiltEnabled = !reducedMotion.value && (window.matchMedia?.('(hover: hover) and (pointer: fine)').matches ?? false)
+  startCoachAuto()
   await Promise.all([loadHealth(), loadSummary(), loadKnowledgePoints()])
   window.addEventListener('resize', handleResize)
 })
@@ -226,6 +364,9 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   window.removeEventListener('resize', handleResize)
   chartInstance?.dispose()
+  stopCoachAuto()
+  cancelAnimationFrame(countRaf)
+  if (tiltRaf) cancelAnimationFrame(tiltRaf)
 })
 </script>
 
@@ -269,11 +410,11 @@ onBeforeUnmount(() => {
     <main class="page">
       <section class="hero">
         <div class="hero-copy">
-          <h1>把“不会做”<br />拆成<span class="mark">下一步</span>。</h1>
-          <p class="lede">
+          <h1 class="hero-enter hero-enter-1">把“不会做”<br />拆成<span class="mark">下一步</span>。</h1>
+          <p class="lede hero-enter hero-enter-2">
             从第一道题开始，先写，再看判题结果，最后由 AI 指出错在哪一行。
           </p>
-          <div class="hero-actions">
+          <div class="hero-actions hero-enter hero-enter-3">
             <button class="btn-primary" type="button" @click="goWorkspace">
               从题库开始 <ArrowRight />
             </button>
@@ -281,57 +422,86 @@ onBeforeUnmount(() => {
               看看我的错题
             </button>
           </div>
-          <dl class="hero-stats">
+          <dl class="hero-stats hero-enter hero-enter-4">
             <div>
-              <dt>{{ statValue(summary.publicQuestions) }}</dt>
+              <dt>{{ statDisplay('publicQuestions') }}</dt>
               <dd>道公共题</dd>
             </div>
             <div>
-              <dt>{{ statValue(summary.knowledgePoints) }}</dt>
+              <dt>{{ statDisplay('knowledgePoints') }}</dt>
               <dd>个知识点</dd>
             </div>
             <div>
-              <dt>{{ statValue(summary.totalSubmits) }}</dt>
+              <dt>{{ statDisplay('totalSubmits') }}</dt>
               <dd>次全站提交</dd>
             </div>
           </dl>
         </div>
 
-        <div class="hero-visual" aria-label="AI 调试界面预览">
-          <div class="preview-card">
-            <div class="preview-head">
-              <span class="window-dots"><i></i><i></i><i></i></span>
-              <span class="file-name">Main.java</span>
-              <span class="preview-label">界面预览</span>
+        <div
+          ref="tiltVisual"
+          class="hero-visual"
+          :class="{ 'is-tilting': tiltActive }"
+          :style="tiltStyle"
+          @mouseenter="handleTiltEnter"
+          @mousemove="handleTiltMove"
+          @mouseleave="handleTiltLeave"
+        >
+          <div class="visual-stack">
+            <div class="preview-card">
+              <div class="preview-head">
+                <span class="window-dots"><i></i><i></i><i></i></span>
+                <span class="file-name">Main.java</span>
+                <span class="preview-label">界面预览</span>
+              </div>
+              <div class="code-block">
+                <div class="code-line"><span>1</span><code>int sum = 0;</code></div>
+                <div class="code-line"><span>2</span><code>for (int i = 1; i &lt;= n; i++) {</code></div>
+                <div class="code-line is-error"><span>3</span><code>&nbsp;&nbsp;sum += a[i];</code></div>
+                <div class="code-line"><span>4</span><code>}</code></div>
+                <div class="code-line"><span>5</span><code>System.out.println(sum);</code></div>
+              </div>
+              <div class="fail-line">
+                <span class="fail-dot"></span>
+                用例 1 未通过 · 期望 15，实际 14
+              </div>
             </div>
-            <div class="code-block">
-              <div class="code-line"><span>1</span><code>int sum = 0;</code></div>
-              <div class="code-line"><span>2</span><code>for (int i = 1; i &lt;= n; i++) {</code></div>
-              <div class="code-line is-error"><span>3</span><code>&nbsp;&nbsp;sum += a[i];</code></div>
-              <div class="code-line"><span>4</span><code>}</code></div>
-              <div class="code-line"><span>5</span><code>System.out.println(sum);</code></div>
-            </div>
-            <div class="fail-line">
-              <span class="fail-dot"></span>
-              用例 1 未通过 · 期望 15，实际 14
-            </div>
-          </div>
 
-          <div class="coach-card">
-            <div class="coach-head">
-              <span class="coach-icon"><MagicStick /></span>
-              <strong>AI 调试教练</strong>
-              <span class="coach-count">02 / 03</span>
+            <div
+              class="coach-card"
+              @mouseenter="pauseCoach"
+              @mouseleave="resumeCoach"
+              @focusin="pauseCoach"
+              @focusout="resumeCoach"
+            >
+              <div class="coach-head">
+                <span class="coach-icon"><MagicStick /></span>
+                <strong>AI 调试教练</strong>
+                <span class="coach-count">{{ coachCount }}</span>
+              </div>
+              <Transition name="coach-swap" mode="out-in">
+                <div :key="coachIndex" class="coach-body">
+                  <p>{{ coachStates[coachIndex].text }}</p>
+                  <div class="coach-tools">
+                    <span v-for="tool in coachStates[coachIndex].tools" :key="tool">{{ tool }}</span>
+                  </div>
+                  <div class="coach-foot">{{ coachStates[coachIndex].foot }}</div>
+                </div>
+              </Transition>
+              <div class="coach-dots" role="tablist" aria-label="AI 调试状态">
+                <button
+                  v-for="(state, index) in coachStates"
+                  :key="state.text"
+                  class="coach-dot"
+                  :class="{ active: index === coachIndex }"
+                  type="button"
+                  role="tab"
+                  :aria-selected="index === coachIndex"
+                  :aria-label="`切换到第 ${index + 1} 条`"
+                  @click.stop="selectCoach(index)"
+                ></button>
+              </div>
             </div>
-            <p>
-              第 3 行：循环从 <code>i = 1</code> 开始，并且条件写到
-              <code>i &lt;= n</code>，会访问 <code>a[n]</code>，导致数组越界。
-            </p>
-            <div class="coach-tools">
-              <span>locate_error</span>
-              <span>retrieve_knowledge</span>
-            </div>
-            <div class="coach-foot">先按提示自己改，需要时再看参考代码。</div>
           </div>
         </div>
       </section>
@@ -657,6 +827,39 @@ onBeforeUnmount(() => {
   line-height: 1.08;
 }
 
+.hero-enter {
+  opacity: 0;
+  animation: hero-enter 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.hero-enter-1 {
+  animation-delay: 0.03s;
+}
+
+.hero-enter-2 {
+  animation-delay: 0.16s;
+}
+
+.hero-enter-3 {
+  animation-delay: 0.29s;
+}
+
+.hero-enter-4 {
+  animation-delay: 0.42s;
+}
+
+@keyframes hero-enter {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .hero h1 .mark {
   color: var(--h-primary);
   white-space: nowrap;
@@ -758,6 +961,24 @@ onBeforeUnmount(() => {
 .hero-visual {
   position: relative;
   padding: 4px 0 32px 18px;
+  perspective: 1000px;
+  --tilt-lift: 0px;
+}
+
+.hero-visual:hover {
+  --tilt-lift: -6px;
+}
+
+.visual-stack {
+  transform: perspective(1000px) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg))
+    translateY(var(--tilt-lift));
+  transform-style: preserve-3d;
+  transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+}
+
+.hero-visual.is-tilting .visual-stack {
+  transition-duration: 0.3s;
 }
 
 .preview-card {
@@ -767,7 +988,17 @@ onBeforeUnmount(() => {
   border: 1px solid #dfe5ee;
   border-radius: 10px;
   background: #fff;
-  box-shadow: 0 14px 40px rgba(15, 23, 42, 0.07);
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.04),
+    0 8px 24px rgba(15, 23, 42, 0.08);
+  transition: box-shadow 0.4s ease;
+}
+
+.hero-visual:hover .preview-card,
+.hero-visual:hover .coach-card {
+  box-shadow:
+    0 2px 4px rgba(15, 23, 42, 0.06),
+    0 20px 48px rgba(15, 23, 42, 0.16);
 }
 
 .preview-head {
@@ -876,12 +1107,16 @@ onBeforeUnmount(() => {
   position: relative;
   z-index: 2;
   width: calc(100% - 28px);
+  min-height: 184px;
   margin: -6px 0 0 28px;
-  padding: 15px 16px 13px;
+  padding: 15px 16px 12px;
   border: 1px solid #c8d2dc;
   border-radius: 12px;
   background: #f7f9fb;
-  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.10);
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.04),
+    0 8px 24px rgba(15, 23, 42, 0.08);
+  transition: box-shadow 0.4s ease;
 }
 
 .coach-head {
@@ -950,6 +1185,59 @@ onBeforeUnmount(() => {
   border-top: 1px dashed #dfe6ed;
   color: #94a3b8;
   font-size: 9px;
+}
+
+.coach-body {
+  min-height: 100px;
+}
+
+.coach-dots {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.coach-dot {
+  width: 5px;
+  height: 5px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: #cbd5e1;
+  cursor: pointer;
+  opacity: 0.8;
+  transform: scaleX(1);
+  transition:
+    transform 0.3s ease,
+    opacity 0.3s ease;
+}
+
+.coach-dot:hover {
+  opacity: 1;
+}
+
+.coach-dot.active {
+  background: var(--h-primary);
+  opacity: 1;
+  transform: scaleX(1.9);
+}
+
+.coach-swap-enter-active,
+.coach-swap-leave-active {
+  transition:
+    opacity 0.35s ease,
+    transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.coach-swap-enter-from {
+  opacity: 0;
+  transform: translateY(6px);
+}
+
+.coach-swap-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
 }
 
 .loop {
@@ -1335,6 +1623,29 @@ onBeforeUnmount(() => {
 
 .foot-status {
   font-size: 10px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-enter {
+    opacity: 1;
+    animation: none;
+    transform: none;
+  }
+
+  .visual-stack,
+  .hero-visual:hover {
+    transition: none;
+    transform: none;
+    --tilt-lift: 0px;
+  }
+
+  .preview-card,
+  .coach-card,
+  .coach-dot,
+  .coach-swap-enter-active,
+  .coach-swap-leave-active {
+    transition: none;
+  }
 }
 
 @media (max-width: 1000px) {
