@@ -75,8 +75,8 @@ const html = computed(() => renderMarkdown(props.content))
 .markdown-body :deep(blockquote) {
   margin: 12px 0;
   padding: 8px 12px;
-  border-left: 3px solid #c7d2fe;
-  background: #f8faff;
+  border-left: 3px solid #c8d2dc;
+  background: #f7f9fb;
   color: #64748b;
 }
 
@@ -84,7 +84,7 @@ const html = computed(() => renderMarkdown(props.content))
   padding: 1px 5px;
   border-radius: 4px;
   background: #f1f5f9;
-  color: #4338ca;
+  color: #152a45;
   font-family: 'JetBrains Mono', Consolas, monospace;
   font-size: 12px;
 }
@@ -126,7 +126,7 @@ const html = computed(() => renderMarkdown(props.content))
 }
 
 .markdown-body :deep(a) {
-  color: #4f46e5;
+  color: #1f3a5f;
   text-decoration: underline;
   text-underline-offset: 2px;
 }

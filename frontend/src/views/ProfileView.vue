@@ -292,8 +292,9 @@ onMounted(loadStats)
 }
 
 .page-eyebrow {
+  display: none;
   margin-bottom: 9px;
-  color: #4f46e5;
+  color: #1f3a5f;
   font-size: 10.5px;
   font-weight: 700;
   letter-spacing: 1.8px;
@@ -302,7 +303,7 @@ onMounted(loadStats)
 .page-title {
   color: #0f172a;
   font-size: 36px;
-  font-weight: 750;
+  font-weight: 700;
   letter-spacing: -1.5px;
   line-height: 1.18;
 }
@@ -318,13 +319,13 @@ onMounted(loadStats)
 .head-action {
   flex-shrink: 0;
   border-radius: 9px;
-  color: #4f46e5;
+  color: #1f3a5f;
   border-color: #dfe5f1;
 }
 
 .panel {
   border: 1px solid #e8edf5;
-  border-radius: 16px;
+  border-radius: 12px;
   background: #fff;
   box-shadow: 0 8px 24px rgba(30, 41, 59, 0.035);
 }
@@ -351,12 +352,12 @@ onMounted(loadStats)
   flex-shrink: 0;
   width: 58px;
   height: 58px;
-  border-radius: 16px;
-  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  border-radius: 12px;
+  background: #1f3a5f;
   color: #fff;
   font-size: 23px;
   font-weight: 700;
-  box-shadow: 0 8px 20px rgba(79, 70, 229, 0.2);
+  box-shadow: 0 2px 4px rgba(15, 23, 42, 0.1);
 }
 
 .identity-copy {
@@ -382,10 +383,10 @@ onMounted(loadStats)
 .account-state {
   margin-left: auto;
   padding: 4px 9px;
-  border: 1px solid #c7f0df;
+  border: 1px solid #d5e7dd;
   border-radius: 999px;
-  background: #f0fdf7;
-  color: #0f9f6e;
+  background: #edf5f1;
+  color: #2f7d5b;
   font-size: 10.5px;
   white-space: nowrap;
 }
@@ -431,9 +432,7 @@ onMounted(loadStats)
 
 .stats-card {
   padding: 22px;
-  background:
-    radial-gradient(circle at 92% 4%, rgba(79, 70, 229, 0.07), transparent 36%),
-    #fff;
+  background: #fff;
 }
 
 .panel-head {
@@ -459,7 +458,7 @@ onMounted(loadStats)
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  color: #4f46e5;
+  color: #1f3a5f;
   font-size: 11px;
   font-weight: 600;
   white-space: nowrap;
@@ -510,7 +509,7 @@ onMounted(loadStats)
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: #10b981;
+  background: #2f7d5b;
 }
 
 .profile-main {
@@ -525,7 +524,7 @@ onMounted(loadStats)
 }
 
 .head-icon {
-  color: #a5b4fc;
+  color: #93a5b8;
   font-size: 17px;
 }
 
@@ -610,7 +609,7 @@ onMounted(loadStats)
 }
 
 .quick-item:hover {
-  background: #f8faff;
+  background: #f7f9fb;
 }
 
 .quick-icon {
@@ -620,8 +619,8 @@ onMounted(loadStats)
   width: 29px;
   height: 29px;
   border-radius: 8px;
-  background: #eef2ff;
-  color: #4f46e5;
+  background: #eef2f6;
+  color: #1f3a5f;
   font-size: 14px;
 }
 
@@ -654,7 +653,7 @@ onMounted(loadStats)
   align-items: flex-start;
   gap: 11px;
   padding: 18px;
-  background: #f8faff;
+  background: #f7f9fb;
 }
 
 .security-icon {
@@ -664,8 +663,8 @@ onMounted(loadStats)
   width: 31px;
   height: 31px;
   border-radius: 9px;
-  background: #eef2ff;
-  color: #4f46e5;
+  background: #eef2f6;
+  color: #1f3a5f;
   font-size: 15px;
 }
 

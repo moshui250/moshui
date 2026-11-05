@@ -331,13 +331,13 @@ onBeforeUnmount(() => {
 }
 
 .back-link:hover {
-  color: #4f46e5;
+  color: #1f3a5f;
 }
 
 .detail-skeleton {
   padding: 32px;
   border: 1px solid #e5e8f0;
-  border-radius: 20px;
+  border-radius: 12px;
   background: #fff;
 }
 
@@ -348,10 +348,8 @@ onBeforeUnmount(() => {
   gap: 36px;
   padding: 34px 36px;
   border: 1px solid #e3e7f1;
-  border-radius: 22px;
-  background:
-    radial-gradient(circle at 92% 8%, rgba(79, 70, 229, 0.1), transparent 30%),
-    #fff;
+  border-radius: 10px;
+  background: #fff;
   overflow: hidden;
 }
 
@@ -362,11 +360,11 @@ onBeforeUnmount(() => {
   top: 0;
   width: 5px;
   height: 100%;
-  background: #4f46e5;
+  background: #1f3a5f;
 }
 
 .contest-banner.is-running::before {
-  background: #10b981;
+  background: #2f7d5b;
 }
 
 .contest-banner.is-ended::before {
@@ -390,13 +388,13 @@ onBeforeUnmount(() => {
 }
 
 .status-running {
-  background: #eafaf3;
-  color: #059669;
+  background: #edf5f1;
+  color: #2f7d5b;
 }
 
 .status-upcoming {
-  background: #eef0ff;
-  color: #4f46e5;
+  background: #eef2f6;
+  color: #1f3a5f;
 }
 
 .status-ended {
@@ -414,9 +412,9 @@ onBeforeUnmount(() => {
 h1 {
   margin: 16px 0 10px;
   color: #0f172a;
-  font-size: clamp(28px, 3.4vw, 40px);
-  line-height: 1.2;
-  letter-spacing: -0.035em;
+  font-size: clamp(26px, 3vw, 34px);
+  line-height: 1.22;
+  letter-spacing: -0.03em;
 }
 
 .banner-main > p {
@@ -470,17 +468,17 @@ h1 {
   margin-top: 18px;
   border: 0;
   border-radius: 10px;
-  background: #4f46e5;
+  background: #1f3a5f;
   color: #fff;
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;
-  box-shadow: 0 8px 18px rgba(79, 70, 229, 0.2);
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.10);
 }
 
 .register-button:disabled {
-  background: #eef0ff;
-  color: #6366f1;
+  background: #eef2f6;
+  color: #3d5a78;
   box-shadow: none;
   cursor: default;
 }
@@ -511,7 +509,7 @@ h1 {
 }
 
 .tabs button.active {
-  color: #4f46e5;
+  color: #1f3a5f;
 }
 
 .tabs button.active::after {
@@ -522,7 +520,7 @@ h1 {
   bottom: -1px;
   height: 2px;
   border-radius: 2px;
-  background: #4f46e5;
+  background: #1f3a5f;
 }
 
 .tabs button span {
@@ -535,7 +533,7 @@ h1 {
 .rank-panel {
   padding: 26px 28px;
   border: 1px solid #e5e8f0;
-  border-radius: 18px;
+  border-radius: 12px;
   background: #fff;
 }
 
@@ -591,7 +589,7 @@ h1 {
   display: grid;
   place-items: center;
   background: #f1f4ff;
-  color: #4f46e5;
+  color: #1f3a5f;
   font-size: 12px;
   font-weight: 750;
 }
@@ -619,18 +617,18 @@ h1 {
 }
 
 .level-1 {
-  background: #eafaf3;
-  color: #059669;
+  background: #edf5f1;
+  color: #2f7d5b;
 }
 
 .level-2 {
-  background: #fff7e6;
-  color: #d97706;
+  background: #f7f1e7;
+  color: #a16207;
 }
 
 .level-3 {
   background: #fff0f0;
-  color: #dc2626;
+  color: #b42318;
 }
 
 .problem-score {
@@ -642,7 +640,7 @@ h1 {
 .problem-action {
   border: 0;
   background: transparent;
-  color: #4f46e5;
+  color: #1f3a5f;
   font-size: 12px;
   font-weight: 700;
   cursor: pointer;
@@ -713,8 +711,8 @@ h1 {
 }
 
 .rank-table tr:nth-child(1) .rank-number {
-  background: #fff7e6;
-  color: #d97706;
+  background: #f7f1e7;
+  color: #a16207;
 }
 
 .rank-user {
@@ -731,8 +729,8 @@ h1 {
   border-radius: 50%;
   display: grid;
   place-items: center;
-  background: #eef0ff;
-  color: #4f46e5;
+  background: #eef2f6;
+  color: #1f3a5f;
   font-size: 11px;
   font-weight: 700;
 }
@@ -740,8 +738,8 @@ h1 {
 .rank-user em {
   padding: 1px 5px;
   border-radius: 4px;
-  background: #eef0ff;
-  color: #4f46e5;
+  background: #eef2f6;
+  color: #1f3a5f;
   font-size: 10px;
   font-style: normal;
 }
@@ -785,7 +783,7 @@ h1 {
 }
 
 .empty-state a {
-  color: #4f46e5;
+  color: #1f3a5f;
   font-size: 13px;
 }
 

@@ -180,14 +180,14 @@ function renderChart() {
         type: 'bar',
         data: submitData,
         barWidth: 14,
-        itemStyle: { color: '#4f46e5', borderRadius: [4, 4, 0, 0] }
+        itemStyle: { color: '#1f3a5f', borderRadius: [4, 4, 0, 0] }
       },
       {
         name: '通过',
         type: 'bar',
         data: acData,
         barWidth: 14,
-        itemStyle: { color: '#10b981', borderRadius: [4, 4, 0, 0] }
+        itemStyle: { color: '#2f7d5b', borderRadius: [4, 4, 0, 0] }
       }
     ]
   })
@@ -448,12 +448,12 @@ onBeforeUnmount(() => {
   --h-text: #475569;
   --h-muted: #64748b;
   --h-line: #e2e8f0;
-  --h-primary: #4f46e5;
-  --h-primary-soft: #eef2ff;
-  --h-mint: #10b981;
+  --h-primary: #1f3a5f;
+  --h-primary-soft: #eef2f6;
+  --h-mint: #2f7d5b;
   --h-surface: #ffffff;
   min-height: 100vh;
-  background: #f7f8fc;
+  background: #f5f6f7;
   color: var(--h-ink);
 }
 
@@ -535,7 +535,7 @@ onBeforeUnmount(() => {
 }
 
 .nav-link:hover {
-  background: #eef2ff;
+  background: #eef2f6;
   color: var(--h-primary);
 }
 
@@ -562,12 +562,12 @@ onBeforeUnmount(() => {
   height: 6px;
   border-radius: 50%;
   background: var(--h-mint);
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.12);
+  box-shadow: 0 0 0 3px rgba(47, 125, 91, 0.10);
 }
 
 .health-pill.warn i,
 .foot-status.warn i {
-  background: #f59e0b;
+  background: #a16207;
   box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.12);
 }
 
@@ -577,7 +577,7 @@ onBeforeUnmount(() => {
   gap: 4px;
   height: 34px;
   padding: 0 13px;
-  border: 1px solid #c7d2fe;
+  border: 1px solid #c8d2dc;
   border-radius: 8px;
   background: #fff;
   color: var(--h-primary);
@@ -642,7 +642,7 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #6366f1;
+  color: #3d5a78;
   font-size: 10px;
   font-weight: 750;
   letter-spacing: 1.7px;
@@ -664,22 +664,14 @@ onBeforeUnmount(() => {
 }
 
 .hero h1 .mark {
-  position: relative;
   color: var(--h-primary);
   white-space: nowrap;
 }
 
-.hero h1 .mark::after {
-  position: absolute;
-  right: 2px;
-  bottom: 2px;
-  left: 2px;
-  height: 9px;
-  border-radius: 2px;
-  background: #c7d2fe;
-  content: '';
-  opacity: 0.7;
-  z-index: -1;
+.eyebrow,
+.panel-kicker,
+.closing-kicker {
+  display: none;
 }
 
 .lede {
@@ -719,8 +711,8 @@ onBeforeUnmount(() => {
 }
 
 .btn-primary:hover {
-  background: #4338ca;
-  border-color: #4338ca;
+  background: #152a45;
+  border-color: #152a45;
 }
 
 .btn-primary svg,
@@ -736,7 +728,7 @@ onBeforeUnmount(() => {
 }
 
 .btn-ghost:hover {
-  border-color: #c7d2fe;
+  border-color: #c8d2dc;
   color: var(--h-primary);
 }
 
@@ -779,7 +771,7 @@ onBeforeUnmount(() => {
   z-index: 1;
   overflow: hidden;
   border: 1px solid #dfe5ee;
-  border-radius: 14px;
+  border-radius: 10px;
   background: #fff;
   box-shadow: 0 14px 40px rgba(15, 23, 42, 0.07);
 }
@@ -807,7 +799,7 @@ onBeforeUnmount(() => {
 }
 
 .window-dots i:first-child {
-  background: #fda4af;
+  background: #d8b4b6;
 }
 
 .file-name {
@@ -858,12 +850,12 @@ onBeforeUnmount(() => {
 }
 
 .code-line.is-error {
-  background: #fff1f2;
-  color: #be123c;
+  background: #f7efee;
+  color: #9f2d2d;
 }
 
 .code-line.is-error span {
-  color: #fda4af;
+  color: #d8b4b6;
 }
 
 .fail-line {
@@ -883,7 +875,7 @@ onBeforeUnmount(() => {
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: #e11d48;
+  background: #9f2d2d;
 }
 
 .coach-card {
@@ -892,17 +884,17 @@ onBeforeUnmount(() => {
   width: calc(100% - 28px);
   margin: -6px 0 0 28px;
   padding: 15px 16px 13px;
-  border: 1px solid #c7d2fe;
+  border: 1px solid #c8d2dc;
   border-radius: 12px;
-  background: #f8faff;
-  box-shadow: 0 12px 30px rgba(79, 70, 229, 0.1);
+  background: #f7f9fb;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.10);
 }
 
 .coach-head {
   display: flex;
   align-items: center;
   gap: 7px;
-  color: #312e81;
+  color: #1f2937;
   font-size: 11px;
 }
 
@@ -912,7 +904,7 @@ onBeforeUnmount(() => {
   width: 21px;
   height: 21px;
   border-radius: 6px;
-  background: #e0e7ff;
+  background: #dfe6ed;
   color: var(--h-primary);
 }
 
@@ -923,13 +915,13 @@ onBeforeUnmount(() => {
 
 .coach-count {
   margin-left: auto;
-  color: #a5b4fc;
+  color: #93a5b8;
   font-size: 9px;
 }
 
 .coach-card p {
   margin-top: 9px;
-  color: #4338ca;
+  color: #152a45;
   font-size: 10.5px;
   line-height: 1.75;
 }
@@ -937,7 +929,7 @@ onBeforeUnmount(() => {
 .coach-card p code {
   padding: 1px 3px;
   border-radius: 3px;
-  background: #eef2ff;
+  background: #eef2f6;
   font-family: 'JetBrains Mono', Consolas, monospace;
   font-size: 9.5px;
 }
@@ -950,7 +942,7 @@ onBeforeUnmount(() => {
 
 .coach-tools span {
   padding: 2px 6px;
-  border: 1px solid #dbe3f5;
+  border: 1px solid #dfe6ed;
   border-radius: 4px;
   background: #fff;
   color: #64748b;
@@ -961,7 +953,7 @@ onBeforeUnmount(() => {
 .coach-foot {
   margin-top: 9px;
   padding-top: 8px;
-  border-top: 1px dashed #dbe3f5;
+  border-top: 1px dashed #dfe6ed;
   color: #94a3b8;
   font-size: 9px;
 }
@@ -1011,7 +1003,7 @@ onBeforeUnmount(() => {
 }
 
 .step-index {
-  color: #c7d2fe;
+  color: #c8d2dc;
   font-family: 'JetBrains Mono', Consolas, monospace;
   font-size: 11px;
   font-weight: 700;
@@ -1041,7 +1033,7 @@ onBeforeUnmount(() => {
 
 .panel {
   border: 1px solid var(--h-line);
-  border-radius: 14px;
+  border-radius: 10px;
   background: var(--h-surface);
 }
 
@@ -1058,7 +1050,7 @@ onBeforeUnmount(() => {
 }
 
 .panel-kicker {
-  color: #a5b4fc;
+  color: #93a5b8;
   font-size: 9px;
   font-weight: 750;
   letter-spacing: 1.4px;
@@ -1215,11 +1207,11 @@ onBeforeUnmount(() => {
 }
 
 .knowledge-row:hover {
-  background: #fafbff;
+  background: #fbfcfd;
 }
 
 .knowledge-index {
-  color: #c7d2fe;
+  color: #c8d2dc;
   font-family: 'JetBrains Mono', Consolas, monospace;
   font-size: 9px;
 }
@@ -1283,13 +1275,13 @@ onBeforeUnmount(() => {
   gap: 28px;
   margin-top: 30px;
   padding: 34px 36px;
-  border-radius: 16px;
+  border-radius: 12px;
   background: var(--h-ink);
   color: #fff;
 }
 
 .closing-kicker {
-  color: #818cf8;
+  color: #6e8299;
   font-size: 9px;
   font-weight: 750;
   letter-spacing: 1.6px;
@@ -1318,8 +1310,8 @@ onBeforeUnmount(() => {
 }
 
 .btn-light:hover {
-  background: #eef2ff;
-  border-color: #eef2ff;
+  background: #eef2f6;
+  border-color: #eef2f6;
 }
 
 .site-foot {

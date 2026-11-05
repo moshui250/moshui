@@ -1066,7 +1066,7 @@ onBeforeRouteLeave(() => {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  color: #059669;
+  color: #2f7d5b;
   font-size: 11.5px;
   font-weight: 500;
 }
@@ -1196,8 +1196,8 @@ onBeforeRouteLeave(() => {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #10b981;
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.12);
+  background: #2f7d5b;
+  box-shadow: 0 0 0 3px rgba(47, 125, 91, 0.10);
 }
 
 .action-bar {
@@ -1219,7 +1219,7 @@ onBeforeRouteLeave(() => {
 }
 
 .autosave-tip .el-icon {
-  color: #10b981;
+  color: #2f7d5b;
   font-size: 13px;
 }
 
@@ -1323,7 +1323,7 @@ onBeforeRouteLeave(() => {
   margin-top: 12px;
   padding: 9px 11px;
   border-radius: 7px;
-  background: #fef2f2;
+  background: #f7efee;
   color: #b91c1c;
   font-size: 12px;
 }
@@ -1371,8 +1371,8 @@ onBeforeRouteLeave(() => {
 }
 
 .case-row.is-failed {
-  border-color: #fecaca;
-  background: #fffafa;
+  border-color: #eed6d4;
+  background: #fbf9f9;
 }
 
 .case-row-head {
@@ -1450,8 +1450,8 @@ onBeforeRouteLeave(() => {
   height: 42px;
   margin-bottom: 10px;
   border-radius: 12px;
-  background: #eef2ff;
-  color: #6366f1;
+  background: #eef2f6;
+  color: #3d5a78;
   font-size: 20px;
 }
 
@@ -1542,12 +1542,12 @@ onBeforeRouteLeave(() => {
 }
 
 .back-link:hover {
-  border-color: #c7d2fe;
-  background: #f8faff;
+  border-color: #c8d2dc;
+  background: #f7f9fb;
 }
 
 .solve-top .page-eyebrow {
-  display: flex;
+  display: none;
   gap: 7px;
   color: #94a3b8;
   font-size: 9.5px;
@@ -1731,23 +1731,23 @@ onBeforeRouteLeave(() => {
 }
 
 .tab-status.is-success {
-  background: #ecfdf5;
-  color: #059669;
+  background: #edf5f1;
+  color: #2f7d5b;
 }
 
 .tab-status.is-danger {
-  background: #fef2f2;
-  color: #dc2626;
+  background: #f7efee;
+  color: #b42318;
 }
 
 .tab-status.is-warning {
-  background: #fffbeb;
-  color: #d97706;
+  background: #f7f3ea;
+  color: #a16207;
 }
 
 .tab-status.is-primary {
-  background: #eef2ff;
-  color: #4f46e5;
+  background: #eef2f6;
+  color: #1f3a5f;
 }
 
 .tab-status.is-muted {

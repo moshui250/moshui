@@ -18,7 +18,7 @@ import SiteFooter from '@/components/SiteFooter.vue'
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: #f7f8fc;
+  background: #f5f6f7;
   color: #0f172a;
 }
 

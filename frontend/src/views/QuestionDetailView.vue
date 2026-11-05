@@ -208,14 +208,14 @@ onMounted(loadQuestion)
 }
 
 .back-link:hover {
-  color: #4f46e5;
+  color: #1f3a5f;
 }
 
 .detail-skeleton,
 .empty-panel {
   padding: 36px 28px;
   border: 1px solid #e5e9f2;
-  border-radius: 16px;
+  border-radius: 12px;
   background: #fff;
 }
 
@@ -229,8 +229,9 @@ onMounted(loadQuestion)
 }
 
 .eyebrow {
+  display: none;
   margin-bottom: 9px;
-  color: #4f46e5;
+  color: #1f3a5f;
   font-size: 10px;
   font-weight: 750;
   letter-spacing: 2px;
@@ -238,10 +239,10 @@ onMounted(loadQuestion)
 
 .title-block h1 {
   color: #0f172a;
-  font-size: 42px;
-  font-weight: 800;
-  letter-spacing: -1.8px;
-  line-height: 1.12;
+  font-size: 34px;
+  font-weight: 700;
+  letter-spacing: -1.2px;
+  line-height: 1.18;
 }
 
 .meta-row {
@@ -274,14 +275,14 @@ onMounted(loadQuestion)
   background: #cbd5e1;
 }
 
-.level-dot.is-easy { background: #10b981; }
-.level-dot.is-medium { background: #f59e0b; }
-.level-dot.is-hard { background: #ef4444; }
+.level-dot.is-easy { background: #2f7d5b; }
+.level-dot.is-medium { background: #a16207; }
+.level-dot.is-hard { background: #b42318; }
 
 .solved-chip {
-  border-color: #bbf7d0;
-  background: #f0fdf4;
-  color: #059669;
+  border-color: #d5e7dd;
+  background: #edf5f1;
+  color: #2f7d5b;
 }
 
 .head-cta {
@@ -308,7 +309,7 @@ onMounted(loadQuestion)
 .statement-card {
   padding: 28px 32px 34px;
   border: 1px solid #e5e9f2;
-  border-radius: 16px;
+  border-radius: 12px;
   background: #fff;
 }
 
@@ -331,7 +332,7 @@ onMounted(loadQuestion)
 
 .side-card {
   border: 1px solid #e5e9f2;
-  border-radius: 14px;
+  border-radius: 10px;
   background: #fff;
 }
 
@@ -387,7 +388,7 @@ onMounted(loadQuestion)
 }
 
 .info-row strong.is-done {
-  color: #059669;
+  color: #2f7d5b;
 }
 
 .sample-list {
@@ -451,7 +452,7 @@ onMounted(loadQuestion)
   display: flex;
   gap: 11px;
   padding: 16px;
-  background: #fbfcff;
+  background: #fbfcfd;
 }
 
 .ai-icon {
@@ -461,8 +462,8 @@ onMounted(loadQuestion)
   width: 30px;
   height: 30px;
   border-radius: 8px;
-  background: #eef2ff;
-  color: #4f46e5;
+  background: #eef2f6;
+  color: #1f3a5f;
   font-size: 15px;
 }
 

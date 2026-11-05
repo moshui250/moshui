@@ -174,7 +174,7 @@ watch(() => [props.events.length, props.answer, props.error], scrollToBottom, { 
 }
 
 .panel-title .el-icon {
-  color: #6366f1;
+  color: #3d5a78;
 }
 
 .panel-subtitle {
@@ -216,18 +216,18 @@ watch(() => [props.events.length, props.answer, props.error], scrollToBottom, { 
 }
 
 .timeline-item.is-tool_call .timeline-icon {
-  background: #eef2ff;
-  color: #6366f1;
+  background: #eef2f6;
+  color: #3d5a78;
 }
 
 .timeline-item.is-tool_result .timeline-icon {
-  background: #ecfdf5;
-  color: #10b981;
+  background: #edf5f1;
+  color: #2f7d5b;
 }
 
 .timeline-item.is-error .timeline-icon {
-  background: #fef2f2;
-  color: #ef4444;
+  background: #f7efee;
+  color: #b42318;
 }
 
 .timeline-body {
@@ -262,7 +262,7 @@ watch(() => [props.events.length, props.answer, props.error], scrollToBottom, { 
 }
 
 .tool-state.is-done {
-  color: #10b981;
+  color: #2f7d5b;
 }
 
 .tool-latency {
@@ -302,7 +302,7 @@ watch(() => [props.events.length, props.answer, props.error], scrollToBottom, { 
 
 .answer-label {
   margin-bottom: 6px;
-  color: #6366f1;
+  color: #3d5a78;
   font-size: 10.5px;
   font-weight: 650;
   letter-spacing: 0.04em;
@@ -333,7 +333,7 @@ watch(() => [props.events.length, props.answer, props.error], scrollToBottom, { 
 }
 
 .caret {
-  color: #6366f1;
+  color: #3d5a78;
   animation: blink 0.9s step-end infinite;
 }
 

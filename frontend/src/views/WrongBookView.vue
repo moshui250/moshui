@@ -396,7 +396,8 @@ onMounted(loadRows)
 }
 
 .page-eyebrow {
-  color: #6366f1;
+  display: none;
+  color: #3d5a78;
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.14em;
@@ -405,10 +406,10 @@ onMounted(loadRows)
 .page-title {
   margin: 8px 0 10px;
   color: #0f172a;
-  font-size: 44px;
-  font-weight: 750;
-  letter-spacing: -0.04em;
-  line-height: 1.08;
+  font-size: 36px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.12;
 }
 
 .page-subtitle {
@@ -435,7 +436,7 @@ onMounted(loadRows)
   min-height: 38px;
   padding: 0 16px;
   border-radius: 8px;
-  background: #4f46e5;
+  background: #1f3a5f;
   color: #fff;
   font-size: 12.5px;
   font-weight: 600;
@@ -444,7 +445,7 @@ onMounted(loadRows)
 }
 
 .btn-primary:hover {
-  background: #4338ca;
+  background: #152a45;
 }
 
 .review-strip {
@@ -454,7 +455,7 @@ onMounted(loadRows)
   min-height: 84px;
   padding: 18px 24px;
   border: 1px solid #e8edf5;
-  border-radius: 14px;
+  border-radius: 10px;
   background: #fff;
 }
 
@@ -498,13 +499,13 @@ onMounted(loadRows)
   margin-left: auto;
   padding: 8px 11px;
   border-radius: 7px;
-  background: #f8faff;
+  background: #f7f9fb;
   color: #7c869c;
   font-size: 11px;
 }
 
 .strip-note .el-icon {
-  color: #10b981;
+  color: #2f7d5b;
 }
 
 .filter-bar {
@@ -550,14 +551,14 @@ onMounted(loadRows)
 }
 
 .filter-tab.active {
-  background: #eef2ff;
-  color: #4338ca;
+  background: #eef2f6;
+  color: #152a45;
   font-weight: 600;
 }
 
 .filter-tab.active span {
-  background: #e0e7ff;
-  color: #4f46e5;
+  background: #dfe6ed;
+  color: #1f3a5f;
 }
 
 .sort-hint {
@@ -571,9 +572,9 @@ onMounted(loadRows)
   gap: 8px;
   margin-bottom: 12px;
   padding: 10px 12px;
-  border: 1px solid #fde2e2;
+  border: 1px solid #f1dddb;
   border-radius: 8px;
-  background: #fff8f8;
+  background: #fbf7f7;
   color: #b91c1c;
   font-size: 12px;
 }
@@ -597,7 +598,7 @@ onMounted(loadRows)
 
 .wrong-card {
   border: 1px solid #e8edf5;
-  border-radius: 14px;
+  border-radius: 10px;
   background: #fff;
   padding: 18px 20px 16px;
   transition: border-color 0.16s, box-shadow 0.16s;
@@ -641,7 +642,7 @@ onMounted(loadRows)
 }
 
 .card-title:hover {
-  color: #4f46e5;
+  color: #1f3a5f;
 }
 
 .card-meta {
@@ -667,15 +668,15 @@ onMounted(loadRows)
 }
 
 .difficulty.easy {
-  color: #059669;
+  color: #2f7d5b;
 }
 
 .difficulty.medium {
-  color: #d97706;
+  color: #a16207;
 }
 
 .difficulty.hard {
-  color: #dc2626;
+  color: #b42318;
 }
 
 .card-actions {
@@ -691,14 +692,14 @@ onMounted(loadRows)
   border: 1px solid #dbe3ef;
   border-radius: 7px;
   background: #fff;
-  color: #4338ca;
+  color: #152a45;
   font-size: 11.5px;
   font-weight: 600;
 }
 
 .btn-small:hover {
-  border-color: #c7d2fe;
-  background: #f8faff;
+  border-color: #c8d2dc;
+  background: #f7f9fb;
 }
 
 .btn-text {
@@ -723,22 +724,22 @@ onMounted(loadRows)
   padding: 0;
   border: 0;
   background: transparent;
-  color: #818cf8;
+  color: #6e8299;
   font-family: inherit;
   font-size: 11px;
   cursor: pointer;
 }
 
 .code-toggle:hover {
-  color: #4f46e5;
+  color: #1f3a5f;
 }
 
 .code-status {
   margin-left: 3px;
   padding: 1px 6px;
   border-radius: 999px;
-  background: #fff1f2;
-  color: #be123c;
+  background: #f7efee;
+  color: #9f2d2d;
   font-size: 10px;
 }
 
@@ -848,15 +849,15 @@ onMounted(loadRows)
 }
 
 .similar-card:hover {
-  border-color: #c7d2fe;
-  background: #f5f7ff;
+  border-color: #c8d2dc;
+  background: #f5f7f8;
 }
 
 .similar-index {
   position: absolute;
   top: 10px;
   left: 10px;
-  color: #c7d2fe;
+  color: #c8d2dc;
   font-family: 'JetBrains Mono', Consolas, monospace;
   font-size: 9px;
   letter-spacing: 0.02em;
@@ -881,7 +882,7 @@ onMounted(loadRows)
 
 .similar-reason {
   overflow: hidden;
-  color: #818cf8;
+  color: #6e8299;
   font-size: 9.5px;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -891,7 +892,7 @@ onMounted(loadRows)
   position: absolute;
   right: 10px;
   bottom: 8px;
-  color: #c7d2fe;
+  color: #c8d2dc;
   font-size: 12px;
 }
 
@@ -901,7 +902,7 @@ onMounted(loadRows)
   align-items: center;
   padding: 64px 24px 58px;
   border: 1px solid #e8edf5;
-  border-radius: 14px;
+  border-radius: 10px;
   background: #fff;
   text-align: center;
 }
@@ -912,8 +913,8 @@ onMounted(loadRows)
   height: 42px;
   place-items: center;
   border-radius: 50%;
-  background: #ecfdf5;
-  color: #10b981;
+  background: #edf5f1;
+  color: #2f7d5b;
   font-size: 18px;
   font-weight: 700;
 }

@@ -298,8 +298,9 @@ onMounted(async () => {
 }
 
 .eyebrow {
+  display: none;
   margin-bottom: 10px;
-  color: #4f46e5;
+  color: #1f3a5f;
   font-size: 10px;
   font-weight: 750;
   letter-spacing: 2.2px;
@@ -307,10 +308,10 @@ onMounted(async () => {
 
 .head-copy h1 {
   color: #0f172a;
-  font-size: 58px;
-  font-weight: 800;
-  letter-spacing: -2.5px;
-  line-height: 1;
+  font-size: 42px;
+  font-weight: 700;
+  letter-spacing: -1.2px;
+  line-height: 1.1;
 }
 
 .head-copy p {
@@ -365,7 +366,7 @@ onMounted(async () => {
   margin: 22px 0 16px;
   padding: 13px 14px;
   border: 1px solid #e5e9f2;
-  border-radius: 14px;
+  border-radius: 10px;
   background: #fff;
 }
 
@@ -395,7 +396,7 @@ onMounted(async () => {
 .problem-board {
   overflow: hidden;
   border: 1px solid #e5e9f2;
-  border-radius: 16px;
+  border-radius: 12px;
   background: #fff;
 }
 
@@ -443,7 +444,7 @@ onMounted(async () => {
 }
 
 .problem-row:hover {
-  background: #f8f9ff;
+  background: #f7f9fb;
 }
 
 .problem-row.is-solved .title-cell strong {
@@ -461,13 +462,13 @@ onMounted(async () => {
   height: 20px;
   border: 1.5px solid #dbe1eb;
   border-radius: 50%;
-  color: #10b981;
+  color: #2f7d5b;
   font-size: 13px;
 }
 
 .status-icon.is-done {
-  border-color: #a7f3d0;
-  background: #ecfdf5;
+  border-color: #cfe3d9;
+  background: #edf5f1;
 }
 
 .title-cell {
@@ -519,9 +520,9 @@ onMounted(async () => {
   background: #cbd5e1;
 }
 
-.level-dot.is-easy { background: #10b981; }
-.level-dot.is-medium { background: #f59e0b; }
-.level-dot.is-hard { background: #ef4444; }
+.level-dot.is-easy { background: #2f7d5b; }
+.level-dot.is-medium { background: #a16207; }
+.level-dot.is-hard { background: #b42318; }
 
 .action-cell {
   grid-area: action;
@@ -529,7 +530,7 @@ onMounted(async () => {
   align-items: center;
   justify-content: flex-end;
   gap: 4px;
-  color: #4f46e5;
+  color: #1f3a5f;
   font-size: 11.5px;
   font-weight: 600;
 }

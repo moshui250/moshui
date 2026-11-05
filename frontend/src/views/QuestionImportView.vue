@@ -359,7 +359,7 @@ onBeforeUnmount(revokePreview)
               <strong>正在识别题面与样例</strong>
               <span>{{ progress }}%</span>
             </div>
-            <el-progress :percentage="progress" :show-text="false" :stroke-width="6" color="#4f46e5" />
+            <el-progress :percentage="progress" :show-text="false" :stroke-width="6" color="#1f3a5f" />
             <div class="skeleton-lines">
               <i></i><i></i><i class="short"></i>
             </div>
@@ -534,7 +534,8 @@ onBeforeUnmount(revokePreview)
 }
 
 .eyebrow {
-  color: #4f46e5;
+  display: none;
+  color: #1f3a5f;
   font-size: 10px;
   font-weight: 750;
   letter-spacing: 0.18em;
@@ -543,9 +544,9 @@ onBeforeUnmount(revokePreview)
 .import-head h1 {
   margin: 8px 0 6px;
   color: #101426;
-  font-size: 42px;
-  font-weight: 760;
-  letter-spacing: -0.04em;
+  font-size: 36px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
 }
 
 .import-head p {
@@ -573,7 +574,7 @@ onBeforeUnmount(revokePreview)
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #10b981;
+  background: #2f7d5b;
 }
 
 .import-layout {
@@ -588,7 +589,7 @@ onBeforeUnmount(revokePreview)
   top: 88px;
   padding: 20px;
   border: 1px solid #e8edf5;
-  border-radius: 16px;
+  border-radius: 12px;
   background: #fff;
 }
 
@@ -657,9 +658,9 @@ onBeforeUnmount(revokePreview)
 
 .flow-list li.active .flow-index,
 .flow-list li.done .flow-index {
-  border-color: #c7d2fe;
-  background: #eef2ff;
-  color: #4f46e5;
+  border-color: #c8d2dc;
+  background: #eef2f6;
+  color: #1f3a5f;
 }
 
 .flow-list li.active strong {
@@ -677,7 +678,7 @@ onBeforeUnmount(revokePreview)
 .flow-note span {
   display: inline-block;
   margin-right: 4px;
-  color: #4f46e5;
+  color: #1f3a5f;
   font-weight: 700;
 }
 
@@ -685,7 +686,7 @@ onBeforeUnmount(revokePreview)
   min-height: 560px;
   padding: 26px 28px 28px;
   border: 1px solid #e8edf5;
-  border-radius: 16px;
+  border-radius: 12px;
   background: #fff;
 }
 
@@ -714,14 +715,14 @@ onBeforeUnmount(revokePreview)
 .work-state {
   padding: 5px 9px;
   border-radius: 999px;
-  background: #eef2ff;
-  color: #4f46e5;
+  background: #eef2f6;
+  color: #1f3a5f;
   font-size: 10px;
   white-space: nowrap;
 }
 
 .work-state.manual {
-  background: #fffbeb;
+  background: #f7f3ea;
   color: #b45309;
 }
 
@@ -747,9 +748,9 @@ onBeforeUnmount(revokePreview)
   align-items: center;
   justify-content: center;
   padding: 30px 20px;
-  border: 1px dashed #c7d2fe;
-  border-radius: 14px;
-  background: #f8faff;
+  border: 1px dashed #c8d2dc;
+  border-radius: 10px;
+  background: #f7f9fb;
 }
 
 .drop-icon {
@@ -758,9 +759,9 @@ onBeforeUnmount(revokePreview)
   height: 52px;
   place-items: center;
   margin-bottom: 10px;
-  border-radius: 14px;
-  background: #eef2ff;
-  color: #4f46e5;
+  border-radius: 10px;
+  background: #eef2f6;
+  color: #1f3a5f;
   font-size: 24px;
 }
 
@@ -781,7 +782,7 @@ onBeforeUnmount(revokePreview)
   border: 1px solid #dfe5f0;
   border-radius: 8px;
   background: #fff;
-  color: #4f46e5;
+  color: #1f3a5f;
   font-size: 11px;
   font-weight: 650;
 }
@@ -791,7 +792,7 @@ onBeforeUnmount(revokePreview)
   overflow: hidden;
   min-height: 246px;
   border: 1px solid #eef2f7;
-  border-radius: 14px;
+  border-radius: 10px;
   background: #fbfcfe;
 }
 
@@ -829,7 +830,7 @@ onBeforeUnmount(revokePreview)
 }
 
 .preview-mark {
-  color: #c7d2fe;
+  color: #c8d2dc;
   font-family: 'JetBrains Mono', Consolas, monospace;
   font-size: 10px;
   letter-spacing: 0.16em;
@@ -843,9 +844,9 @@ onBeforeUnmount(revokePreview)
 .recognizing {
   margin-top: 18px;
   padding: 16px;
-  border: 1px solid #e0e7ff;
+  border: 1px solid #dfe6ed;
   border-radius: 12px;
-  background: #f8faff;
+  background: #f7f9fb;
 }
 
 .recognizing-copy {
@@ -853,7 +854,7 @@ onBeforeUnmount(revokePreview)
   align-items: center;
   gap: 8px;
   margin-bottom: 9px;
-  color: #4f46e5;
+  color: #1f3a5f;
   font-size: 11px;
 }
 
@@ -871,8 +872,8 @@ onBeforeUnmount(revokePreview)
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #4f46e5;
-  box-shadow: 0 0 0 4px #e0e7ff;
+  background: #1f3a5f;
+  box-shadow: 0 0 0 4px #dfe6ed;
   animation: pulse 1.2s ease-in-out infinite;
 }
 
@@ -987,18 +988,18 @@ onBeforeUnmount(revokePreview)
 }
 
 .notice.warning {
-  background: #fffbeb;
+  background: #f7f3ea;
   color: #92400e;
 }
 
 .notice.info {
-  background: #f5f7ff;
-  color: #4f46e5;
+  background: #f5f7f8;
+  color: #1f3a5f;
 }
 
 .notice.danger {
-  background: #fff1f2;
-  color: #be123c;
+  background: #f7efee;
+  color: #9f2d2d;
 }
 
 .notice.plain {
@@ -1042,7 +1043,7 @@ onBeforeUnmount(revokePreview)
 }
 
 .field em {
-  color: #e11d48;
+  color: #9f2d2d;
   font-style: normal;
 }
 

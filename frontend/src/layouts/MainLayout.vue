@@ -294,13 +294,13 @@ onBeforeUnmount(() => {
   width: 38px;
   height: 38px;
   border-radius: 11px;
-  background: linear-gradient(135deg, #4f46e5, #6366f1);
+  background: #1f3a5f;
   color: #fff;
   font-family: 'JetBrains Mono', Consolas, monospace;
   font-size: 14px;
   font-weight: 700;
   letter-spacing: -1px;
-  box-shadow: 0 6px 16px rgba(79, 70, 229, 0.28);
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.10);
 }
 
 .brand-copy {
@@ -370,18 +370,16 @@ onBeforeUnmount(() => {
   margin: 10px 4px 12px;
   padding: 15px 14px 13px;
   overflow: hidden;
-  border: 1px solid #dfe3ff;
-  border-radius: 14px;
-  background:
-    radial-gradient(circle at 100% 0%, rgba(99, 102, 241, 0.16), transparent 52%),
-    linear-gradient(160deg, #f7f8ff 0%, #ffffff 100%);
+  border: 1px solid #e4e7ec;
+  border-radius: 10px;
+  background: #fff;
   cursor: pointer;
   transition: border-color 0.18s ease, transform 0.18s ease;
 }
 
 .coach-card:hover,
 .coach-card:focus-visible {
-  border-color: #a5b4fc;
+  border-color: #93a5b8;
   outline: none;
   transform: translateY(-1px);
 }
@@ -393,7 +391,7 @@ onBeforeUnmount(() => {
   height: 30px;
   margin-bottom: 9px;
   border-radius: 9px;
-  background: #eef2ff;
+  background: #eef2f6;
   color: var(--ca-primary);
   font-size: 17px;
 }
@@ -415,8 +413,8 @@ onBeforeUnmount(() => {
   padding: 2px 7px;
   border-radius: 5px;
   background: #fff;
-  border: 1px solid #e0e7ff;
-  color: #6366f1;
+  border: 1px solid #dfe6ed;
+  color: #3d5a78;
   font-size: 10px;
   letter-spacing: 0.3px;
 }
@@ -500,22 +498,22 @@ onBeforeUnmount(() => {
 }
 
 .health-chip.is-ok .health-dot {
-  background: #10b981;
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.13);
+  background: #2f7d5b;
+  box-shadow: 0 0 0 3px rgba(47, 125, 91, 0.10);
 }
 
 .health-chip.is-warn .health-dot {
-  background: #f59e0b;
+  background: #a16207;
   box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.13);
 }
 
 .health-chip.is-offline .health-dot {
-  background: #ef4444;
+  background: #b42318;
   box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12);
 }
 
 .health-chip.is-checking .health-dot {
-  background: #6366f1;
+  background: #3d5a78;
 }
 
 .icon-button {
@@ -555,7 +553,7 @@ onBeforeUnmount(() => {
   width: 26px;
   height: 26px;
   border-radius: 50%;
-  background: #eef2ff;
+  background: #eef2f6;
   color: var(--ca-primary);
   font-size: 11px;
   font-weight: 700;
@@ -587,7 +585,7 @@ onBeforeUnmount(() => {
 }
 
 .logout-btn:hover {
-  color: #dc2626;
+  color: #b42318;
 }
 
 .page-wrap {

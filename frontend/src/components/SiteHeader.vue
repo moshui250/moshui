@@ -137,9 +137,8 @@ onBeforeUnmount(() => {
   position: sticky;
   top: 0;
   z-index: 20;
-  background: rgba(255, 255, 255, 0.92);
+  background: #ffffff;
   border-bottom: 1px solid #e8eaf0;
-  backdrop-filter: blur(14px);
 }
 
 .site-inner {
@@ -166,11 +165,11 @@ onBeforeUnmount(() => {
   display: grid;
   place-items: center;
   color: #fff;
-  background: #4f46e5;
+  background: #1f3a5f;
   font-size: 15px;
   font-weight: 700;
   letter-spacing: -1px;
-  box-shadow: 0 8px 18px rgba(79, 70, 229, 0.22);
+  box-shadow: none;
 }
 
 .brand-copy {
@@ -210,7 +209,7 @@ onBeforeUnmount(() => {
 
 .site-nav a:hover,
 .site-nav a.router-link-active {
-  color: #4f46e5;
+  color: #1f3a5f;
 }
 
 .header-right {
@@ -236,12 +235,12 @@ onBeforeUnmount(() => {
 }
 
 .health.is-up i {
-  background: #10b981;
-  box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1);
+  background: #2f7d5b;
+  box-shadow: 0 0 0 4px rgba(47, 125, 91, 0.10);
 }
 
 .health.is-warn i {
-  background: #f59e0b;
+  background: #a16207;
 }
 
 .user-pill {
@@ -259,7 +258,7 @@ onBeforeUnmount(() => {
 }
 
 .user-pill:hover {
-  border-color: #c7cdfb;
+  border-color: #c8d2dc;
   box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
 }
 
@@ -269,8 +268,8 @@ onBeforeUnmount(() => {
   border-radius: 50%;
   display: grid;
   place-items: center;
-  background: #eef0ff;
-  color: #4f46e5;
+  background: #eef2f6;
+  color: #1f3a5f;
   font-size: 12px;
   font-weight: 700;
 }
@@ -296,12 +295,12 @@ onBeforeUnmount(() => {
   height: 36px;
   padding: 0 18px;
   border-radius: 999px;
-  background: #4f46e5;
+  background: #1f3a5f;
   color: #fff;
   font-size: 13px;
   font-weight: 650;
   text-decoration: none;
-  box-shadow: 0 8px 16px rgba(79, 70, 229, 0.2);
+  box-shadow: 0 8px 16px rgba(15, 23, 42, 0.10);
 }
 
 .menu-toggle {
@@ -352,7 +351,7 @@ onBeforeUnmount(() => {
 .mobile-menu a:hover,
 .mobile-menu a.router-link-active {
   background: #f4f5ff;
-  color: #4f46e5;
+  color: #1f3a5f;
 }
 
 @media (max-width: 900px) {

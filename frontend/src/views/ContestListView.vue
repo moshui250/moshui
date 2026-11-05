@@ -192,8 +192,9 @@ onMounted(load)
 }
 
 .eyebrow {
+  display: none;
   margin: 0 0 14px;
-  color: #4f46e5;
+  color: #1f3a5f;
   font-size: 11px;
   font-weight: 750;
   letter-spacing: 0.18em;
@@ -202,9 +203,9 @@ onMounted(load)
 h1 {
   margin: 0;
   color: #0f172a;
-  font-size: clamp(32px, 4vw, 48px);
-  line-height: 1.12;
-  letter-spacing: -0.04em;
+  font-size: clamp(30px, 3.4vw, 40px);
+  line-height: 1.16;
+  letter-spacing: -0.03em;
 }
 
 .hero-desc {
@@ -225,7 +226,7 @@ h1 {
 }
 
 .hero-stat strong {
-  color: #4f46e5;
+  color: #1f3a5f;
   font-size: 42px;
   line-height: 1;
   font-weight: 760;
@@ -265,8 +266,8 @@ h1 {
 }
 
 .filter-tabs button.active {
-  background: #eef0ff;
-  color: #4f46e5;
+  background: #eef2f6;
+  color: #1f3a5f;
 }
 
 .filter-note {
@@ -283,7 +284,7 @@ h1 {
 .contest-card {
   padding: 22px 24px 20px;
   border: 1px solid #e5e8f0;
-  border-radius: 18px;
+  border-radius: 12px;
   background: #fff;
   cursor: pointer;
   transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
@@ -317,13 +318,13 @@ h1 {
 }
 
 .status-running {
-  background: #eafaf3;
-  color: #059669;
+  background: #edf5f1;
+  color: #2f7d5b;
 }
 
 .status-upcoming {
-  background: #eef0ff;
-  color: #4f46e5;
+  background: #eef2f6;
+  color: #1f3a5f;
 }
 
 .status-ended {
@@ -395,7 +396,7 @@ h2 {
 }
 
 .registered-mark {
-  color: #059669;
+  color: #2f7d5b;
   font-size: 12px;
   font-weight: 650;
 }
@@ -411,7 +412,7 @@ h2 {
   gap: 5px;
   border: 0;
   background: transparent;
-  color: #4f46e5;
+  color: #1f3a5f;
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;
@@ -428,13 +429,13 @@ h2 {
 .empty-state {
   padding: 68px 24px;
   border: 1px dashed #dbe1ea;
-  border-radius: 20px;
+  border-radius: 12px;
   background: #fff;
   text-align: center;
 }
 
 .empty-mark {
-  color: #c7cdfb;
+  color: #c8d2dc;
   font-size: 34px;
 }
 
@@ -451,7 +452,7 @@ h2 {
 }
 
 .empty-link {
-  color: #4f46e5;
+  color: #1f3a5f;
   font-size: 13px;
   font-weight: 650;
   text-decoration: none;

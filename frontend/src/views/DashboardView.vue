@@ -170,7 +170,7 @@ function renderChart() {
         showBackground: true,
         backgroundStyle: { color: '#f4f6fb', borderRadius: [6, 6, 0, 0] },
         itemStyle: {
-          color: '#6366f1',
+          color: '#3d5a78',
           borderRadius: [6, 6, 0, 0]
         }
       }
@@ -353,7 +353,8 @@ onBeforeUnmount(() => {
 }
 
 .page-eyebrow {
-  color: #6366f1;
+  display: none;
+  color: #3d5a78;
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.14em;
@@ -362,10 +363,10 @@ onBeforeUnmount(() => {
 .page-title {
   margin: 8px 0 10px;
   color: #0f172a;
-  font-size: 44px;
-  font-weight: 750;
-  letter-spacing: -0.04em;
-  line-height: 1.08;
+  font-size: 36px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.12;
 }
 
 .page-subtitle {
@@ -402,7 +403,7 @@ onBeforeUnmount(() => {
   padding: 0 15px;
   border: 0;
   border-radius: 8px;
-  background: #4f46e5;
+  background: #1f3a5f;
   color: #fff;
   font-family: inherit;
   font-size: 12.5px;
@@ -412,7 +413,7 @@ onBeforeUnmount(() => {
 }
 
 .btn-primary:hover {
-  background: #4338ca;
+  background: #152a45;
 }
 
 .error-banner {
@@ -421,9 +422,9 @@ onBeforeUnmount(() => {
   gap: 8px;
   margin-bottom: 12px;
   padding: 10px 12px;
-  border: 1px solid #fde2e2;
+  border: 1px solid #f1dddb;
   border-radius: 8px;
-  background: #fff8f8;
+  background: #fbf7f7;
   color: #b91c1c;
   font-size: 12px;
 }
@@ -468,15 +469,15 @@ onBeforeUnmount(() => {
 }
 
 .tone-indigo {
-  background: #6366f1;
+  background: #3d5a78;
 }
 
 .tone-mint {
-  background: #10b981;
+  background: #2f7d5b;
 }
 
 .tone-rose {
-  background: #f43f5e;
+  background: #9f2d2d;
 }
 
 .metric-number {
@@ -591,7 +592,7 @@ onBeforeUnmount(() => {
 }
 
 .weak-value {
-  color: #4f46e5;
+  color: #1f3a5f;
   font-family: 'JetBrains Mono', Consolas, monospace;
   font-size: 11px;
 }
@@ -607,7 +608,7 @@ onBeforeUnmount(() => {
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: #818cf8;
+  background: #6e8299;
 }
 
 .weak-foot {
@@ -641,7 +642,7 @@ onBeforeUnmount(() => {
   border: 0;
   border-top: 1px solid #f1f4f9;
   background: transparent;
-  color: #4f46e5;
+  color: #1f3a5f;
   font-family: inherit;
   font-size: 11px;
   font-weight: 600;
@@ -650,7 +651,7 @@ onBeforeUnmount(() => {
 }
 
 .panel-link:hover {
-  color: #4338ca;
+  color: #152a45;
 }
 
 .recent-card {
@@ -691,7 +692,7 @@ onBeforeUnmount(() => {
 }
 
 .recent-row:hover {
-  background: #fbfcff;
+  background: #fbfcfd;
 }
 
 .recent-title {
@@ -719,17 +720,17 @@ onBeforeUnmount(() => {
 }
 
 .status-pill.ok {
-  background: #ecfdf5;
-  color: #059669;
+  background: #edf5f1;
+  color: #2f7d5b;
 }
 
 .status-pill.danger {
-  background: #fff1f2;
-  color: #be123c;
+  background: #f7efee;
+  color: #9f2d2d;
 }
 
 .status-pill.warn {
-  background: #fffbeb;
+  background: #f7f3ea;
   color: #b45309;
 }
 
@@ -747,7 +748,7 @@ onBeforeUnmount(() => {
 }
 
 .empty-mark {
-  color: #c7d2fe;
+  color: #c8d2dc;
   font-size: 28px;
 }
 
