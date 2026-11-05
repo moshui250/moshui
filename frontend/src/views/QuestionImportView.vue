@@ -14,7 +14,6 @@ import {
 const router = useRouter()
 
 const stage = ref('upload')
-const step = computed(() => (stage.value === 'upload' ? 0 : 1))
 const knowledgePoints = ref([])
 const file = ref(null)
 const previewUrl = ref('')
@@ -49,6 +48,8 @@ const stageHint = computed(() => {
   if (stage.value === 'manual') return '手动录入模式，不会调用图片识别'
   return '上传题目截图或照片，先识别成草稿，确认后才会入库'
 })
+
+const activeStep = computed(() => (stage.value === 'upload' ? 0 : 1))
 
 function revokePreview() {
   if (previewUrl.value) {
@@ -186,11 +187,7 @@ function validateForm() {
   const selected = knowledgePoints.value.find(
     (item) => item.code === form.knowledgePointCode || item.id === Number(form.knowledgePointCode)
   )
-  if (!selected && stage.value === 'confirm') {
-    ElMessage.error('请选择知识点')
-    return false
-  }
-  if (stage.value === 'manual' && !selected) {
+  if (!selected) {
     ElMessage.error('请选择知识点')
     return false
   }
@@ -272,371 +269,986 @@ onBeforeUnmount(revokePreview)
 
 <template>
   <div class="import-page">
-    <section class="import-hero">
+    <header class="import-head">
       <div>
-        <div class="page-eyebrow">Image To Draft</div>
-        <h1 class="page-title">图片录题</h1>
-        <p class="page-subtitle">
-          上传题目截图或照片，AI 先识别成草稿；你核对、修改并确认后才会写入题库。
-        </p>
+        <div class="eyebrow">IMAGE TO DRAFT</div>
+        <h1>图片录题</h1>
+        <p>上传题目截图或照片，AI 先识别成草稿；核对、修改并确认后，才会写入个人题库。</p>
       </div>
-      <el-tag type="warning" effect="plain" round>两段式 · 识别结果不直接入库</el-tag>
-    </section>
-
-    <section class="panel import-panel">
-      <el-steps :active="step" finish-status="success" simple class="import-steps">
-        <el-step title="上传图片" />
-        <el-step title="核对草稿" />
-        <el-step title="确认入库" />
-      </el-steps>
-
-      <div class="stage-hint">{{ stageHint }}</div>
-
-      <div v-if="stage === 'upload'" class="upload-stage">
-        <el-upload
-          drag
-          :auto-upload="false"
-          :show-file-list="false"
-          accept="image/jpeg,image/png,image/webp"
-          :on-change="onFileChange"
-          class="upload-drop"
-        >
-          <el-icon class="upload-icon"><UploadFilled /></el-icon>
-          <div class="upload-title">拖拽图片到这里，或点击选择</div>
-          <div class="upload-sub">支持 JPG / PNG / WebP，最大 5MB；会自动压缩到长边 1600px</div>
-        </el-upload>
-
-        <div v-if="previewUrl" class="preview-card">
-          <img :src="previewUrl" alt="题目预览" class="preview-image" />
-          <div class="preview-meta">
-            <span>{{ file?.name }}</span>
-            <span>{{ Math.ceil((file?.size || 0) / 1024) }} KB</span>
-          </div>
-        </div>
-
-        <el-progress
-          v-if="recognizing"
-          :percentage="progress"
-          :stroke-width="8"
-          class="upload-progress"
-        />
-
-        <div class="upload-actions">
-          <el-button type="primary" size="large" :loading="recognizing" @click="recognize">
-            开始识别
-          </el-button>
-          <el-button text @click="startManual()">直接手动录入</el-button>
-        </div>
+      <div class="head-badge">
+        <span class="badge-dot"></span>
+        识别结果不直接入库
       </div>
+    </header>
 
-      <div v-else class="draft-stage">
-        <el-alert
-          v-if="stage === 'manual'"
-          type="warning"
-          :closable="false"
-          show-icon
-          class="draft-alert"
-          title="已切换到手动录入"
-          :description="manualReason || '请手动填写题目信息，不会调用图片识别。'"
-        />
-
-        <el-alert
-          v-else
-          type="warning"
-          :closable="false"
-          show-icon
-          class="draft-alert"
-          title="请核对 AI 识别结果"
-          description="识别结果可能有误，尤其是输入输出格式、公式和样例。确认后才会创建个人题目。"
-        />
-
-        <el-alert
-          v-if="missingFields.length"
-          type="error"
-          :closable="false"
-          show-icon
-          class="draft-alert"
-          title="以下字段缺失，请补充"
-          :description="missingFields.join('、')"
-        />
-
-        <el-alert
-          v-if="warnText"
-          type="info"
-          :closable="false"
-          show-icon
-          class="draft-alert"
-          title="识别提示"
-          :description="warnText"
-        />
-
-        <el-form label-position="top" class="draft-form">
-          <div class="form-grid">
-            <el-form-item label="题目标题" required>
-              <el-input v-model="form.title" maxlength="100" show-word-limit placeholder="例如：数组元素求和" />
-            </el-form-item>
-
-            <el-form-item label="知识点" required>
-              <el-select v-model="form.knowledgePointCode" placeholder="请选择知识点" filterable class="full-width">
-                <el-option
-                  v-for="item in knowledgePoints"
-                  :key="item.id"
-                  :label="item.name"
-                  :value="item.code"
-                />
-              </el-select>
-            </el-form-item>
-
-            <el-form-item label="难度" required>
-              <el-radio-group v-model="form.difficulty">
-                <el-radio-button v-for="item in difficultyOptions" :key="item.value" :value="item.value">
-                  {{ item.label }}
-                </el-radio-button>
-              </el-radio-group>
-            </el-form-item>
-          </div>
-
-          <el-form-item label="题目描述" required>
-            <el-input v-model="form.description" type="textarea" :rows="4" placeholder="支持 Markdown" />
-          </el-form-item>
-
-          <div class="form-grid">
-            <el-form-item label="输入格式">
-              <el-input v-model="form.inputDesc" type="textarea" :rows="3" placeholder="例如：第一行一个整数 n" />
-            </el-form-item>
-            <el-form-item label="输出格式">
-              <el-input v-model="form.outputDesc" type="textarea" :rows="3" placeholder="例如：输出一个整数" />
-            </el-form-item>
-          </div>
-        </el-form>
-
-        <div class="case-section">
-          <div class="section-head">
+    <div class="import-layout">
+      <aside class="flow-card">
+        <div class="flow-title">录题流程</div>
+        <ol class="flow-list">
+          <li :class="{ active: activeStep === 0, done: activeStep > 0 }">
+            <span class="flow-index">01</span>
             <div>
-              <h3>样例用例</h3>
-              <p>至少要有一条完整样例，用户可见。</p>
+              <strong>上传图片</strong>
+              <p>截图或拍照，最大 5MB</p>
             </div>
-            <el-button plain :icon="Plus" @click="addSample">添加样例</el-button>
-          </div>
-
-          <div v-for="(item, index) in form.samples" :key="`sample-${index}`" class="case-row">
-            <div class="case-index">样例 {{ index + 1 }}</div>
-            <el-input v-model="item.input" type="textarea" :rows="2" placeholder="输入" />
-            <el-input v-model="item.output" type="textarea" :rows="2" placeholder="输出" />
-            <el-button link type="danger" :icon="Delete" @click="removeSample(index)">删除</el-button>
-          </div>
-        </div>
-
-        <div class="case-section">
-          <div class="section-head">
+          </li>
+          <li :class="{ active: activeStep === 1 }">
+            <span class="flow-index">02</span>
             <div>
-              <h3>隐藏用例（可选）</h3>
-              <p>不填时会复制样例生成 2 条隐藏用例，入库后需人工确认。</p>
+              <strong>核对草稿</strong>
+              <p>题面、样例、知识点</p>
             </div>
-            <el-button plain :icon="Plus" @click="addHiddenCase">添加隐藏用例</el-button>
-          </div>
+          </li>
+          <li>
+            <span class="flow-index">03</span>
+            <div>
+              <strong>确认入库</strong>
+              <p>创建个人题目</p>
+            </div>
+          </li>
+        </ol>
+        <div class="flow-note">
+          <span>10 分钟</span>
+          识别草稿只在内存中保留 10 分钟，过期后请重新识别。
+        </div>
+      </aside>
 
-          <div v-for="(item, index) in form.hiddenCases" :key="`hidden-${index}`" class="case-row">
-            <div class="case-index">隐藏 {{ index + 1 }}</div>
-            <el-input v-model="item.input" type="textarea" :rows="2" placeholder="输入" />
-            <el-input v-model="item.output" type="textarea" :rows="2" placeholder="输出" />
-            <el-button link type="danger" :icon="Delete" @click="removeHiddenCase(index)">删除</el-button>
+      <main class="work-card">
+        <div class="work-head">
+          <div>
+            <span class="work-kicker">{{ stageHint }}</span>
+            <h2>{{ stage === 'upload' ? '选择一张题目图片' : stage === 'manual' ? '手动录入题目' : '核对 AI 草稿' }}</h2>
           </div>
-
-          <div v-if="!form.hiddenCases.length" class="hidden-empty">
-            当前没有隐藏用例，提交后将复制样例生成 2 条隐藏用例。
-          </div>
+          <span class="work-state" :class="{ manual: stage === 'manual' }">
+            {{ stage === 'upload' ? '等待上传' : stage === 'manual' ? '手动模式' : '待确认' }}
+          </span>
         </div>
 
-        <div class="draft-actions">
-          <el-button @click="goUpload">重新上传</el-button>
-          <el-button type="primary" :loading="submitting" @click="submit">
-            确认入库
-          </el-button>
-        </div>
-      </div>
-    </section>
+        <template v-if="stage === 'upload'">
+          <div class="upload-grid">
+            <el-upload
+              drag
+              :auto-upload="false"
+              :show-file-list="false"
+              accept="image/jpeg,image/png,image/webp"
+              :on-change="onFileChange"
+              class="upload-box"
+            >
+              <div class="drop-icon"><el-icon><UploadFilled /></el-icon></div>
+              <div class="drop-title">拖拽题目图片到这里</div>
+              <p>或点击浏览文件 · JPG / PNG / WebP · 最大 5MB</p>
+              <span class="drop-action">选择图片</span>
+            </el-upload>
+
+            <div v-if="previewUrl" class="preview-box">
+              <img :src="previewUrl" alt="题目预览" />
+              <div class="preview-meta">
+                <span class="preview-name">{{ file?.name }}</span>
+                <span>{{ Math.ceil((file?.size || 0) / 1024) }} KB</span>
+              </div>
+            </div>
+            <div v-else class="preview-placeholder">
+              <span class="preview-mark">PREVIEW</span>
+              <p>选择图片后在这里预览</p>
+            </div>
+          </div>
+
+          <div v-if="recognizing" class="recognizing">
+            <div class="recognizing-copy">
+              <span class="scan-dot"></span>
+              <strong>正在识别题面与样例</strong>
+              <span>{{ progress }}%</span>
+            </div>
+            <el-progress :percentage="progress" :show-text="false" :stroke-width="6" color="#4f46e5" />
+            <div class="skeleton-lines">
+              <i></i><i></i><i class="short"></i>
+            </div>
+          </div>
+
+          <div class="upload-tip">
+            图片会自动压缩到长边 1600px；AI 只负责生成草稿，不会直接创建题目。
+          </div>
+
+          <div class="actions">
+            <el-button type="primary" size="large" :loading="recognizing" @click="recognize">
+              开始识别
+            </el-button>
+            <el-button size="large" @click="startManual()">直接手动录入</el-button>
+          </div>
+        </template>
+
+        <template v-else>
+          <div class="draft-summary">
+            <div class="draft-thumb">
+              <img v-if="previewUrl" :src="previewUrl" alt="题目图片" />
+              <span v-else>无图片</span>
+            </div>
+            <div>
+              <strong>{{ stage === 'manual' ? '未使用识别结果' : 'AI 草稿已生成' }}</strong>
+              <p>{{ stage === 'manual' ? '手动填写不会覆盖或调用识别服务。' : '请重点检查公式、输入输出格式和样例。' }}</p>
+            </div>
+            <el-button text @click="goUpload">重新上传</el-button>
+          </div>
+
+          <div v-if="stage === 'manual'" class="notice warning">
+            <strong>已切换到手动录入</strong>
+            <span>{{ manualReason || '请手动填写题目信息，不会调用图片识别。' }}</span>
+          </div>
+          <div v-else class="notice info">
+            <strong>请核对 AI 识别结果</strong>
+            <span>识别结果可能有误，确认后才会创建个人题目。</span>
+          </div>
+
+          <div v-if="missingFields.length" class="notice danger">
+            <strong>以下字段缺失</strong>
+            <span>{{ missingFields.join('、') }}</span>
+          </div>
+          <div v-if="warnText" class="notice plain">
+            <strong>识别提示</strong>
+            <span>{{ warnText }}</span>
+          </div>
+
+          <section class="form-card">
+            <div class="form-row three">
+              <label class="field">
+                <span>题目标题 <em>*</em></span>
+                <el-input v-model="form.title" maxlength="100" show-word-limit placeholder="例如：数组元素求和" />
+              </label>
+              <label class="field">
+                <span>知识点 <em>*</em></span>
+                <el-select v-model="form.knowledgePointCode" placeholder="请选择知识点" filterable class="full-width">
+                  <el-option
+                    v-for="item in knowledgePoints"
+                    :key="item.id"
+                    :label="item.name"
+                    :value="item.code"
+                  />
+                </el-select>
+              </label>
+              <label class="field">
+                <span>难度 <em>*</em></span>
+                <el-radio-group v-model="form.difficulty" class="difficulty-group">
+                  <el-radio-button v-for="item in difficultyOptions" :key="item.value" :value="item.value">
+                    {{ item.label }}
+                  </el-radio-button>
+                </el-radio-group>
+              </label>
+            </div>
+
+            <label class="field block">
+              <span>题目描述 <em>*</em></span>
+              <el-input
+                v-model="form.description"
+                type="textarea"
+                :rows="5"
+                maxlength="20000"
+                show-word-limit
+                placeholder="支持 Markdown，建议保留原题的标题层级"
+              />
+            </label>
+
+            <div class="form-row two">
+              <label class="field">
+                <span>输入格式</span>
+                <el-input v-model="form.inputDesc" type="textarea" :rows="3" placeholder="例如：第一行一个整数 n" />
+              </label>
+              <label class="field">
+                <span>输出格式</span>
+                <el-input v-model="form.outputDesc" type="textarea" :rows="3" placeholder="例如：输出一个整数" />
+              </label>
+            </div>
+          </section>
+
+          <section class="case-card">
+            <div class="case-head">
+              <div>
+                <h3>样例用例</h3>
+                <p>至少一条完整样例，会展示在题目详情页。</p>
+              </div>
+              <el-button plain :icon="Plus" @click="addSample">添加样例</el-button>
+            </div>
+            <div v-for="(item, index) in form.samples" :key="`sample-${index}`" class="case-row">
+              <span class="case-no">{{ String(index + 1).padStart(2, '0') }}</span>
+              <label class="case-field">
+                <span>输入</span>
+                <el-input v-model="item.input" type="textarea" :rows="2" placeholder="样例输入" />
+              </label>
+              <label class="case-field">
+                <span>输出</span>
+                <el-input v-model="item.output" type="textarea" :rows="2" placeholder="样例输出" />
+              </label>
+              <el-button link type="danger" :icon="Delete" @click="removeSample(index)" />
+            </div>
+          </section>
+
+          <section class="case-card">
+            <div class="case-head">
+              <div>
+                <h3>隐藏用例（可选）</h3>
+                <p>不填时会复制样例生成 2 条隐藏用例，入库后需人工确认。</p>
+              </div>
+              <el-button plain :icon="Plus" @click="addHiddenCase">添加隐藏用例</el-button>
+            </div>
+            <div v-for="(item, index) in form.hiddenCases" :key="`hidden-${index}`" class="case-row">
+              <span class="case-no">{{ String(index + 1).padStart(2, '0') }}</span>
+              <label class="case-field">
+                <span>输入</span>
+                <el-input v-model="item.input" type="textarea" :rows="2" placeholder="隐藏输入" />
+              </label>
+              <label class="case-field">
+                <span>输出</span>
+                <el-input v-model="item.output" type="textarea" :rows="2" placeholder="隐藏输出" />
+              </label>
+              <el-button link type="danger" :icon="Delete" @click="removeHiddenCase(index)" />
+            </div>
+            <div v-if="!form.hiddenCases.length" class="hidden-empty">
+              当前没有隐藏用例，提交后会复制样例生成 2 条隐藏用例。
+            </div>
+          </section>
+
+          <div class="actions draft-actions">
+            <el-button size="large" @click="goUpload">返回上一步</el-button>
+            <el-button type="primary" size="large" :loading="submitting" @click="submit">
+              确认入库
+            </el-button>
+          </div>
+        </template>
+      </main>
+    </div>
   </div>
 </template>
 
 <style scoped>
 .import-page {
-  max-width: 1080px;
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 42px 24px 64px;
 }
 
-.import-hero {
+.import-head {
   display: flex;
-  align-items: flex-start;
+  align-items: flex-end;
   justify-content: space-between;
   gap: 24px;
-  margin-bottom: 20px;
+  margin-bottom: 28px;
 }
 
-.import-panel {
-  padding: 26px 30px 30px;
+.eyebrow {
+  color: #4f46e5;
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.18em;
 }
 
-.import-steps {
-  margin-bottom: 16px;
+.import-head h1 {
+  margin: 8px 0 6px;
+  color: #101426;
+  font-size: 42px;
+  font-weight: 760;
+  letter-spacing: -0.04em;
 }
 
-.stage-hint {
-  margin-bottom: 22px;
-  color: #6b7280;
+.import-head p {
+  max-width: 620px;
+  margin: 0;
+  color: #64748b;
   font-size: 13px;
+  line-height: 1.8;
 }
 
-.upload-stage {
-  max-width: 760px;
+.head-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid #e6eaf2;
+  border-radius: 999px;
+  background: #fff;
+  color: #64748b;
+  font-size: 11px;
+  white-space: nowrap;
 }
 
-.upload-drop {
-  width: 100%;
+.badge-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #10b981;
 }
 
-.upload-drop :deep(.el-upload-dragger) {
-  padding: 38px 24px;
+.import-layout {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  align-items: start;
+  gap: 20px;
+}
+
+.flow-card {
+  position: sticky;
+  top: 88px;
+  padding: 20px;
+  border: 1px solid #e8edf5;
   border-radius: 16px;
-  border-color: #c7d2fe;
-  background: #f8faff;
-}
-
-.upload-icon {
-  font-size: 44px;
-  color: #6366f1;
-}
-
-.upload-title {
-  margin-top: 8px;
-  color: #1f2937;
-  font-size: 17px;
-  font-weight: 700;
-}
-
-.upload-sub {
-  margin-top: 6px;
-  color: #8a94a6;
-  font-size: 13px;
-}
-
-.preview-card {
-  margin-top: 16px;
-  padding: 12px;
-  border: 1px solid #e5e7eb;
-  border-radius: 14px;
   background: #fff;
 }
 
-.preview-image {
+.flow-title {
+  color: #94a3b8;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.flow-list {
+  margin: 18px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.flow-list li {
+  position: relative;
+  display: flex;
+  gap: 12px;
+  padding-bottom: 22px;
+  color: #94a3b8;
+}
+
+.flow-list li::before {
+  position: absolute;
+  top: 22px;
+  bottom: 0;
+  left: 13px;
+  width: 1px;
+  background: #e8edf5;
+  content: '';
+}
+
+.flow-list li:last-child::before {
+  display: none;
+}
+
+.flow-index {
+  z-index: 1;
+  display: grid;
+  width: 27px;
+  height: 27px;
+  flex: 0 0 27px;
+  place-items: center;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fff;
+  font-family: 'JetBrains Mono', Consolas, monospace;
+  font-size: 10px;
+}
+
+.flow-list strong {
+  display: block;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.flow-list p {
+  margin: 3px 0 0;
+  font-size: 10.5px;
+  line-height: 1.5;
+}
+
+.flow-list li.active .flow-index,
+.flow-list li.done .flow-index {
+  border-color: #c7d2fe;
+  background: #eef2ff;
+  color: #4f46e5;
+}
+
+.flow-list li.active strong {
+  color: #1e293b;
+}
+
+.flow-note {
+  padding-top: 14px;
+  border-top: 1px solid #eef2f7;
+  color: #94a3b8;
+  font-size: 10.5px;
+  line-height: 1.7;
+}
+
+.flow-note span {
+  display: inline-block;
+  margin-right: 4px;
+  color: #4f46e5;
+  font-weight: 700;
+}
+
+.work-card {
+  min-height: 560px;
+  padding: 26px 28px 28px;
+  border: 1px solid #e8edf5;
+  border-radius: 16px;
+  background: #fff;
+}
+
+.work-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #eef2f7;
+}
+
+.work-kicker {
+  color: #94a3b8;
+  font-size: 11px;
+}
+
+.work-head h2 {
+  margin: 6px 0 0;
+  color: #1e293b;
+  font-size: 22px;
+  font-weight: 720;
+  letter-spacing: -0.02em;
+}
+
+.work-state {
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: #eef2ff;
+  color: #4f46e5;
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.work-state.manual {
+  background: #fffbeb;
+  color: #b45309;
+}
+
+.upload-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.upload-box {
+  width: 100%;
+}
+
+.upload-box :deep(.el-upload) {
+  width: 100%;
+}
+
+.upload-box :deep(.el-upload-dragger) {
+  display: flex;
+  min-height: 246px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 30px 20px;
+  border: 1px dashed #c7d2fe;
+  border-radius: 14px;
+  background: #f8faff;
+}
+
+.drop-icon {
+  display: grid;
+  width: 52px;
+  height: 52px;
+  place-items: center;
+  margin-bottom: 10px;
+  border-radius: 14px;
+  background: #eef2ff;
+  color: #4f46e5;
+  font-size: 24px;
+}
+
+.drop-title {
+  color: #1e293b;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.upload-box p {
+  margin: 7px 0 14px;
+  color: #8a94a6;
+  font-size: 11px;
+}
+
+.drop-action {
+  padding: 7px 14px;
+  border: 1px solid #dfe5f0;
+  border-radius: 8px;
+  background: #fff;
+  color: #4f46e5;
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.preview-box,
+.preview-placeholder {
+  overflow: hidden;
+  min-height: 246px;
+  border: 1px solid #eef2f7;
+  border-radius: 14px;
+  background: #fbfcfe;
+}
+
+.preview-box img {
   display: block;
   width: 100%;
-  max-height: 340px;
-  object-fit: contain;
-  border-radius: 10px;
+  height: 206px;
+  object-fit: cover;
+  object-position: top;
   background: #f8fafc;
 }
 
 .preview-meta {
   display: flex;
   justify-content: space-between;
-  gap: 12px;
-  margin-top: 8px;
-  color: #6b7280;
+  gap: 10px;
+  padding: 9px 12px;
+  color: #94a3b8;
+  font-size: 10px;
+}
+
+.preview-name {
+  overflow: hidden;
+  color: #64748b;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.preview-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #a8b3c4;
+}
+
+.preview-mark {
+  color: #c7d2fe;
+  font-family: 'JetBrains Mono', Consolas, monospace;
+  font-size: 10px;
+  letter-spacing: 0.16em;
+}
+
+.preview-placeholder p {
+  margin: 8px 0 0;
+  font-size: 11px;
+}
+
+.recognizing {
+  margin-top: 18px;
+  padding: 16px;
+  border: 1px solid #e0e7ff;
+  border-radius: 12px;
+  background: #f8faff;
+}
+
+.recognizing-copy {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 9px;
+  color: #4f46e5;
+  font-size: 11px;
+}
+
+.recognizing-copy strong {
+  color: #334155;
   font-size: 12px;
 }
 
-.upload-progress {
-  margin-top: 16px;
+.recognizing-copy span:last-child {
+  margin-left: auto;
+  color: #64748b;
 }
 
-.upload-actions,
-.draft-actions {
+.scan-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #4f46e5;
+  box-shadow: 0 0 0 4px #e0e7ff;
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.skeleton-lines {
+  display: grid;
+  gap: 7px;
+  margin-top: 13px;
+}
+
+.skeleton-lines i {
+  display: block;
+  height: 7px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #eef2f7, #f8fafc, #eef2f7);
+  background-size: 200% 100%;
+  animation: shimmer 1.3s linear infinite;
+}
+
+.skeleton-lines i.short {
+  width: 62%;
+}
+
+@keyframes shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+.upload-tip {
+  margin-top: 14px;
+  color: #94a3b8;
+  font-size: 11px;
+}
+
+.actions {
   display: flex;
   align-items: center;
   gap: 10px;
   margin-top: 22px;
 }
 
-.draft-alert {
-  margin-bottom: 12px;
-  border-radius: 10px;
+.actions :deep(.el-button) {
+  border-radius: 8px;
 }
 
-.draft-form {
-  margin-top: 8px;
+.draft-summary {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  margin-top: 20px;
+  padding: 12px;
+  border: 1px solid #eef2f7;
+  border-radius: 12px;
+  background: #fbfcfe;
 }
 
-.form-grid {
+.draft-thumb {
   display: grid;
-  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 1fr);
-  gap: 16px;
+  width: 60px;
+  height: 48px;
+  flex: 0 0 60px;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 8px;
+  background: #eef2f7;
+  color: #94a3b8;
+  font-size: 9px;
+}
+
+.draft-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.draft-summary strong {
+  display: block;
+  color: #334155;
+  font-size: 12px;
+}
+
+.draft-summary p {
+  margin: 3px 0 0;
+  color: #94a3b8;
+  font-size: 10.5px;
+}
+
+.draft-summary :deep(.el-button) {
+  margin-left: auto;
+}
+
+.notice {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  margin-top: 12px;
+  padding: 11px 13px;
+  border-radius: 9px;
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.notice strong {
+  flex: 0 0 auto;
+  font-size: 11px;
+}
+
+.notice.warning {
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.notice.info {
+  background: #f5f7ff;
+  color: #4f46e5;
+}
+
+.notice.danger {
+  background: #fff1f2;
+  color: #be123c;
+}
+
+.notice.plain {
+  background: #f8fafc;
+  color: #64748b;
+}
+
+.form-card {
+  margin-top: 18px;
+}
+
+.form-row {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.form-row.three {
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 0.9fr);
+}
+
+.form-row.two {
+  grid-template-columns: 1fr 1fr;
+}
+
+.field {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field.block {
+  margin-bottom: 14px;
+}
+
+.field > span {
+  color: #64748b;
+  font-size: 10.5px;
+  font-weight: 600;
+}
+
+.field em {
+  color: #e11d48;
+  font-style: normal;
+}
+
+.field :deep(.el-input__wrapper),
+.field :deep(.el-textarea__inner),
+.case-field :deep(.el-textarea__inner) {
+  border-radius: 8px;
+  box-shadow: 0 0 0 1px #e6ebf3 inset;
+}
+
+.field :deep(.el-textarea__inner) {
+  padding: 10px 12px;
+  color: #334155;
+  font-size: 12px;
+  line-height: 1.8;
 }
 
 .full-width {
   width: 100%;
 }
 
-.case-section {
-  margin-top: 8px;
-  padding-top: 18px;
-  border-top: 1px dashed #e5e7eb;
+.difficulty-group :deep(.el-radio-button__inner) {
+  padding: 8px 11px;
+  font-size: 11px;
 }
 
-.section-head {
+.case-card {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid #eef2f7;
+}
+
+.case-head {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
-.section-head h3 {
+.case-head h3 {
   margin: 0;
-  color: #1f2937;
-  font-size: 15px;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 700;
 }
 
-.section-head p {
+.case-head p {
   margin: 4px 0 0;
-  color: #8a94a6;
-  font-size: 12px;
+  color: #94a3b8;
+  font-size: 10.5px;
+}
+
+.case-head :deep(.el-button) {
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 7px;
+  font-size: 10.5px;
 }
 
 .case-row {
   display: grid;
-  grid-template-columns: 72px minmax(0, 1fr) minmax(0, 1fr) 48px;
-  align-items: start;
+  grid-template-columns: 30px minmax(0, 1fr) minmax(0, 1fr) 24px;
+  align-items: end;
   gap: 10px;
-  margin-bottom: 10px;
+  margin-bottom: 9px;
 }
 
-.case-index {
-  padding-top: 8px;
-  color: #6b7280;
-  font-size: 12px;
-  font-weight: 600;
+.case-no {
+  padding-bottom: 8px;
+  color: #c0cad8;
+  font-family: 'JetBrains Mono', Consolas, monospace;
+  font-size: 10px;
+}
+
+.case-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.case-field > span {
+  color: #94a3b8;
+  font-size: 9.5px;
+}
+
+.case-field :deep(.el-textarea__inner) {
+  padding: 7px 9px;
+  color: #475569;
+  font-family: 'JetBrains Mono', Consolas, monospace;
+  font-size: 10.5px;
+  line-height: 1.6;
+}
+
+.case-row :deep(.el-button) {
+  margin-bottom: 6px;
 }
 
 .hidden-empty {
-  padding: 12px 14px;
-  border-radius: 10px;
-  background: #fffbeb;
-  color: #92400e;
-  font-size: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #94a3b8;
+  font-size: 10.5px;
 }
 
-@media (max-width: 860px) {
-  .import-hero {
-    flex-direction: column;
+.draft-actions {
+  justify-content: flex-end;
+  padding-top: 20px;
+  border-top: 1px solid #eef2f7;
+}
+
+@media (max-width: 980px) {
+  .import-layout {
+    grid-template-columns: 1fr;
   }
 
-  .form-grid,
+  .flow-card {
+    position: static;
+    padding: 14px 16px;
+  }
+
+  .flow-list {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+  }
+
+  .flow-list li {
+    flex: 1;
+    padding: 0;
+  }
+
+  .flow-list li::before {
+    display: none;
+  }
+
+  .flow-note {
+    display: none;
+  }
+
+  .upload-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .import-page {
+    padding: 26px 14px 42px;
+  }
+
+  .import-head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .import-head h1 {
+    font-size: 32px;
+  }
+
+  .head-badge {
+    font-size: 10px;
+  }
+
+  .work-card {
+    padding: 18px 14px;
+  }
+
+  .work-head h2 {
+    font-size: 18px;
+  }
+
+  .form-row.three,
+  .form-row.two,
   .case-row {
     grid-template-columns: 1fr;
   }
 
-  .case-index {
-    padding-top: 0;
+  .case-no {
+    padding: 0;
+  }
+
+  .case-row :deep(.el-button) {
+    justify-self: end;
+    margin: 0;
+  }
+
+  .draft-summary {
+    align-items: flex-start;
+  }
+
+  .draft-summary :deep(.el-button) {
+    align-self: flex-start;
+  }
+
+  .actions {
+    flex-wrap: wrap;
+  }
+
+  .flow-list strong {
+    font-size: 11px;
+  }
+
+  .flow-list p {
+    display: none;
   }
 }
 </style>

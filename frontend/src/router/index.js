@@ -74,6 +74,12 @@ const routes = [
         meta: { title: '题库' }
       },
       {
+        path: 'import',
+        name: 'question-import',
+        component: () => import('@/views/QuestionImportView.vue'),
+        meta: { title: '图片录题' }
+      },
+      {
         path: ':id(\\d+)',
         name: 'question-detail',
         component: () => import('@/views/QuestionDetailView.vue'),
@@ -96,12 +102,6 @@ const routes = [
         name: 'home',
         component: () => import('@/views/HomeView.vue'),
         meta: { title: '首页', public: true, layout: 'home' }
-      },
-      {
-        path: 'question/import',
-        name: 'question-import',
-        component: () => import('@/views/QuestionImportView.vue'),
-        meta: { title: '图片录题', section: '练习' }
       },
       {
         path: 'profile',
