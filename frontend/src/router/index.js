@@ -18,8 +18,13 @@ const routes = [
   {
     path: '/',
     component: () => import('@/layouts/MainLayout.vue'),
-    redirect: '/question',
     children: [
+      {
+        path: '',
+        name: 'home',
+        component: () => import('@/views/HomeView.vue'),
+        meta: { title: '首页', public: true, layout: 'home' }
+      },
       {
         path: 'question',
         name: 'question-list',
@@ -101,6 +106,9 @@ router.beforeEach(async (to) => {
   document.title = to.meta.title ? `${to.meta.title} · CodeAgent` : 'CodeAgent · 智码刷题'
 
   const userStore = useUserStore()
+
+  // 首页始终公开；已登录用户也可以停留在首页。
+  if (to.name === 'home') return true
 
   // 登录/注册页：已登录则直接进入目标页；token 失效则允许重新登录。
   if (to.meta.public) {

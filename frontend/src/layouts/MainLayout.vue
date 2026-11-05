@@ -37,6 +37,8 @@ const navItems = [
   { path: '/dashboard', label: '数据看板', icon: DataAnalysis }
 ]
 
+const isHome = computed(() => route.name === 'home' || route.meta.layout === 'home')
+
 const activeMenu = computed(() => {
   if (route.path.startsWith('/question')) return '/question'
   return route.path
@@ -131,7 +133,11 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="app-shell" :class="{ 'sidebar-open': sidebarOpen }">
+  <div v-if="isHome" class="home-host">
+    <router-view />
+  </div>
+
+  <div v-else class="app-shell" :class="{ 'sidebar-open': sidebarOpen }">
     <div class="sidebar-mask" @click="sidebarOpen = false"></div>
 
     <aside class="app-sidebar">
@@ -249,6 +255,11 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
+.home-host {
+  min-height: 100vh;
+  background: #f6f2ea;
+}
+
 .app-shell {
   display: flex;
   min-height: 100vh;
