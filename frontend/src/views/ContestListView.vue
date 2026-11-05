@@ -29,7 +29,7 @@
             {{ item.label }}
           </button>
         </div>
-        <span class="filter-note">按开始时间排序</span>
+        <span class="filter-note">按赛事状态排序</span>
       </div>
 
       <div v-if="loading" class="contest-grid">
@@ -282,6 +282,12 @@ h1 {
   gap: 18px;
 }
 
+@media (min-width: 1120px) {
+  .contest-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
 .contest-card {
   padding: 22px 24px 20px;
   border: 1px solid #e5e8f0;
@@ -293,8 +299,8 @@ h1 {
 
 .contest-card:hover {
   transform: translateY(-2px);
-  border-color: #c8cdfa;
-  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.07);
+  border-color: #cbd5e1;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06);
 }
 
 .contest-card.skeleton {
