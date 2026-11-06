@@ -15,7 +15,7 @@ import {
 import AgentTimeline from '@/components/AgentTimeline.vue'
 import CodeEditor from '@/components/CodeEditor.vue'
 import MarkdownBody from '@/components/MarkdownBody.vue'
-import { getAgentHistory, streamAgent } from '@/api/agent'
+import { streamAgent } from '@/api/agent'
 import { getJudgeResult, getQuestion, runSampleCode, submitCode } from '@/api/question'
 
 const route = useRoute()
@@ -286,6 +286,9 @@ function readInitialLanguage() {
 async function loadQuestion() {
   loading.value = true
   loadError.value = ''
+  resetAgent()
+  agentSessionId.value = null
+  activePane.value = 'result'
   try {
     const data = await getQuestion(questionId.value)
     if (!data) throw new Error('题目不存在')
@@ -301,7 +304,6 @@ async function loadQuestion() {
     } else {
       code.value = readStoredCode(data.id, language.value) ?? baselineCode.value
     }
-    loadAgentHistory()
   } catch (error) {
     question.value = null
     loadError.value = error?.message || '题目加载失败'
@@ -733,46 +735,6 @@ async function startAgent(mode = 'HINT') {
       agentRunning.value = false
       agentController = null
     }
-  }
-}
-
-/**
- * 刷新页面后从后端历史中恢复最近一次时间线。
- *
- * @returns {Promise<void>} 历史加载完成后结束
- */
-async function loadAgentHistory() {
-  if (!question.value) return
-  try {
-    const data = await getAgentHistory(question.value.id)
-    const session = data?.sessions?.[0]
-    const messages = session?.messages || []
-    if (!session || !messages.length) return
-
-    const events = []
-    messages
-      .filter((message) => message.role === 'tool')
-      .forEach((message) => {
-        events.push({
-          id: `history-result-${message.id}`,
-          type: 'tool_result',
-          name: message.toolName || 'tool',
-          args: message.toolInput,
-          summary: message.content || '工具执行完成',
-          latencyMs: null
-        })
-      })
-
-    const assistant = [...messages].reverse().find((message) => message.role === 'assistant')
-    if (!assistant?.content) return
-
-    agentEvents.value = events
-    agentAnswer.value = assistant.content
-    agentCanReveal.value = assistant.hintLevel === 1
-    agentSessionId.value = session.id
-    activePane.value = 'agent'
-  } catch {
-    // 历史接口失败不阻断答题页。
   }
 }
 

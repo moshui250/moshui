@@ -334,19 +334,23 @@ onMounted(loadStats)
             <div>
               <strong>默认语言</strong>
             </div>
-            <el-radio-group v-model="prefs.language" size="small">
-              <el-radio-button label="CPP">C++</el-radio-button>
-              <el-radio-button label="JAVA">Java</el-radio-button>
-            </el-radio-group>
+            <div class="pref-control">
+              <el-radio-group v-model="prefs.language" size="small">
+                <el-radio-button label="CPP">C++</el-radio-button>
+                <el-radio-button label="JAVA">Java</el-radio-button>
+              </el-radio-group>
+            </div>
           </div>
 
           <div class="pref-row">
             <div>
               <strong>字号</strong>
             </div>
-            <div class="slider-wrap">
-              <el-slider v-model="prefs.fontSize" :min="12" :max="20" :step="1" />
-              <span class="slider-value">{{ prefs.fontSize }}px</span>
+            <div class="pref-control">
+              <div class="slider-wrap">
+                <el-slider v-model="prefs.fontSize" :min="12" :max="20" :step="1" />
+                <span class="slider-value">{{ prefs.fontSize }}px</span>
+              </div>
             </div>
           </div>
 
@@ -354,7 +358,9 @@ onMounted(loadStats)
             <div>
               <strong>自动保存代码</strong>
             </div>
-            <el-switch v-model="prefs.autoSave" />
+            <div class="pref-control">
+              <el-switch v-model="prefs.autoSave" />
+            </div>
           </div>
 
           <div v-if="savedHint" class="save-hint">{{ savedHint }}</div>
@@ -747,6 +753,13 @@ onMounted(loadStats)
   font-weight: 600;
 }
 
+.pref-control {
+  display: flex;
+  flex: 0 0 190px;
+  align-items: center;
+  justify-content: flex-end;
+}
+
 .pref-row p {
   margin-top: 3px;
   color: #a0a9ba;
@@ -757,7 +770,7 @@ onMounted(loadStats)
   display: flex;
   align-items: center;
   gap: 10px;
-  width: 180px;
+  width: 100%;
 }
 
 .slider-wrap :deep(.el-slider) {
@@ -1134,6 +1147,12 @@ onMounted(loadStats)
     align-items: flex-start;
     flex-direction: column;
     gap: 9px;
+  }
+
+  .pref-control {
+    width: 100%;
+    flex-basis: auto;
+    justify-content: flex-start;
   }
 
   .slider-wrap {
