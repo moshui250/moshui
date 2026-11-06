@@ -26,6 +26,7 @@ public class QuestionDetailVO implements Serializable {
     private Integer difficulty;
     private Long knowledgePointId;
     private KnowledgePointBriefVO knowledgePoint;
+    private List<KnowledgePointBriefVO> knowledgePoints;
     private JsonNode templateJson;
     private String type;
     private String visibility;

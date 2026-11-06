@@ -346,6 +346,14 @@ function goWorkspace() {
   router.push('/question')
 }
 
+function goKnowledge() {
+  router.push('/knowledge')
+}
+
+function goKnowledgePoint(item) {
+  router.push({ name: 'question-list', query: { kp: String(item.id) } })
+}
+
 function goWrongBook() {
   router.push('/wrong-book')
 }
@@ -537,7 +545,7 @@ onBeforeUnmount(() => {
               :key="item.id || item.code"
               class="knowledge-row"
               type="button"
-              @click="goWorkspace"
+              @click="goKnowledgePoint(item)"
             >
               <span class="knowledge-index">{{ String(index + 1).padStart(2, '0') }}</span>
               <span class="knowledge-copy">
@@ -549,8 +557,8 @@ onBeforeUnmount(() => {
           </div>
           <div v-else class="knowledge-empty">知识点暂时未加载。</div>
 
-          <button class="panel-link" type="button" @click="goWorkspace">
-            查看全部题目 <ArrowRight />
+          <button class="panel-link" type="button" @click="goKnowledge">
+            查看全部知识点 <ArrowRight />
           </button>
         </aside>
       </section>

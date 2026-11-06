@@ -35,7 +35,7 @@ const form = reactive({
   inputDesc: '',
   outputDesc: '',
   difficulty: 1,
-  knowledgePointCode: '',
+  knowledgePointIds: [],
   visibility: 'PRIVATE',
   samples: [{ input: '', output: '' }],
   hiddenCases: []
@@ -107,7 +107,10 @@ function applyDraft(data) {
   form.inputDesc = draft.inputDesc || ''
   form.outputDesc = draft.outputDesc || ''
   form.difficulty = Number(draft.difficulty) || 1
-  form.knowledgePointCode = draft.knowledgePointCode || ''
+  const matched = knowledgePoints.value.find(
+    (item) => item.code === draft.knowledgePointCode || item.id === Number(draft.knowledgePointCode)
+  )
+  form.knowledgePointIds = matched ? [matched.id] : []
   form.samples = Array.isArray(draft.samples) && draft.samples.length
     ? draft.samples.map((item) => ({ input: item.input || '', output: item.output || '' }))
     : [{ input: '', output: '' }]
@@ -188,11 +191,8 @@ function validateForm() {
     ElMessage.error('请填写题目描述')
     return false
   }
-  const selected = knowledgePoints.value.find(
-    (item) => item.code === form.knowledgePointCode || item.id === Number(form.knowledgePointCode)
-  )
-  if (!selected) {
-    ElMessage.error('请选择知识点')
+  if (!Array.isArray(form.knowledgePointIds) || form.knowledgePointIds.length === 0) {
+    ElMessage.error('请选择至少一个知识点')
     return false
   }
   if (!form.samples.length || !form.samples.every((item) => item.input.trim() && item.output.trim())) {
@@ -204,9 +204,7 @@ function validateForm() {
 
 async function submit() {
   if (!validateForm()) return
-  const selected = knowledgePoints.value.find(
-    (item) => item.code === form.knowledgePointCode || item.id === Number(form.knowledgePointCode)
-  )
+  const selected = knowledgePoints.value.find((item) => item.id === form.knowledgePointIds[0])
 
   submitting.value = true
   try {
@@ -223,7 +221,8 @@ async function submit() {
         inputDesc: form.inputDesc,
         outputDesc: form.outputDesc,
         difficulty: form.difficulty,
-        knowledgePointCode: selected?.code || form.knowledgePointCode,
+        knowledgePointCode: selected?.code || '',
+        knowledgePointIds: [...form.knowledgePointIds],
         visibility: form.visibility,
         samples: normalizedSamples(),
         testCases: normalizedHiddenCases(),
@@ -243,6 +242,7 @@ async function submit() {
         outputDesc: form.outputDesc,
         difficulty: form.difficulty,
         knowledgePointId: selected?.id,
+        knowledgePointIds: [...form.knowledgePointIds],
         visibility: form.visibility,
         samples: normalizedSamples(),
         testCases: normalizedHiddenCases(),
@@ -422,12 +422,21 @@ onBeforeUnmount(revokePreview)
               </label>
               <label class="field">
                 <span>知识点 <em>*</em></span>
-                <el-select v-model="form.knowledgePointCode" placeholder="请选择知识点" filterable class="full-width">
+                <el-select
+                  v-model="form.knowledgePointIds"
+                  multiple
+                  filterable
+                  collapse-tags
+                  collapse-tags-tooltip
+                  :max-collapse-tags="2"
+                  placeholder="可多选知识点"
+                  class="full-width"
+                >
                   <el-option
                     v-for="item in knowledgePoints"
                     :key="item.id"
                     :label="item.name"
-                    :value="item.code"
+                    :value="item.id"
                   />
                 </el-select>
               </label>

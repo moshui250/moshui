@@ -40,7 +40,15 @@
         </label>
         <label class="field">
           <span>知识点</span>
-          <el-select v-model="form.knowledgePointId" placeholder="选择知识点">
+          <el-select
+            v-model="form.knowledgePointIds"
+            multiple
+            filterable
+            collapse-tags
+            collapse-tags-tooltip
+            :max-collapse-tags="2"
+            placeholder="可多选知识点"
+          >
             <el-option v-for="point in knowledgePoints" :key="point.id" :label="point.name" :value="point.id" />
           </el-select>
         </label>
@@ -94,7 +102,7 @@ const form = reactive({
   inputDesc: '',
   outputDesc: '',
   difficulty: 1,
-  knowledgePointId: null,
+  knowledgePointIds: [],
   visibility: 'PRIVATE'
 })
 
@@ -119,7 +127,9 @@ async function load() {
       inputDesc: data.inputDesc || '',
       outputDesc: data.outputDesc || '',
       difficulty: data.difficulty || 1,
-      knowledgePointId: data.knowledgePointId || null,
+      knowledgePointIds: Array.isArray(data.knowledgePoints) && data.knowledgePoints.length
+        ? data.knowledgePoints.map((item) => item.id)
+        : (data.knowledgePointId ? [data.knowledgePointId] : []),
       visibility: data.visibility || 'PRIVATE'
     })
     knowledgePoints.value = (await listKnowledgePoints()) || []
@@ -133,7 +143,7 @@ async function load() {
 async function save() {
   if (!form.title.trim()) return ElMessage.warning('请填写题目标题')
   if (!form.description.trim()) return ElMessage.warning('请填写题目描述')
-  if (!form.knowledgePointId) return ElMessage.warning('请选择知识点')
+  if (!form.knowledgePointIds.length) return ElMessage.warning('请选择至少一个知识点')
   saving.value = true
   try {
     await updateQuestion(route.params.id, {
@@ -142,7 +152,8 @@ async function save() {
       inputDesc: form.inputDesc,
       outputDesc: form.outputDesc,
       difficulty: form.difficulty,
-      knowledgePointId: form.knowledgePointId,
+      knowledgePointId: form.knowledgePointIds[0],
+      knowledgePointIds: [...form.knowledgePointIds],
       visibility: form.visibility
     })
     ElMessage.success('题目已更新')

@@ -44,6 +44,12 @@ public class QuestionSaveRequest {
     @NotNull(message = "知识点不能为空")
     private Long knowledgePointId;
 
+    /**
+     * 多知识点；存在时以第一个作为题目主知识点，其余写入关联表。
+     */
+    @Size(max = 8, message = "一题最多选择 8 个知识点")
+    private List<Long> knowledgePointIds;
+
     private JsonNode templateJson;
 
     @Valid

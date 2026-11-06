@@ -276,7 +276,12 @@ onMounted(loadRows)
         </button>
       </div>
 
-      <article v-for="row in rows" :key="row.id" class="wrong-card">
+      <article
+        v-for="(row, index) in rows"
+        :key="row.id"
+        v-reveal="{ delay: index * 35 }"
+        class="wrong-card"
+      >
         <div class="card-top">
           <div class="card-copy">
             <div class="card-kicker">{{ knowledgeOf(row) }}</div>

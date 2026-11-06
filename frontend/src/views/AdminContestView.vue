@@ -103,7 +103,15 @@
                 </label>
                 <label class="field">
                   <span>知识点</span>
-                  <el-select v-model="draft.knowledgePointId" placeholder="选择知识点">
+                  <el-select
+                    v-model="draft.knowledgePointIds"
+                    multiple
+                    filterable
+                    collapse-tags
+                    collapse-tags-tooltip
+                    :max-collapse-tags="2"
+                    placeholder="可多选知识点"
+                  >
                     <el-option v-for="kp in knowledgePoints" :key="kp.id" :label="kp.name" :value="kp.id" />
                   </el-select>
                 </label>
@@ -215,7 +223,7 @@ function addDraft() {
     inputDesc: '',
     outputDesc: '',
     difficulty: 1,
-    knowledgePointId: null,
+    knowledgePointIds: [],
     sampleInput: '',
     sampleOutput: ''
   })
@@ -236,7 +244,7 @@ async function loadOptions() {
 }
 
 function validateDraft(draft) {
-  if (!draft.title.trim() || !draft.description.trim() || !draft.knowledgePointId) {
+  if (!draft.title.trim() || !draft.description.trim() || !draft.knowledgePointIds?.length) {
     return '每题都需要标题、描述和知识点'
   }
   if (!draft.sampleInput.trim() || !draft.sampleOutput.trim()) {
@@ -271,7 +279,8 @@ async function submit() {
         inputDesc: draft.inputDesc,
         outputDesc: draft.outputDesc,
         difficulty: draft.difficulty,
-        knowledgePointId: draft.knowledgePointId,
+        knowledgePointId: draft.knowledgePointIds[0],
+        knowledgePointIds: [...draft.knowledgePointIds],
         visibility: 'PRIVATE',
         samples: [{ inputData: draft.sampleInput, expectedOutput: draft.sampleOutput }]
       }))

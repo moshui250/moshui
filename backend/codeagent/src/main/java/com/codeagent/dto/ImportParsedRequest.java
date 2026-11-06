@@ -68,6 +68,12 @@ public class ImportParsedRequest {
     private String knowledgePointCode;
 
     /**
+     * 多知识点；第一项作为主知识点。
+     */
+    @Size(max = 8, message = "一题最多选择 8 个知识点")
+    private List<Long> knowledgePointIds;
+
+    /**
      * 用户确认后的样例用例，至少一条。
      */
     @Valid

@@ -27,7 +27,11 @@
             </otherwise>
         </choose>
         <if test="knowledgePointId != null">
-            AND q.knowledge_point_id = #{knowledgePointId}
+            AND EXISTS (
+                SELECT 1 FROM question_knowledge_point qkp
+                WHERE qkp.question_id = q.id
+                  AND qkp.knowledge_point_id = #{knowledgePointId}
+            )
         </if>
         <if test="difficulty != null">
             AND q.difficulty = #{difficulty}
@@ -113,7 +117,11 @@
         WHERE q.deleted = 0
           AND q.visibility IN ('PUBLIC', 'SHARED')
           AND q.id != #{excludeId}
-        ORDER BY CASE WHEN q.knowledge_point_id = #{knowledgePointId} THEN 0 ELSE 1 END,
+        ORDER BY CASE WHEN EXISTS (
+                    SELECT 1 FROM question_knowledge_point qkp
+                    WHERE qkp.question_id = q.id
+                      AND qkp.knowledge_point_id = #{knowledgePointId}
+                 ) THEN 0 ELSE 1 END,
                  solved ASC,
                  ABS(q.difficulty - #{difficulty}) ASC,
                  q.id ASC

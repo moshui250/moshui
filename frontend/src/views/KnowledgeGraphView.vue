@@ -14,8 +14,19 @@ const CONCEPTS = {
   string: ['回文', '滑动窗口'],
   linked_list: ['反转', '双指针'],
   recursion: ['分治', '边界'],
-  sort: ['比较器', '稳定性']
+  sort: ['比较器', '稳定性'],
+  algorithm: ['二分', '贪心'],
+  tree: ['遍历', '二叉搜索'],
+  graph: ['BFS', '最短路'],
+  dp: ['状态', '转移'],
+  math: ['数论', '组合'],
+  hash: ['计数', '去重']
 }
+
+const CLUSTER_COLORS = [
+  '#6f8fb0', '#8f7aa6', '#6f9a84', '#b08a5a', '#5f9a9a',
+  '#a67575', '#7c8fb5', '#9b8a63', '#6d8f6d', '#8f7f9e', '#5f879d'
+]
 
 const router = useRouter()
 const points = ref([])
@@ -95,7 +106,8 @@ function buildGraph(list) {
       ay,
       x: ax,
       y: ay,
-      r: 19,
+      r: 16,
+      color: CLUSTER_COLORS[index % CLUSTER_COLORS.length],
       phase: index * 1.1,
       drift: 3.2
     }
@@ -116,7 +128,8 @@ function buildGraph(list) {
         ay: cy,
         x: cx,
         y: cy,
-        r: 8,
+        r: 6,
+        color: CLUSTER_COLORS[index % CLUSTER_COLORS.length],
         phase: index * 1.7 + conceptIndex,
         drift: 2.4
       }
@@ -130,7 +143,17 @@ function buildGraph(list) {
     ['array', 'string'],
     ['string', 'linked_list'],
     ['linked_list', 'recursion'],
-    ['recursion', 'sort']
+    ['recursion', 'sort'],
+    ['array', 'sort'],
+    ['sort', 'algorithm'],
+    ['algorithm', 'dp'],
+    ['recursion', 'tree'],
+    ['tree', 'graph'],
+    ['array', 'hash'],
+    ['string', 'hash'],
+    ['algorithm', 'math'],
+    ['math', 'dp'],
+    ['graph', 'dp']
   ]
   for (const [from, to] of links) {
     if (byCode.has(from) && byCode.has(to)) {
@@ -140,7 +163,7 @@ function buildGraph(list) {
 
   nodes.value = [root, ...kpNodes, ...conceptNodes]
   edges.value = nextEdges
-  selectedId.value = list[0] ? `kp-${list[0].id}` : ''
+  selectedId.value = ''
 
   const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
   if (!reduced) startAnimation()
@@ -225,7 +248,7 @@ onBeforeUnmount(() => {
             <h2>知识网络</h2>
             <p>悬停或点击节点，查看相邻概念。</p>
           </div>
-          <span class="graph-tag"><el-icon><Connection /></el-icon> INTERACTIVE</span>
+          <span class="graph-tag"><el-icon><Connection /></el-icon> 可交互</span>
         </div>
 
         <div class="graph-stage">
@@ -261,6 +284,7 @@ onBeforeUnmount(() => {
                   }
                 ]"
                 :transform="`translate(${node.x} ${node.y})`"
+                :style="{ '--node-color': node.color || '#294866' }"
                 @mouseenter="hoveredId = node.id"
                 @mouseleave="hoveredId = ''"
                 @click.stop="selectNode(node)"
@@ -389,9 +413,9 @@ onBeforeUnmount(() => {
   min-height: 622px;
   flex-direction: column;
   overflow: hidden;
-  border: 1px solid #16263c;
+  border: 1px solid #e5e9ef;
   border-radius: 14px;
-  background: #0b1524;
+  background: #ffffff;
 }
 
 .graph-head {
@@ -403,14 +427,14 @@ onBeforeUnmount(() => {
 }
 
 .graph-head h2 {
-  color: #e5edf6;
+  color: #1f2937;
   font-size: 16px;
   font-weight: 650;
 }
 
 .graph-head p {
   margin-top: 5px;
-  color: #7f93a9;
+  color: #8a94a3;
   font-size: 12px;
 }
 
@@ -418,7 +442,7 @@ onBeforeUnmount(() => {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  color: #91a7bd;
+  color: #8a94a3;
   font-size: 10px;
   letter-spacing: 0.12em;
 }
@@ -429,8 +453,8 @@ onBeforeUnmount(() => {
   min-height: 0;
   margin-top: 4px;
   background:
-    radial-gradient(circle at 50% 45%, rgba(36, 59, 86, 0.45) 0, rgba(11, 21, 36, 0) 58%),
-    #0b1524;
+    radial-gradient(circle at 50% 46%, rgba(226, 232, 240, 0.5) 0, rgba(255, 255, 255, 0) 62%),
+    #ffffff;
 }
 
 .graph-stage svg {
@@ -444,37 +468,37 @@ onBeforeUnmount(() => {
   height: 100%;
   min-height: 480px;
   place-items: center;
-  color: #8ea3b9;
+  color: #8a94a3;
   font-size: 13px;
 }
 
 .graph-state.is-error {
-  color: #e4a3a3;
+  color: #b42318;
 }
 
 .graph-edges line {
-  stroke: #334960;
+  stroke: #cbd5e1;
   stroke-width: 1;
   transition: opacity 160ms ease, stroke 160ms ease;
 }
 
 .graph-edges .edge-root {
-  stroke: #54708c;
+  stroke: #94a3b8;
   stroke-opacity: 0.7;
 }
 
 .graph-edges .edge-branch {
-  stroke-opacity: 0.38;
+  stroke-opacity: 0.42;
 }
 
 .graph-edges .edge-cross {
-  stroke: #405b73;
+  stroke: #cbd5e1;
   stroke-dasharray: 3 5;
-  stroke-opacity: 0.36;
+  stroke-opacity: 0.6;
 }
 
 .graph-edges line.is-active {
-  stroke: #a9c0d6;
+  stroke: #64748b;
   stroke-opacity: 0.95;
 }
 
@@ -497,58 +521,59 @@ onBeforeUnmount(() => {
 }
 
 .node-root .node-core {
-  fill: #dce7f2;
-  stroke: #ffffff;
+  fill: #e8eef6;
+  stroke: #94a3b8;
   stroke-width: 1.2;
 }
 
 .node-kp .node-core {
-  fill: #294866;
-  stroke: #91a9c0;
-  stroke-width: 1;
+  fill: var(--node-color);
+  stroke: #ffffff;
+  stroke-width: 1.5;
 }
 
 .node-concept .node-core {
-  fill: #74889d;
-  stroke: #a3b6c9;
+  fill: var(--node-color);
+  stroke: #ffffff;
   stroke-width: 0.8;
+  opacity: 0.62;
 }
 
 .node text {
-  fill: #c2d1e0;
-  font-size: 12px;
+  fill: #475569;
+  font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.02em;
   pointer-events: none;
 }
 
 .node-root text {
-  fill: #f3f7fb;
+  fill: #334155;
   font-size: 13px;
 }
 
 .node-concept text {
-  fill: #b7c7d8;
-  font-size: 11px;
+  fill: #94a3b8;
+  font-size: 9px;
   font-weight: 500;
 }
 
 .node.is-active .node-halo {
-  fill: rgba(173, 198, 221, 0.14);
+  fill: rgba(148, 163, 184, 0.18);
 }
 
 .node.is-active .node-kp,
 .node.is-active .node-root {
-  filter: drop-shadow(0 0 8px rgba(189, 213, 234, 0.4));
+  filter: drop-shadow(0 2px 7px rgba(51, 65, 85, 0.18));
 }
 
 .node.is-active .node-core {
-  stroke: #ffffff;
-  stroke-width: 1.6;
+  stroke: #334155;
+  stroke-width: 1.5;
 }
 
 .node.is-dim {
-  opacity: 0.2;
+  opacity: 0.18;
 }
 
 .graph-legend {
@@ -557,7 +582,7 @@ onBeforeUnmount(() => {
   left: 20px;
   display: flex;
   gap: 16px;
-  color: #7f93a9;
+  color: #8a94a3;
   font-size: 10px;
 }
 
@@ -573,9 +598,9 @@ onBeforeUnmount(() => {
   border-radius: 50%;
 }
 
-.dot-root { background: #dce7f2; }
-.dot-kp { background: #4f6d8a; }
-.dot-concept { background: #74889d; }
+.dot-root { background: #cbd5e1; }
+.dot-kp { background: #6f8fb0; }
+.dot-concept { background: #9aa8b8; }
 
 .knowledge-side {
   min-height: 622px;
@@ -608,7 +633,11 @@ onBeforeUnmount(() => {
 .kp-list {
   display: grid;
   gap: 2px;
+  max-height: 366px;
   margin-top: 8px;
+  padding-right: 4px;
+  overflow-y: auto;
+  scrollbar-width: thin;
 }
 
 .kp-row {
@@ -736,6 +765,11 @@ onBeforeUnmount(() => {
 
   .knowledge-side {
     min-height: 0;
+  }
+
+  .kp-list {
+    max-height: none;
+    overflow: visible;
   }
 }
 

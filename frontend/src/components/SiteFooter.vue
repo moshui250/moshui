@@ -2,7 +2,6 @@
   <footer class="site-footer">
     <div class="footer-inner">
       <span><strong>CodeAgent</strong> 智码刷题 · 让每一次报错都有回应</span>
-      <span class="footer-meta">Java 17 · Spring Boot 3.5 · Vue 3</span>
     </div>
   </footer>
 </template>

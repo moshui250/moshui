@@ -15,6 +15,7 @@ import com.codeagent.entity.QuestionTestCase;
 import com.codeagent.exception.BizException;
 import com.codeagent.mapper.ContestMapper;
 import com.codeagent.mapper.KnowledgePointMapper;
+import com.codeagent.mapper.QuestionKnowledgePointMapper;
 import com.codeagent.mapper.QuestionMapper;
 import com.codeagent.mapper.QuestionSolutionMapper;
 import com.codeagent.mapper.QuestionTestCaseMapper;
@@ -52,6 +53,7 @@ public class QuestionServiceImpl implements QuestionService {
     private static final int DEFAULT_SCORE = 25;
 
     private final QuestionMapper questionMapper;
+    private final QuestionKnowledgePointMapper questionKnowledgePointMapper;
     private final QuestionTestCaseMapper testCaseMapper;
     private final QuestionSolutionMapper solutionMapper;
     private final KnowledgePointMapper knowledgePointMapper;
@@ -129,6 +131,12 @@ public class QuestionServiceImpl implements QuestionService {
         point.setName(row.getKnowledgePointName());
         vo.setKnowledgePoint(point);
 
+        List<KnowledgePointBriefVO> points = questionKnowledgePointMapper.selectPointsByQuestionId(id);
+        if (points == null || points.isEmpty()) {
+            points = List.of(point);
+        }
+        vo.setKnowledgePoints(points);
+
         QuestionUserState state = submitRecordMapper.selectUserState(userId, id);
         vo.setLastSubmitId(state == null ? null : state.getLastSubmitId());
         vo.setSolved(state != null && Boolean.TRUE.equals(state.getSolved()));
@@ -148,16 +156,18 @@ public class QuestionServiceImpl implements QuestionService {
     @Transactional
     public Long create(QuestionSaveRequest request) {
         Long userId = requireUserId();
-        requireKnowledgePoint(request.getKnowledgePointId());
+        List<Long> pointIds = resolveKnowledgePointIds(request, null);
 
         List<QuestionTestCase> cases = buildCases(request, true);
         List<QuestionSolution> solutions = buildSolutions(request);
 
         Question question = new Question();
         fillQuestion(question, request, userId);
+        question.setKnowledgePointId(pointIds.get(0));
         questionMapper.insert(question);
 
         Long questionId = question.getId();
+        syncKnowledgePoints(questionId, pointIds);
         attachQuestionId(cases, questionId);
         testCaseMapper.insertBatch(cases);
         if (!solutions.isEmpty()) {
@@ -178,13 +188,16 @@ public class QuestionServiceImpl implements QuestionService {
     public void update(Long id, QuestionSaveRequest request) {
         Long userId = requireUserId();
         QuestionDetailRow existing = requireOwnedPersonal(id, userId);
-        requireKnowledgePoint(request.getKnowledgePointId());
+        List<Long> pointIds = hasKnowledgePointSelection(request)
+                ? resolveKnowledgePointIds(request, existing.getKnowledgePointId())
+                : existingKnowledgePointIds(id, existing.getKnowledgePointId());
 
         boolean casesProvided = request.getTestCases() != null || request.getSamples() != null;
         boolean solutionsProvided = request.getSolutions() != null || request.getReferenceCode() != null;
 
         Question question = new Question();
         fillQuestion(question, request, userId);
+        question.setKnowledgePointId(pointIds.get(0));
         if (request.getVisibility() == null || request.getVisibility().isBlank()) {
             question.setVisibility(existing.getVisibility());
         }
@@ -193,6 +206,7 @@ public class QuestionServiceImpl implements QuestionService {
         if (updated == 0) {
             throw new BizException(ErrorCode.NOT_FOUND, "题目不存在");
         }
+        syncKnowledgePoints(id, pointIds);
 
         if (casesProvided) {
             List<QuestionTestCase> cases = buildCases(request, true);
@@ -256,6 +270,77 @@ public class QuestionServiceImpl implements QuestionService {
             }
         }
         return records;
+    }
+
+    /**
+     * 判断请求是否显式选择了知识点。
+     *
+     * @param request 题目保存请求
+     * @return true 表示传了 knowledgePointIds 或 knowledgePointId
+     */
+    private boolean hasKnowledgePointSelection(QuestionSaveRequest request) {
+        return (request.getKnowledgePointIds() != null && !request.getKnowledgePointIds().isEmpty())
+                || request.getKnowledgePointId() != null;
+    }
+
+    /**
+     * 合并主知识点与多知识点列表，去重并按请求顺序返回。
+     *
+     * @param request  题目保存请求
+     * @param fallback 请求没有选择时使用的知识点 ID
+     * @return 去重后的知识点 ID 列表，首项作为主知识点
+     */
+    private List<Long> resolveKnowledgePointIds(QuestionSaveRequest request, Long fallback) {
+        java.util.LinkedHashSet<Long> ids = new java.util.LinkedHashSet<>();
+        if (request.getKnowledgePointIds() != null) {
+            request.getKnowledgePointIds().stream()
+                    .filter(java.util.Objects::nonNull)
+                    .forEach(ids::add);
+        }
+        if (ids.isEmpty() && request.getKnowledgePointId() != null) {
+            ids.add(request.getKnowledgePointId());
+        }
+        if (ids.isEmpty() && fallback != null) {
+            ids.add(fallback);
+        }
+        if (ids.isEmpty()) {
+            throw new BizException(ErrorCode.PARAM_ERROR, "知识点不能为空");
+        }
+        if (ids.size() > 8) {
+            throw new BizException(ErrorCode.PARAM_ERROR, "一题最多选择 8 个知识点");
+        }
+        for (Long pointId : ids) {
+            requireKnowledgePoint(pointId);
+        }
+        return new ArrayList<>(ids);
+    }
+
+    /**
+     * 读取题目现有知识点；旧数据没有关联记录时回退到主知识点。
+     *
+     * @param questionId 题目 ID
+     * @param primaryId  题目主知识点 ID
+     * @return 知识点 ID 列表
+     */
+    private List<Long> existingKnowledgePointIds(Long questionId, Long primaryId) {
+        List<Long> ids = questionKnowledgePointMapper.selectIdsByQuestionId(questionId);
+        if (ids == null || ids.isEmpty()) {
+            return primaryId == null ? List.of() : List.of(primaryId);
+        }
+        return ids;
+    }
+
+    /**
+     * 重写题目的知识点关联。
+     *
+     * @param questionId 题目 ID
+     * @param pointIds   知识点 ID 列表，首项为主知识点
+     */
+    private void syncKnowledgePoints(Long questionId, List<Long> pointIds) {
+        questionKnowledgePointMapper.deleteByQuestionId(questionId);
+        if (pointIds != null && !pointIds.isEmpty()) {
+            questionKnowledgePointMapper.insertBatch(questionId, pointIds);
+        }
     }
 
     /**

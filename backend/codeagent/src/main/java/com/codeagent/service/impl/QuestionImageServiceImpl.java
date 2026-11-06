@@ -111,6 +111,7 @@ public class QuestionImageServiceImpl implements QuestionImageService {
         save.setOutputDesc(request.getOutputDesc());
         save.setDifficulty(request.getDifficulty());
         save.setKnowledgePointId(point.getId());
+        save.setKnowledgePointIds(request.getKnowledgePointIds());
         // 样例统一排在前、隐藏用例排在后，避免前端/数据库排序混乱。
         for (int i = 0; i < request.getSamples().size(); i++) {
             TestCaseRequest sample = request.getSamples().get(i);

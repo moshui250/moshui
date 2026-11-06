@@ -26,6 +26,11 @@ const difficulty = computed(
 const knowledgeName = computed(
   () => question.value?.knowledgePoint?.name || question.value?.knowledgePointName || '未分类'
 )
+const knowledgeNames = computed(() => {
+  const points = question.value?.knowledgePoints
+  if (Array.isArray(points) && points.length) return points.map((item) => item.name)
+  return [knowledgeName.value]
+})
 const samples = computed(() =>
   (question.value?.samples || []).map((sample, index) => ({
     index: index + 1,
@@ -126,7 +131,7 @@ onMounted(loadQuestion)
               <i class="level-dot" :class="difficulty.className"></i>
               {{ difficulty.label }}
             </span>
-            <span class="meta-chip">{{ knowledgeName }}</span>
+            <span v-for="name in knowledgeNames" :key="name" class="meta-chip">{{ name }}</span>
             <span class="meta-chip">{{ typeText }}</span>
             <span v-if="question.solved" class="solved-chip">
               <el-icon><CircleCheck /></el-icon>
@@ -155,7 +160,7 @@ onMounted(loadQuestion)
             <div class="info-list">
               <div class="info-row">
                 <span>知识点</span>
-                <strong>{{ knowledgeName }}</strong>
+                <strong>{{ knowledgeNames.join('、') }}</strong>
               </div>
               <div class="info-row">
                 <span>难度</span>
