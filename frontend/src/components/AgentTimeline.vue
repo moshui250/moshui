@@ -3,10 +3,10 @@ import { computed, nextTick, ref, watch } from 'vue'
 import MarkdownBody from '@/components/MarkdownBody.vue'
 import {
   CircleCheck,
-  Loading,
   MagicStick,
   Warning
 } from '@element-plus/icons-vue'
+import ThinkingDots from '@/components/ThinkingDots.vue'
 
 const props = defineProps({
   events: {
@@ -85,13 +85,18 @@ watch(() => [props.events.length, props.answer, props.error], scrollToBottom, { 
 
     <div ref="timelineRef" class="timeline">
       <div v-if="!events.length && !answer && !error" class="timeline-empty">
-        提交失败后会自动触发调试，也可以点上方「AI 调试」。
+        <template v-if="running">
+          <ThinkingDots />
+          <span>AI 正在读题、定位错误点…</span>
+        </template>
+        <template v-else>
+          提交失败后会自动触发调试，也可以点上方「AI 调试」。
+        </template>
       </div>
 
       <div v-for="(item, index) in events" :key="item.id || index" class="timeline-item" :class="`is-${item.type}`">
         <div class="timeline-icon">
-          <el-icon v-if="item.type === 'thinking'" class="is-loading"><Loading /></el-icon>
-          <el-icon v-else-if="item.type === 'tool_call'" class="is-loading"><Loading /></el-icon>
+          <ThinkingDots v-if="item.type === 'thinking' || item.type === 'tool_call'" />
           <el-icon v-else-if="item.type === 'tool_result'"><CircleCheck /></el-icon>
           <el-icon v-else><Warning /></el-icon>
         </div>
@@ -190,10 +195,18 @@ watch(() => [props.events.length, props.answer, props.error], scrollToBottom, { 
 }
 
 .timeline-empty {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   padding: 20px 0;
   color: #94a3b8;
   font-size: 12px;
   line-height: 1.7;
+}
+
+.timeline-empty .thinking-dots {
+  flex: 0 0 auto;
+  color: #3d5a78;
 }
 
 .timeline-item {
@@ -215,7 +228,8 @@ watch(() => [props.events.length, props.answer, props.error], scrollToBottom, { 
   font-size: 13px;
 }
 
-.timeline-item.is-tool_call .timeline-icon {
+.timeline-item.is-tool_call .timeline-icon,
+.timeline-item.is-thinking .timeline-icon {
   background: #eef2f6;
   color: #3d5a78;
 }
