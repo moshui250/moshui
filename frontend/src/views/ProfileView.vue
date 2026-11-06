@@ -204,7 +204,7 @@ onMounted(loadStats)
     </header>
 
     <div class="profile-top">
-      <section class="panel identity-card">
+      <section v-reveal="{ delay: 0 }" class="panel identity-card">
         <div class="identity-main">
           <UserAvatar :name="displayName" :avatar="userStore.user?.avatar" size="lg" />
           <div class="identity-copy">
@@ -237,7 +237,7 @@ onMounted(loadStats)
         </div>
       </section>
 
-      <section v-loading="loadingStats" class="panel stats-card">
+      <section v-reveal="{ delay: 45 }" v-loading="loadingStats" class="panel stats-card">
         <div class="panel-head">
           <div>
             <div class="panel-title">学习概览</div>
@@ -269,7 +269,7 @@ onMounted(loadStats)
       </section>
     </div>
 
-    <section v-if="rankInfo" class="panel level-card">
+    <section v-if="rankInfo" v-reveal="{ delay: 90 }" class="panel level-card">
       <div class="panel-head">
         <div>
           <div class="panel-title">段位与排名</div>
@@ -321,7 +321,7 @@ onMounted(loadStats)
     </section>
 
     <div class="profile-main">
-      <section class="panel prefs-card">
+      <section v-reveal="{ delay: 135 }" class="panel prefs-card">
         <div class="panel-head">
           <div>
             <div class="panel-title">编辑器偏好</div>
@@ -362,7 +362,7 @@ onMounted(loadStats)
       </section>
 
       <aside class="profile-side">
-        <section class="panel quick-card">
+        <section v-reveal="{ delay: 180 }" class="panel quick-card">
           <div class="panel-title">快捷入口</div>
           <div class="quick-list">
             <router-link
@@ -382,7 +382,7 @@ onMounted(loadStats)
           </div>
         </section>
 
-        <section class="panel security-card">
+        <section v-reveal="{ delay: 225 }" class="panel security-card">
           <div class="security-icon">
             <el-icon><Aim /></el-icon>
           </div>

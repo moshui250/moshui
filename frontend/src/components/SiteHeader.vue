@@ -1,16 +1,18 @@
 <template>
   <header class="site-header">
     <div class="site-inner">
-      <router-link class="brand" to="/" aria-label="CodeAgent 首页">
+      <div class="brand" aria-label="CodeAgent">
         <span class="brand-mark">&lt;/&gt;</span>
         <span class="brand-copy">
           <strong>CodeAgent</strong>
           <em>AI 编程练习</em>
         </span>
-      </router-link>
+      </div>
 
       <nav class="site-nav" aria-label="主导航">
+        <router-link to="/">首页</router-link>
         <router-link to="/question">题库</router-link>
+        <router-link to="/knowledge">知识点</router-link>
         <router-link to="/contests">竞赛</router-link>
         <router-link to="/rank">排名</router-link>
         <router-link to="/wrong-book">错题本</router-link>
@@ -42,6 +44,7 @@
             <template #dropdown>
               <el-dropdown-menu>
                 <el-dropdown-item command="profile">个人中心</el-dropdown-item>
+                <el-dropdown-item v-if="isAdmin" command="admin-contest">创建竞赛</el-dropdown-item>
                 <el-dropdown-item command="logout" divided>退出登录</el-dropdown-item>
               </el-dropdown-menu>
             </template>
@@ -54,7 +57,9 @@
     </div>
 
     <nav v-if="menuOpen" class="mobile-menu" aria-label="移动端导航">
+      <router-link to="/" @click="menuOpen = false">首页</router-link>
       <router-link to="/question" @click="menuOpen = false">题库</router-link>
+      <router-link to="/knowledge" @click="menuOpen = false">知识点</router-link>
       <router-link to="/contests" @click="menuOpen = false">竞赛</router-link>
       <router-link to="/rank" @click="menuOpen = false">排名</router-link>
       <router-link to="/wrong-book" @click="menuOpen = false">错题本</router-link>
@@ -86,8 +91,7 @@ watch(
   }
 )
 
-const healthClass = computed(() => {
-  if (!health.value) return 'is-checking'
+const healthClass = computed(() => {  if (!health.value) return 'is-checking'
   if (health.value.db === 'UP') return 'is-up'
   return 'is-warn'
 })
@@ -95,6 +99,7 @@ const healthText = computed(() => {
   if (!health.value) return '检查服务'
   return health.value.db === 'UP' ? '服务正常' : '数据库未连接'
 })
+const isAdmin = computed(() => userStore.user?.role === 'ADMIN')
 
 async function loadHealth() {
   try {
@@ -107,6 +112,10 @@ async function loadHealth() {
 function handleCommand(command) {
   if (command === 'profile') {
     router.push('/profile')
+    return
+  }
+  if (command === 'admin-contest') {
+    router.push('/admin/contests/new')
     return
   }
   if (command === 'logout') {
@@ -371,14 +380,15 @@ onBeforeUnmount(() => {
   }
 
   .header-right {
-    order: 2;
-    margin-left: auto;
+    order: 3;
+    margin-left: 0;
     gap: 8px;
   }
 
   .menu-toggle {
     display: grid;
-    order: 3;
+    order: 2;
+    margin-left: auto;
     flex-shrink: 0;
   }
 

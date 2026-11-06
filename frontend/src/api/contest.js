@@ -40,3 +40,13 @@ export function registerContest(contestId) {
 export function getContestRank(contestId, params = {}) {
   return request.get(`/contest/${contestId}/rank`, { params })
 }
+
+/**
+ * 管理员创建竞赛。
+ *
+ * @param {object} data 竞赛信息、已有题目 ID 与竞赛专属新题
+ * @returns {Promise<number>} 新建竞赛 ID
+ */
+export function createAdminContest(data) {
+  return request.post('/admin/contest', data)
+}

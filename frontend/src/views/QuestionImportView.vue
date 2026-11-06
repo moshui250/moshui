@@ -10,8 +10,11 @@ import {
   parseQuestionImage,
   uploadQuestionImage
 } from '@/api/question'
+import { useUserStore } from '@/store/user'
 
 const router = useRouter()
+const userStore = useUserStore()
+const isAdmin = computed(() => userStore.user?.role === 'ADMIN')
 
 const stage = ref('upload')
 const knowledgePoints = ref([])
@@ -458,6 +461,7 @@ onBeforeUnmount(revokePreview)
               <el-radio-group v-model="form.visibility" class="difficulty-group">
                 <el-radio-button value="PRIVATE">仅自己</el-radio-button>
                 <el-radio-button value="SHARED">共享</el-radio-button>
+                <el-radio-button v-if="isAdmin" value="PUBLIC">公共</el-radio-button>
               </el-radio-group>
             </div>
 

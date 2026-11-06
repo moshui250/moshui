@@ -40,6 +40,18 @@ const routes = [
     ]
   },
   {
+    path: '/knowledge',
+    component: () => import('@/layouts/PublicLayout.vue'),
+    children: [
+      {
+        path: '',
+        name: 'knowledge',
+        component: () => import('@/views/KnowledgeGraphView.vue'),
+        meta: { title: '知识点' }
+      }
+    ]
+  },
+  {
     path: '/rank',
     component: () => import('@/layouts/PublicLayout.vue'),
     children: [
@@ -98,6 +110,12 @@ const routes = [
         meta: { title: '题目详情' }
       },
       {
+        path: ':id(\\d+)/edit',
+        name: 'question-edit',
+        component: () => import('@/views/QuestionEditView.vue'),
+        meta: { title: '编辑题目' }
+      },
+      {
         path: ':id(\\d+)/solve',
         name: 'question-solve',
         component: () => import('@/views/QuestionSolveView.vue'),
@@ -115,6 +133,18 @@ const routes = [
         component: () => import('@/views/HomeView.vue'),
         meta: { title: '首页', public: true, layout: 'home' }
       },
+    ]
+  },
+  {
+    path: '/admin',
+    component: () => import('@/layouts/PublicLayout.vue'),
+    children: [
+      {
+        path: 'contests/new',
+        name: 'admin-contest-create',
+        component: () => import('@/views/AdminContestView.vue'),
+        meta: { title: '创建竞赛', adminOnly: true }
+      }
     ]
   },
   {
@@ -210,6 +240,11 @@ router.beforeEach(async (to) => {
       ElMessage.error('无法校验登录状态，请检查后端服务')
       return true
     }
+  }
+
+  if (to.meta.adminOnly && userStore.user?.role !== 'ADMIN') {
+    ElMessage.error('仅管理员可以访问该页面')
+    return { name: 'question-list' }
   }
 
   return true

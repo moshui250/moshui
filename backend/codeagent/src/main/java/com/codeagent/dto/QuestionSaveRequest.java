@@ -68,8 +68,9 @@ public class QuestionSaveRequest {
     private String sourceImageUrl;
 
     /**
-     * 个人题可见性：PRIVATE 仅自己，SHARED 共享给其他用户；默认 PRIVATE。
+     * 可见性：PRIVATE 仅自己，SHARED 共享给其他用户，PUBLIC 公共题（仅管理员）。
+     * 默认 PRIVATE。
      */
-    @Pattern(regexp = "(?i)PRIVATE|SHARED", message = "可见性只能是 PRIVATE 或 SHARED")
+    @Pattern(regexp = "(?i)PRIVATE|SHARED|PUBLIC", message = "可见性只能是 PRIVATE、SHARED 或 PUBLIC")
     private String visibility;
 }

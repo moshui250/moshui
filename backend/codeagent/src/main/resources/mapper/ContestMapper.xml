@@ -107,4 +107,25 @@
         VALUES (#{contestId}, #{userId}, NOW())
     </insert>
 
+    <insert id="insertContest" parameterType="com.codeagent.entity.Contest"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO contest (title, description, start_time, end_time, create_time, update_time, deleted)
+        VALUES (#{title}, #{description}, #{startTime}, #{endTime}, NOW(), NOW(), 0)
+    </insert>
+
+    <insert id="insertProblem" parameterType="com.codeagent.entity.ContestProblem"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO contest_problem (contest_id, question_id, label, sort_no, score, create_time)
+        VALUES (#{contestId}, #{questionId}, #{label}, #{sortNo}, #{score}, NOW())
+    </insert>
+
+    <select id="countRegisteredQuestion" resultType="int">
+        SELECT COUNT(*)
+        FROM contest_problem cp
+        JOIN contest_registration cr ON cr.contest_id = cp.contest_id
+        JOIN contest c ON c.id = cp.contest_id AND c.deleted = 0
+        WHERE cp.question_id = #{questionId}
+          AND cr.user_id = #{userId}
+    </select>
+
 </mapper>

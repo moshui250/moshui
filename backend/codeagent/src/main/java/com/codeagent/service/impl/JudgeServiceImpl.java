@@ -11,6 +11,7 @@ import com.codeagent.dto.QuestionDetailRow;
 import com.codeagent.entity.QuestionTestCase;
 import com.codeagent.entity.SubmitRecord;
 import com.codeagent.exception.BizException;
+import com.codeagent.mapper.ContestMapper;
 import com.codeagent.mapper.QuestionMapper;
 import com.codeagent.mapper.QuestionTestCaseMapper;
 import com.codeagent.mapper.SubmitRecordMapper;
@@ -64,6 +65,7 @@ public class JudgeServiceImpl implements JudgeService {
     private final JudgeRateLimiter rateLimiter;
     private final RateLimitService rateLimitService;
     private final QuestionMapper questionMapper;
+    private final ContestMapper contestMapper;
     private final QuestionTestCaseMapper testCaseMapper;
     private final SubmitRecordMapper submitRecordMapper;
     private final PistonClient pistonClient;
@@ -640,7 +642,9 @@ public class JudgeServiceImpl implements JudgeService {
         }
         if ("PERSONAL".equals(question.getType())
                 && !"SHARED".equalsIgnoreCase(question.getVisibility())
-                && !userId.equals(question.getUserId())) {
+                && !"PUBLIC".equalsIgnoreCase(question.getVisibility())
+                && !userId.equals(question.getUserId())
+                && contestMapper.countRegisteredQuestion(questionId, userId) == 0) {
             throw new BizException(ErrorCode.FORBIDDEN);
         }
         return question;

@@ -2,14 +2,19 @@ package com.codeagent.service.impl;
 
 import com.codeagent.common.ErrorCode;
 import com.codeagent.common.PageResult;
+import com.codeagent.dto.AdminContestRequest;
 import com.codeagent.dto.ContestParticipantRow;
 import com.codeagent.dto.ContestProblemRow;
 import com.codeagent.dto.ContestRow;
 import com.codeagent.dto.ContestSubmitRow;
+import com.codeagent.dto.QuestionSaveRequest;
 import com.codeagent.entity.Contest;
+import com.codeagent.entity.ContestProblem;
 import com.codeagent.exception.BizException;
 import com.codeagent.mapper.ContestMapper;
+import com.codeagent.mapper.QuestionMapper;
 import com.codeagent.service.ContestService;
+import com.codeagent.service.QuestionService;
 import com.codeagent.vo.ContestDetailVO;
 import com.codeagent.vo.ContestListItemVO;
 import com.codeagent.vo.ContestProblemVO;
@@ -46,6 +51,8 @@ public class ContestServiceImpl implements ContestService {
     private static final long WRONG_PENALTY_SECONDS = 20L * 60L;
 
     private final ContestMapper contestMapper;
+    private final QuestionService questionService;
+    private final QuestionMapper questionMapper;
 
     @Override
     public PageResult<ContestListItemVO> list(Long userId, String status, long page, long size) {
@@ -200,6 +207,72 @@ public class ContestServiceImpl implements ContestService {
             records.add(vo);
         }
         return PageResult.of(records, total, safePage, safeSize);
+    }
+
+    @Override
+    @Transactional
+    public Long createContest(AdminContestRequest request) {
+        if (request.getStartTime() == null || request.getEndTime() == null
+                || !request.getEndTime().isAfter(request.getStartTime())) {
+            throw new BizException(ErrorCode.PARAM_ERROR, "结束时间必须晚于开始时间");
+        }
+
+        Contest contest = new Contest();
+        contest.setTitle(request.getTitle().trim());
+        contest.setDescription(request.getDescription());
+        contest.setStartTime(request.getStartTime());
+        contest.setEndTime(request.getEndTime());
+        contestMapper.insertContest(contest);
+
+        int order = 0;
+        Set<Long> seen = new HashSet<>();
+        if (request.getQuestionIds() != null) {
+            for (Long questionId : request.getQuestionIds()) {
+                if (questionId == null || !seen.add(questionId)) {
+                    continue;
+                }
+                if (questionMapper.selectDetailRow(questionId) == null) {
+                    throw new BizException(ErrorCode.PARAM_ERROR, "题目不存在：" + questionId);
+                }
+                order = addContestProblem(contest.getId(), questionId, order);
+            }
+        }
+        if (request.getNewQuestions() != null) {
+            for (QuestionSaveRequest draft : request.getNewQuestions()) {
+                if (draft == null) {
+                    continue;
+                }
+                Long questionId = questionService.create(draft);
+                order = addContestProblem(contest.getId(), questionId, order);
+            }
+        }
+        if (order == 0) {
+            throw new BizException(ErrorCode.PARAM_ERROR, "竞赛至少需要一道题");
+        }
+        log.info("[monitor] type=contest-create contestId={} problems={}", contest.getId(), order);
+        return contest.getId();
+    }
+
+    /**
+     * 把一道题挂到竞赛题单，自动分配 A/B/C 标签和 100 分。
+     *
+     * @param contestId 竞赛 ID
+     * @param questionId 题目 ID
+     * @param order 当前题目序号，从 0 开始
+     * @return 下一道题的序号
+     */
+    private int addContestProblem(Long contestId, Long questionId, int order) {
+        if (order >= 26) {
+            throw new BizException(ErrorCode.PARAM_ERROR, "单场竞赛最多 26 道题");
+        }
+        ContestProblem problem = new ContestProblem();
+        problem.setContestId(contestId);
+        problem.setQuestionId(questionId);
+        problem.setLabel(String.valueOf((char) ('A' + order)));
+        problem.setSortNo(order + 1);
+        problem.setScore(100);
+        contestMapper.insertProblem(problem);
+        return order + 1;
     }
 
     @Override

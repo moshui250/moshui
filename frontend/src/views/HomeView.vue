@@ -18,6 +18,7 @@ import { getHealth } from '@/api/health'
 import { getHomeSummary } from '@/api/home'
 import { listKnowledgePoints } from '@/api/question'
 import { useUserStore } from '@/store/user'
+import SiteHeader from '@/components/SiteHeader.vue'
 
 echarts.use([BarChart, GridComponent, LegendComponent, TooltipComponent, CanvasRenderer])
 
@@ -372,40 +373,7 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="home-page">
-    <header class="site-head">
-      <button class="brand" type="button" @click="go('/')">
-        <span class="brand-mark">&lt;/&gt;</span>
-        <span class="brand-name">
-          <strong>CodeAgent</strong>
-          <small>AI 编程练习</small>
-        </span>
-      </button>
-
-      <nav class="site-nav" aria-label="主导航">
-        <button
-          v-for="item in navItems"
-          :key="item.label"
-          class="nav-link"
-          type="button"
-          @click="go(item.path)"
-        >
-          {{ item.label }}
-        </button>
-      </nav>
-
-      <div class="head-actions">
-        <span class="health-pill" :class="{ warn: !healthOk }">
-          <i></i>{{ healthText }}
-        </span>
-        <button v-if="userStore.isLoggedIn" class="user-pill" type="button" @click="goWorkspace">
-          <span class="avatar">{{ initial }}</span>
-          <span class="user-name">{{ userStore.displayName || '已登录' }}</span>
-        </button>
-        <button v-else class="login-link" type="button" @click="goLogin">
-          登录 <ArrowRight />
-        </button>
-      </div>
-    </header>
+    <SiteHeader />
 
     <main class="page">
       <section class="hero">

@@ -13,6 +13,7 @@ import com.codeagent.entity.Question;
 import com.codeagent.entity.QuestionSolution;
 import com.codeagent.entity.QuestionTestCase;
 import com.codeagent.exception.BizException;
+import com.codeagent.mapper.ContestMapper;
 import com.codeagent.mapper.KnowledgePointMapper;
 import com.codeagent.mapper.QuestionMapper;
 import com.codeagent.mapper.QuestionSolutionMapper;
@@ -55,6 +56,7 @@ public class QuestionServiceImpl implements QuestionService {
     private final QuestionSolutionMapper solutionMapper;
     private final KnowledgePointMapper knowledgePointMapper;
     private final SubmitRecordMapper submitRecordMapper;
+    private final ContestMapper contestMapper;
     private final ObjectMapper objectMapper;
 
     /**
@@ -278,7 +280,7 @@ public class QuestionServiceImpl implements QuestionService {
     }
 
     /**
-     * 个人题只允许 PRIVATE 或 SHARED，未传时默认 PRIVATE。
+     * 个人题允许 PRIVATE/SHARED；管理员额外允许 PUBLIC。
      *
      * @param visibility 前端传入的可见性
      * @return 规范化后的可见性
@@ -288,10 +290,26 @@ public class QuestionServiceImpl implements QuestionService {
             return PRIVATE;
         }
         String value = visibility.trim().toUpperCase(Locale.ROOT);
+        if (PUBLIC.equals(value)) {
+            if (!isAdmin()) {
+                throw new BizException(ErrorCode.FORBIDDEN, "仅管理员可以发布公共题");
+            }
+            return PUBLIC;
+        }
         if (!PRIVATE.equals(value) && !SHARED.equals(value)) {
-            throw new BizException(ErrorCode.PARAM_ERROR, "可见性只能是 PRIVATE 或 SHARED");
+            throw new BizException(ErrorCode.PARAM_ERROR, "可见性只能是 PRIVATE、SHARED 或 PUBLIC");
         }
         return value;
+    }
+
+    /**
+     * 当前登录用户是否管理员。
+     *
+     * @return true 表示 role=ADMIN
+     */
+    private boolean isAdmin() {
+        UserContext.UserInfo user = UserContext.get();
+        return user != null && "ADMIN".equalsIgnoreCase(user.getRole());
     }
 
     /**
@@ -475,9 +493,11 @@ public class QuestionServiceImpl implements QuestionService {
         if (row == null) {
             throw new BizException(ErrorCode.NOT_FOUND, "题目不存在");
         }
-        if (PERSONAL.equals(row.getType())
-                && !userId.equals(row.getUserId())
-                && !SHARED.equalsIgnoreCase(row.getVisibility())) {
+        if (PUBLIC.equalsIgnoreCase(row.getVisibility()) || SHARED.equalsIgnoreCase(row.getVisibility())) {
+            return row;
+        }
+        if (PERSONAL.equals(row.getType()) && !userId.equals(row.getUserId())
+                && contestMapper.countRegisteredQuestion(id, userId) == 0) {
             throw new BizException(ErrorCode.FORBIDDEN);
         }
         return row;

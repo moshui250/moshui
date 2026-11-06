@@ -4,6 +4,8 @@ import com.codeagent.dto.ContestParticipantRow;
 import com.codeagent.dto.ContestProblemRow;
 import com.codeagent.dto.ContestRow;
 import com.codeagent.dto.ContestSubmitRow;
+import com.codeagent.entity.Contest;
+import com.codeagent.entity.ContestProblem;
 import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
@@ -93,4 +95,30 @@ public interface ContestMapper {
      * @return 新增行数
      */
     int insertRegistration(@Param("contestId") Long contestId, @Param("userId") Long userId);
+
+    /**
+     * 新建竞赛。
+     *
+     * @param contest 已填充标题、说明和起止时间的竞赛实体
+     * @return 新增行数
+     */
+    int insertContest(Contest contest);
+
+    /**
+     * 向竞赛题单添加一道题。
+     *
+     * @param problem 已填充竞赛、题目、标签和分值的题单项
+     * @return 新增行数
+     */
+    int insertProblem(ContestProblem problem);
+
+    /**
+     * 查询用户是否报名了包含指定题目的竞赛。
+     * 用于允许参赛者读取竞赛专属的私有题。
+     *
+     * @param questionId 题目 ID
+     * @param userId     用户 ID
+     * @return 报名记录数
+     */
+    int countRegisteredQuestion(@Param("questionId") Long questionId, @Param("userId") Long userId);
 }

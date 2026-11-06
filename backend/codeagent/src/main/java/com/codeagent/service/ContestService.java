@@ -1,6 +1,7 @@
 package com.codeagent.service;
 
 import com.codeagent.common.PageResult;
+import com.codeagent.dto.AdminContestRequest;
 import com.codeagent.vo.ContestDetailVO;
 import com.codeagent.vo.ContestListItemVO;
 import com.codeagent.vo.ContestRankVO;
@@ -59,4 +60,12 @@ public interface ContestService {
      * @param userId     当前登录用户 ID
      */
     void validateSubmission(Long contestId, Long questionId, Long userId);
+
+    /**
+     * 管理员创建竞赛，可混合已有题目与竞赛专属新题。
+     *
+     * @param request 竞赛信息、已有题目 ID 和竞赛专属新题
+     * @return 新建竞赛 ID
+     */
+    Long createContest(AdminContestRequest request);
 }

@@ -1,12 +1,14 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ArrowLeft, CircleCheck, Collection, InfoFilled, VideoPlay } from '@element-plus/icons-vue'
+import { ArrowLeft, CircleCheck, Collection, EditPen, InfoFilled, VideoPlay } from '@element-plus/icons-vue'
 import { getQuestion } from '@/api/question'
 import MarkdownBody from '@/components/MarkdownBody.vue'
+import { useUserStore } from '@/store/user'
 
 const route = useRoute()
 const router = useRouter()
+const userStore = useUserStore()
 
 const loading = ref(true)
 const question = ref(null)
@@ -39,6 +41,12 @@ const typeText = computed(() => {
   return value.visibility === 'SHARED' ? '共享题' : '私有题'
 })
 
+const canEdit = computed(
+  () =>
+    question.value?.type === 'PERSONAL' &&
+    String(question.value?.userId) === String(userStore.user?.id)
+)
+
 // 题面 Markdown 通常已经包含输入/输出小节，缺失时才补，避免重复标题。
 const statementMarkdown = computed(() => {
   const description = question.value?.description || ''
@@ -70,6 +78,11 @@ async function loadQuestion() {
 function startPractice() {
   if (!question.value) return
   router.push({ name: 'question-solve', params: { id: question.value.id } })
+}
+
+function editQuestion() {
+  if (!question.value) return
+  router.push({ name: 'question-edit', params: { id: question.value.id } })
 }
 
 const prefetchSolve = () => import('@/views/QuestionSolveView.vue')
@@ -124,6 +137,7 @@ onMounted(loadQuestion)
 
         <div class="head-cta">
           <span class="sample-count">{{ samples.length }} 组公开样例</span>
+          <el-button v-if="canEdit" :icon="EditPen" @click="editQuestion">编辑题目</el-button>
           <el-button type="primary" size="large" :icon="VideoPlay" @mouseenter="prefetchSolve" @focus="prefetchSolve" @click="startPractice">
             开始作答
           </el-button>

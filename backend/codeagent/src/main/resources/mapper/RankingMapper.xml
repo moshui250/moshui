@@ -10,7 +10,7 @@
             FROM submit_record sr
             JOIN question q ON q.id = sr.question_id
                 AND q.deleted = 0
-                AND q.type = 'PUBLIC'
+                AND q.visibility = 'PUBLIC'
             WHERE sr.status = 'AC'
             GROUP BY sr.user_id, sr.question_id
         ),

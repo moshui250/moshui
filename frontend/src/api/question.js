@@ -106,3 +106,13 @@ export function importParsedQuestion(data) {
 export function createQuestion(data) {
   return request.post('/question', data, { silent: true })
 }
+
+/**
+ * 修改当前用户创建的题目。
+ * @param {number|string} id 题目 ID
+ * @param {object} data 题目字段
+ * @returns {Promise<void>}
+ */
+export function updateQuestion(id, data) {
+  return request.put(`/question/${id}`, data, { silent: true })
+}

@@ -23,7 +23,7 @@
                 AND q.type = 'PERSONAL' AND q.user_id = #{userId}
             </when>
             <otherwise>
-                AND (q.type = 'PUBLIC' OR (q.type = 'PERSONAL' AND q.visibility = 'SHARED'))
+                AND q.visibility IN ('PUBLIC', 'SHARED')
             </otherwise>
         </choose>
         <if test="knowledgePointId != null">
@@ -111,7 +111,7 @@
         FROM question q
         LEFT JOIN knowledge_point kp ON kp.id = q.knowledge_point_id
         WHERE q.deleted = 0
-          AND (q.type = 'PUBLIC' OR (q.type = 'PERSONAL' AND q.visibility = 'SHARED'))
+          AND q.visibility IN ('PUBLIC', 'SHARED')
           AND q.id != #{excludeId}
         ORDER BY CASE WHEN q.knowledge_point_id = #{knowledgePointId} THEN 0 ELSE 1 END,
                  solved ASC,
