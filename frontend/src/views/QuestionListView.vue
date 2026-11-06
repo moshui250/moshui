@@ -321,11 +321,7 @@ onMounted(async () => {
 
           <span class="title-cell">
             <strong>{{ row.title }}</strong>
-            <em>
-              #{{ row.id }}
-              <span>·</span>
-              {{ typeLabel(row) }}
-            </em>
+            <em>{{ typeLabel(row) }}</em>
           </span>
 
           <span class="kp-cell">{{ knowledgeName(row) }}</span>

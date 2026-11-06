@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { getMeApi, loginApi, logoutApi, registerApi } from '@/api/auth'
+import { getMeApi, loginApi, logoutApi, registerApi, updateProfileApi } from '@/api/auth'
 import { clearToken, getToken, saveToken } from '@/utils/auth-token'
 
 export const useUserStore = defineStore('user', {
@@ -10,7 +10,7 @@ export const useUserStore = defineStore('user', {
 
   getters: {
     isLoggedIn: (state) => Boolean(state.token),
-    displayName: (state) => state.user?.nickname || state.user?.username || ''
+    displayName: (state) => state.user?.nickname || '用户'
   },
 
   actions: {
@@ -46,6 +46,12 @@ export const useUserStore = defineStore('user', {
         }
         throw error
       }
+    },
+
+    async updateProfile(payload) {
+      const user = await updateProfileApi(payload)
+      this.user = user
+      return user
     },
 
     async logout() {

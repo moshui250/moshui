@@ -15,3 +15,7 @@ export function logoutApi() {
 export function getMeApi() {
   return request.get('/auth/me', { silent: true })
 }
+
+export function updateProfileApi(data) {
+  return request.put('/auth/profile', data, { silent: true })
+}

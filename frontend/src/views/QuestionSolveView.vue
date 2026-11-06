@@ -868,7 +868,7 @@ onBeforeRouteLeave(() => {
         <aside class="problem-pane">
           <div class="pane-bar">
             <span>题目说明</span>
-            <span class="pane-id">#{{ question.id }}</span>
+            <span class="pane-id">{{ question.id }}</span>
           </div>
           <div class="problem-scroll">
             <section class="problem-section problem-statement">
@@ -879,7 +879,6 @@ onBeforeRouteLeave(() => {
               <div class="custom-samples-head">
                 <div>
                   <strong>自定义样例</strong>
-                  <span>只在本机本次运行中使用</span>
                 </div>
                 <button type="button" class="custom-add" @click="addCustomCase">+ 添加</button>
               </div>
@@ -956,7 +955,7 @@ onBeforeRouteLeave(() => {
             <div class="action-bar">
               <span class="autosave-tip">
                 <el-icon><CircleCheck /></el-icon>
-                代码只保存在本机
+                自动保存
               </span>
 
               <div class="actions">

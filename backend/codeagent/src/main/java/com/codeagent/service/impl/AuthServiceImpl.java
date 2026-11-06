@@ -3,6 +3,7 @@ package com.codeagent.service.impl;
 import com.codeagent.common.ErrorCode;
 import com.codeagent.common.UserContext;
 import com.codeagent.dto.LoginRequest;
+import com.codeagent.dto.ProfileUpdateRequest;
 import com.codeagent.dto.RegisterRequest;
 import com.codeagent.entity.SysUser;
 import com.codeagent.exception.BizException;
@@ -18,12 +19,17 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+import java.util.Set;
+
 @Service
 @Slf4j
 @RequiredArgsConstructor
 public class AuthServiceImpl implements AuthService {
 
     private static final String DEFAULT_ROLE = "USER";
+    private static final String DEFAULT_AVATAR = "navy";
+    private static final Set<String> AVATARS =
+            Set.of("navy", "slate", "sage", "sand", "clay", "ink");
 
     private final SysUserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
@@ -41,6 +47,7 @@ public class AuthServiceImpl implements AuthService {
         user.setNickname(StringUtils.hasText(request.getNickname())
                 ? request.getNickname().trim()
                 : request.getUsername());
+        user.setAvatar(DEFAULT_AVATAR);
         user.setRole(DEFAULT_ROLE);
         user.setStatus(1);
         user.setDeleted(0);
@@ -87,7 +94,33 @@ public class AuthServiceImpl implements AuthService {
         return toVO(user);
     }
 
+    @Override
+    public UserVO updateProfile(ProfileUpdateRequest request) {
+        Long userId = UserContext.getUserId();
+        if (userId == null) {
+            throw new BizException(ErrorCode.UNAUTHORIZED);
+        }
+        SysUser user = userMapper.selectById(userId);
+        if (user == null) {
+            throw new BizException(ErrorCode.UNAUTHORIZED);
+        }
+
+        String nickname = request.getNickname().trim();
+        if (!StringUtils.hasText(nickname)) {
+            throw new BizException(ErrorCode.PARAM_ERROR, "昵称不能为空");
+        }
+        String avatar = request.getAvatar().trim().toLowerCase();
+        if (!AVATARS.contains(avatar)) {
+            throw new BizException(ErrorCode.PARAM_ERROR, "请选择有效头像");
+        }
+
+        userMapper.updateProfile(userId, nickname, avatar);
+        user.setNickname(nickname);
+        user.setAvatar(avatar);
+        return toVO(user);
+    }
+
     private UserVO toVO(SysUser user) {
-        return new UserVO(user.getId(), user.getUsername(), user.getNickname(), user.getRole());
+        return new UserVO(user.getId(), user.getUsername(), user.getNickname(), user.getAvatar(), user.getRole());
     }
 }

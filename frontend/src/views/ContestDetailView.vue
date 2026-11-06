@@ -18,7 +18,7 @@
               <span class="status-pill" :class="'status-' + contest.status.toLowerCase()">
                 {{ statusLabel(contest.status) }}
               </span>
-              <span class="contest-no">CONTEST #{{ String(contest.id).padStart(2, '0') }}</span>
+              <span class="contest-no">CONTEST {{ String(contest.id).padStart(2, '0') }}</span>
             </div>
             <h1>{{ contest.title }}</h1>
             <p>{{ contest.description || '这场竞赛还没有填写说明。' }}</p>
@@ -127,8 +127,8 @@
                   <td class="rank-col"><span class="rank-number">{{ row.rank }}</span></td>
                   <td>
                     <div class="rank-user">
-                      <span class="rank-avatar">{{ (row.nickname || row.username || 'U').slice(0, 1) }}</span>
-                      <span>{{ row.nickname || row.username }}</span>
+                      <span class="rank-avatar">{{ (row.nickname || 'U').slice(0, 1) }}</span>
+                      <span>{{ row.nickname || '匿名用户' }}</span>
                       <em v-if="row.me">我</em>
                     </div>
                   </td>

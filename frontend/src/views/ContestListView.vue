@@ -51,7 +51,7 @@
             <span class="status-pill" :class="'status-' + contest.status.toLowerCase()">
               {{ statusLabel(contest.status) }}
             </span>
-            <span class="contest-id">#{{ String(contest.id).padStart(2, '0') }}</span>
+            <span class="contest-id">{{ String(contest.id).padStart(2, '0') }}</span>
           </div>
 
           <h2>{{ contest.title }}</h2>

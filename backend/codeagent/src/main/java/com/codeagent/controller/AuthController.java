@@ -2,6 +2,7 @@ package com.codeagent.controller;
 
 import com.codeagent.common.R;
 import com.codeagent.dto.LoginRequest;
+import com.codeagent.dto.ProfileUpdateRequest;
 import com.codeagent.dto.RegisterRequest;
 import com.codeagent.service.AuthService;
 import com.codeagent.service.impl.AuthServiceImpl;
@@ -11,6 +12,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -41,5 +43,10 @@ public class AuthController {
     @GetMapping("/me")
     public R<UserVO> me() {
         return R.ok(authService.me());
+    }
+
+    @PutMapping("/profile")
+    public R<UserVO> updateProfile(@Valid @RequestBody ProfileUpdateRequest request) {
+        return R.ok(authService.updateProfile(request));
     }
 }

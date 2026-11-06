@@ -279,9 +279,7 @@ onMounted(loadRows)
       <article v-for="row in rows" :key="row.id" class="wrong-card">
         <div class="card-top">
           <div class="card-copy">
-            <div class="card-kicker">
-              #{{ questionOf(row).id || '—' }} · {{ knowledgeOf(row) }}
-            </div>
+            <div class="card-kicker">{{ knowledgeOf(row) }}</div>
             <button class="card-title" type="button" @click="goSolve(row)">
               {{ titleOf(row) }}
             </button>

@@ -40,7 +40,7 @@ function formatTime(value) {
 }
 
 function displayName(row) {
-  return row.nickname || row.username || '匿名用户'
+  return row.nickname || '匿名用户'
 }
 
 function initial(row) {
@@ -93,7 +93,7 @@ onBeforeUnmount(() => {
       <div class="my-rank">
         <span class="my-label">我的排名</span>
         <div class="my-number">
-          <strong v-if="me.onBoard">#{{ me.rank }}</strong>
+          <strong v-if="me.onBoard">第 {{ me.rank }} 名</strong>
           <strong v-else>未上榜</strong>
           <span v-if="me.onBoard">全站共 {{ data.totalUsers }} 人</span>
           <span v-else>全站第 {{ me.rank }} 名，仅本人可见</span>
@@ -181,7 +181,6 @@ onBeforeUnmount(() => {
               <span class="rank-avatar">{{ initial(row) }}</span>
               <span class="rank-name">
                 <strong>{{ displayName(row) }}</strong>
-                <small>@{{ row.username }}</small>
               </span>
               <span v-if="row.me" class="me-tag">我</span>
             </div>

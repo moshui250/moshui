@@ -35,7 +35,7 @@
         <template v-if="userStore.user">
           <el-dropdown trigger="click" @command="handleCommand">
             <button class="user-pill" type="button">
-              <span class="avatar">{{ initial }}</span>
+              <UserAvatar :name="userStore.displayName" :avatar="userStore.user?.avatar" size="sm" />
               <span class="user-name">{{ userStore.displayName }}</span>
               <span class="caret">⌄</span>
             </button>
@@ -70,6 +70,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { getHealth } from '@/api/health'
 import { useUserStore } from '@/store/user'
+import UserAvatar from '@/components/UserAvatar.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -85,7 +86,6 @@ watch(
   }
 )
 
-const initial = computed(() => (userStore.displayName || 'U').slice(0, 1))
 const healthClass = computed(() => {
   if (!health.value) return 'is-checking'
   if (health.value.db === 'UP') return 'is-up'

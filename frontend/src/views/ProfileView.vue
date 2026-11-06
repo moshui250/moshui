@@ -3,11 +3,11 @@ import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import {
+  Aim,
   ArrowRight,
   Collection,
   DataAnalysis,
   EditPen,
-  Lock,
   Picture,
   QuestionFilled,
   Setting,
@@ -19,6 +19,7 @@ import { getProfileStat } from '@/api/profile'
 import { useUserStore } from '@/store/user'
 import TierBadge from '@/components/TierBadge.vue'
 import TierHelpDialog from '@/components/TierHelpDialog.vue'
+import UserAvatar from '@/components/UserAvatar.vue'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -41,6 +42,20 @@ const prefs = reactive({
 const savedHint = ref('')
 const loadingStats = ref(false)
 const helpVisible = ref(false)
+const editVisible = ref(false)
+const editSaving = ref(false)
+const editForm = reactive({
+  nickname: '',
+  avatar: 'navy'
+})
+const avatarOptions = [
+  { key: 'navy', label: '深蓝' },
+  { key: 'slate', label: '石板' },
+  { key: 'sage', label: '灰绿' },
+  { key: 'sand', label: '浅棕' },
+  { key: 'clay', label: '陶土' },
+  { key: 'ink', label: '墨黑' }
+]
 const stats = ref({
   totalSubmit: 0,
   acSubmit: 0,
@@ -54,13 +69,6 @@ const stats = ref({
 })
 
 const displayName = computed(() => userStore.displayName || '未登录')
-const initial = computed(() => (userStore.displayName || 'U').slice(0, 1).toUpperCase())
-const roleLabel = computed(() => {
-  const role = userStore.user?.role
-  if (role === 'ADMIN') return '管理员'
-  if (role === 'USER') return '学习者'
-  return '访客'
-})
 const accuracyText = computed(() => {
   if (!stats.value.totalSubmit) return '—'
   return `${(Number(stats.value.accuracy || 0) * 100).toFixed(1)}%`
@@ -116,7 +124,7 @@ watch(
   prefs,
   (value) => {
     localStorage.setItem(PREF_KEY, JSON.stringify(value))
-    savedHint.value = '已保存到本地'
+    savedHint.value = '已保存'
     window.setTimeout(() => {
       savedHint.value = ''
     }, 1600)
@@ -156,6 +164,30 @@ async function handleLogout() {
   await router.replace({ name: 'login' })
 }
 
+function openEdit() {
+  editForm.nickname = userStore.user?.nickname || ''
+  editForm.avatar = userStore.user?.avatar || 'navy'
+  editVisible.value = true
+}
+
+async function saveProfile() {
+  const nickname = editForm.nickname.trim()
+  if (!nickname) {
+    ElMessage.warning('请输入昵称')
+    return
+  }
+  editSaving.value = true
+  try {
+    await userStore.updateProfile({ nickname, avatar: editForm.avatar })
+    editVisible.value = false
+    ElMessage.success('资料已更新')
+  } catch (error) {
+    ElMessage.error(error?.message || '更新失败，请稍后再试')
+  } finally {
+    editSaving.value = false
+  }
+}
+
 onMounted(loadStats)
 </script>
 
@@ -164,7 +196,6 @@ onMounted(loadStats)
     <header class="page-head">
       <div>
         <h1 class="page-title">个人中心</h1>
-        <p class="page-subtitle">账号、学习数据与编辑器偏好。</p>
       </div>
       <el-button class="head-action" plain @click="router.push('/question')">
         去题库
@@ -175,16 +206,9 @@ onMounted(loadStats)
     <div class="profile-top">
       <section class="panel identity-card">
         <div class="identity-main">
-          <div class="profile-avatar">{{ initial }}</div>
+          <UserAvatar :name="displayName" :avatar="userStore.user?.avatar" size="lg" />
           <div class="identity-copy">
-            <div class="identity-name">
-              {{ displayName }}
-              <el-tag size="small" effect="plain" round>{{ roleLabel }}</el-tag>
-            </div>
-            <p v-if="userStore.isLoggedIn">
-              {{ userStore.user?.username ? `@${userStore.user.username}` : '已登录用户' }}
-            </p>
-            <p v-else>登录后可保存刷题进度、错题与 AI 对话记录。</p>
+            <div class="identity-name">{{ displayName }}</div>
             <div v-if="rankInfo?.tier" class="identity-tier">
               <TierBadge :tier="rankInfo.tier" size="sm" />
               <button class="tier-help" type="button" aria-label="查看段位规则" @click="helpVisible = true">
@@ -193,22 +217,6 @@ onMounted(loadStats)
               <span class="identity-rank">{{ rankText }}</span>
             </div>
           </div>
-          <span class="account-state">{{ userStore.isLoggedIn ? '正常' : '未登录' }}</span>
-        </div>
-
-        <div class="identity-meta">
-          <div class="meta-item">
-            <span>默认语言</span>
-            <strong>{{ prefs.language === 'JAVA' ? 'Java' : 'C++' }}</strong>
-          </div>
-          <div class="meta-item">
-            <span>编辑器字号</span>
-            <strong>{{ prefs.fontSize }} px</strong>
-          </div>
-          <div class="meta-item">
-            <span>登录方式</span>
-            <strong>JWT</strong>
-          </div>
         </div>
 
         <div class="identity-actions">
@@ -216,11 +224,16 @@ onMounted(loadStats)
             <el-icon><User /></el-icon>
             登录 / 注册
           </el-button>
-          <el-button v-else type="danger" plain @click="handleLogout">
-            <el-icon><SwitchButton /></el-icon>
-            退出登录
-          </el-button>
-          <span class="logout-note">退出后清除本机 token</span>
+          <template v-else>
+            <el-button plain @click="openEdit">
+              <el-icon><EditPen /></el-icon>
+              编辑资料
+            </el-button>
+            <el-button type="danger" plain @click="handleLogout">
+              <el-icon><SwitchButton /></el-icon>
+              退出登录
+            </el-button>
+          </template>
         </div>
       </section>
 
@@ -228,7 +241,6 @@ onMounted(loadStats)
         <div class="panel-head">
           <div>
             <div class="panel-title">学习概览</div>
-            <div class="panel-subtitle">当前账号</div>
           </div>
           <router-link class="text-link" to="/dashboard">
             完整看板
@@ -261,7 +273,6 @@ onMounted(loadStats)
       <div class="panel-head">
         <div>
           <div class="panel-title">段位与排名</div>
-          <div class="panel-subtitle">按唯一 AC 题数计算</div>
         </div>
         <button class="tier-help" type="button" aria-label="查看段位规则" @click="helpVisible = true">
           <el-icon><QuestionFilled /></el-icon>
@@ -314,7 +325,6 @@ onMounted(loadStats)
         <div class="panel-head">
           <div>
             <div class="panel-title">编辑器偏好</div>
-            <div class="panel-subtitle">仅保存在本机</div>
           </div>
           <el-icon class="head-icon"><Setting /></el-icon>
         </div>
@@ -323,7 +333,6 @@ onMounted(loadStats)
           <div class="pref-row">
             <div>
               <strong>默认语言</strong>
-              <p>进入答题页时优先加载的模板</p>
             </div>
             <el-radio-group v-model="prefs.language" size="small">
               <el-radio-button label="CPP">C++</el-radio-button>
@@ -334,7 +343,6 @@ onMounted(loadStats)
           <div class="pref-row">
             <div>
               <strong>字号</strong>
-              <p>Monaco 编辑器默认字体大小</p>
             </div>
             <div class="slider-wrap">
               <el-slider v-model="prefs.fontSize" :min="12" :max="20" :step="1" />
@@ -345,12 +353,11 @@ onMounted(loadStats)
           <div class="pref-row">
             <div>
               <strong>自动保存代码</strong>
-              <p>按题目与语言存入 localStorage</p>
             </div>
             <el-switch v-model="prefs.autoSave" />
           </div>
 
-          <div class="save-hint">{{ savedHint || '修改后自动保存' }}</div>
+          <div v-if="savedHint" class="save-hint">{{ savedHint }}</div>
         </div>
       </section>
 
@@ -377,15 +384,45 @@ onMounted(loadStats)
 
         <section class="panel security-card">
           <div class="security-icon">
-            <el-icon><Lock /></el-icon>
+            <el-icon><Aim /></el-icon>
           </div>
           <div>
-            <h3>账号安全</h3>
-            <p>登录由 JWT 保护，token 仅存本机。</p>
+            <h3>继续练习</h3>
+            <router-link class="security-link" to="/wrong-book">
+              去错题本
+              <el-icon><ArrowRight /></el-icon>
+            </router-link>
           </div>
         </section>
       </aside>
     </div>
+
+    <el-dialog v-model="editVisible" title="编辑资料" width="min(420px, calc(100vw - 28px))" append-to-body>
+      <el-form label-position="top">
+        <el-form-item label="头像">
+          <div class="avatar-options">
+            <button
+              v-for="item in avatarOptions"
+              :key="item.key"
+              class="avatar-option"
+              :class="[`avatar-${item.key}`, { 'is-active': editForm.avatar === item.key }]"
+              type="button"
+              :aria-label="item.label"
+              @click="editForm.avatar = item.key"
+            >
+              {{ (editForm.nickname || displayName).slice(0, 1) }}
+            </button>
+          </div>
+        </el-form-item>
+        <el-form-item label="昵称">
+          <el-input v-model="editForm.nickname" maxlength="32" show-word-limit />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="editVisible = false">取消</el-button>
+        <el-button type="primary" :loading="editSaving" @click="saveProfile">保存</el-button>
+      </template>
+    </el-dialog>
 
     <TierHelpDialog
       v-model="helpVisible"
@@ -547,6 +584,46 @@ onMounted(loadStats)
 .logout-note {
   color: #a3adc2;
   font-size: 10.5px;
+}
+
+.avatar-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.avatar-option {
+  width: 38px;
+  height: 38px;
+  border: 0;
+  border-radius: 10px;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 0 0 2px transparent;
+  transition: box-shadow 0.2s ease;
+}
+
+.avatar-option.is-active {
+  box-shadow: 0 0 0 2px #fff, 0 0 0 4px #1f3a5f;
+}
+
+.avatar-navy { background: #1f3a5f; }
+.avatar-slate { background: #475569; }
+.avatar-sage { background: #4f6b5d; }
+.avatar-sand { background: #78664c; }
+.avatar-clay { background: #7a5148; }
+.avatar-ink { background: #273244; }
+
+.security-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 10px;
+  color: #1f3a5f;
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .stats-card {
