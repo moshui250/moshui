@@ -193,8 +193,6 @@ function safeRedirect(raw) {
 }
 
 router.beforeEach(async (to) => {
-  document.title = to.meta.title ? `${to.meta.title} · CodeAgent` : 'CodeAgent · 智码刷题'
-
   const userStore = useUserStore()
 
   // 首页始终公开；已登录用户也可以停留在首页。
