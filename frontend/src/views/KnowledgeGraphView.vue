@@ -37,6 +37,7 @@ const error = ref('')
 const selectedId = ref('')
 const hoveredId = ref('')
 const draggingId = ref('')
+const graphSvg = ref(null)
 
 const INTRO_FLAG = '__codeagentKnowledgeIntroPlayed'
 const INTRO_DELAY = 260
@@ -49,6 +50,7 @@ let introLast = 0
 let introElapsed = 0
 let dragOffsetX = 0
 let dragOffsetY = 0
+let draggingNode = null
 
 const activeId = computed(() => hoveredId.value || selectedId.value)
 const selectedPoint = computed(() => points.value.find((item) => `kp-${item.id}` === selectedId.value) || null)
@@ -328,7 +330,8 @@ function finishIntro() {
 }
 
 function toSvgPoint(event) {
-  const svg = event.currentTarget.ownerSVGElement
+  const svg = graphSvg.value
+  if (!svg) return { x: 0, y: 0 }
   const point = svg.createSVGPoint()
   point.x = event.clientX
   point.y = event.clientY
@@ -339,31 +342,32 @@ function startDrag(node, event) {
   if (event.button !== 0) return
   finishIntro()
   const point = toSvgPoint(event)
+  draggingNode = node
   dragOffsetX = node.x - point.x
   dragOffsetY = node.y - point.y
   draggingId.value = node.id
-  try {
-    event.currentTarget.setPointerCapture?.(event.pointerId)
-  } catch {
-    // Synthetic pointers can reject capture; movement still works through the element.
-  }
+  window.addEventListener('pointermove', moveDrag, { passive: false })
+  window.addEventListener('pointerup', endDrag, { once: true })
+  window.addEventListener('pointercancel', endDrag, { once: true })
+  window.addEventListener('blur', endDrag, { once: true })
 }
 
-function moveDrag(node, event) {
-  if (draggingId.value !== node.id) return
+function moveDrag(event) {
+  if (!draggingNode) return
+  event.preventDefault()
   const point = toSvgPoint(event)
-  node.x = Math.max(16, Math.min(WIDTH - 16, point.x + dragOffsetX))
-  node.y = Math.max(16, Math.min(HEIGHT - 16, point.y + dragOffsetY))
+  draggingNode.x = Math.max(16, Math.min(WIDTH - 16, point.x + dragOffsetX))
+  draggingNode.y = Math.max(16, Math.min(HEIGHT - 16, point.y + dragOffsetY))
 }
 
-function endDrag(node, event) {
-  if (draggingId.value !== node.id) return
+function endDrag() {
+  if (!draggingNode) return
+  draggingNode = null
   draggingId.value = ''
-  try {
-    event.currentTarget.releasePointerCapture?.(event.pointerId)
-  } catch {
-    // Ignore capture release failures on synthetic pointers.
-  }
+  window.removeEventListener('pointermove', moveDrag)
+  window.removeEventListener('pointerup', endDrag)
+  window.removeEventListener('pointercancel', endDrag)
+  window.removeEventListener('blur', endDrag)
 }
 
 function selectNode(node) {
@@ -404,6 +408,7 @@ async function load() {
 onMounted(load)
 
 onBeforeUnmount(() => {
+  endDrag()
   if (introTimer) window.clearTimeout(introTimer)
   cancelAnimationFrame(introRaf)
 })
@@ -437,6 +442,7 @@ onBeforeUnmount(() => {
           <div v-else-if="error" class="graph-state is-error">{{ error }}</div>
           <svg
             v-else
+            ref="graphSvg"
             :viewBox="`0 0 ${WIDTH} ${HEIGHT}`"
             role="img"
             aria-label="知识点关系网络"
@@ -461,7 +467,8 @@ onBeforeUnmount(() => {
                   `node-${node.type}`,
                   {
                     'is-active': activeId === node.id,
-                    'is-dim': activeId && !nodeVisible(node)
+                    'is-dim': activeId && !nodeVisible(node),
+                    'is-dragging': draggingId === node.id
                   }
                 ]"
                 :transform="`translate(${node.x} ${node.y})`"
@@ -469,9 +476,6 @@ onBeforeUnmount(() => {
                 @mouseenter="hoveredId = node.id"
                 @mouseleave="hoveredId = ''"
                 @pointerdown.stop.prevent="startDrag(node, $event)"
-                @pointermove.stop.prevent="moveDrag(node, $event)"
-                @pointerup.stop.prevent="endDrag(node, $event)"
-                @pointercancel.stop.prevent="endDrag(node, $event)"
                 @click.stop="selectNode(node)"
               >
                 <circle class="node-halo" :r="node.r + 8" />
@@ -692,9 +696,13 @@ onBeforeUnmount(() => {
 }
 
 .node {
-  cursor: pointer;
+  cursor: grab;
   outline: none;
   touch-action: none;
+}
+
+.node.is-dragging {
+  cursor: grabbing;
 }
 
 .node-halo {
