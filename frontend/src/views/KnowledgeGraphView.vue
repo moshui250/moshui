@@ -36,9 +36,19 @@ const loading = ref(true)
 const error = ref('')
 const selectedId = ref('')
 const hoveredId = ref('')
-let frame = 0
-let lastTick = 0
-let raf = 0
+const draggingId = ref('')
+
+const INTRO_FLAG = '__codeagentKnowledgeIntroPlayed'
+const INTRO_DELAY = 260
+const INTRO_MAX = 4200
+const INTRO_SETTLE = 3000
+let introRaf = 0
+let introTimer = 0
+let introStart = 0
+let introLast = 0
+let introElapsed = 0
+let dragOffsetX = 0
+let dragOffsetY = 0
 
 const activeId = computed(() => hoveredId.value || selectedId.value)
 const selectedPoint = computed(() => points.value.find((item) => `kp-${item.id}` === selectedId.value) || null)
@@ -82,6 +92,9 @@ function buildGraph(list) {
     ay: CENTER_Y,
     x: CENTER_X,
     y: CENTER_Y,
+    vx: 0,
+    vy: 0,
+    mass: 3,
     r: 31,
     phase: 0,
     drift: 2
@@ -104,8 +117,11 @@ function buildGraph(list) {
       kpId: item.id,
       ax,
       ay,
-      x: ax,
-      y: ay,
+      x: CENTER_X,
+      y: CENTER_Y,
+      vx: 0,
+      vy: 0,
+      mass: 1,
       r: 16,
       color: CLUSTER_COLORS[index % CLUSTER_COLORS.length],
       phase: index * 1.1,
@@ -126,8 +142,11 @@ function buildGraph(list) {
         kpId: item.id,
         ax: cx,
         ay: cy,
-        x: cx,
-        y: cy,
+        x: CENTER_X,
+        y: CENTER_Y,
+        vx: 0,
+        vy: 0,
+        mass: 0.72,
         r: 6,
         color: CLUSTER_COLORS[index % CLUSTER_COLORS.length],
         phase: index * 1.7 + conceptIndex,
@@ -161,29 +180,190 @@ function buildGraph(list) {
     }
   }
 
-  nodes.value = [root, ...kpNodes, ...conceptNodes]
+  const allNodes = [root, ...kpNodes, ...conceptNodes]
+  const allById = new Map(allNodes.map((node) => [node.id, node]))
+  for (const edge of nextEdges) {
+    const source = allById.get(edge.sourceId)
+    const target = allById.get(edge.targetId)
+    edge.rest = Math.hypot(target.ax - source.ax, target.ay - source.ay)
+  }
+
+  nodes.value = allNodes
   edges.value = nextEdges
   selectedId.value = ''
-
-  const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
-  if (!reduced) startAnimation()
+  if (!window[INTRO_FLAG] && !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+    for (const node of allNodes) {
+      node.x = CENTER_X
+      node.y = CENTER_Y
+      node.vx = 0
+      node.vy = 0
+    }
+  }
+  scheduleIntro()
 }
 
-function startAnimation() {
-  cancelAnimationFrame(raf)
-  lastTick = 0
-  const tick = (time) => {
-    if (time - lastTick > 32) {
-      lastTick = time
-      frame += 0.032
-      for (const node of nodes.value) {
-        node.x = node.ax + Math.sin(frame * 0.72 + node.phase) * node.drift
-        node.y = node.ay + Math.cos(frame * 0.58 + node.phase * 1.3) * node.drift
-      }
-    }
-    raf = requestAnimationFrame(tick)
+function scheduleIntro() {
+  if (window[INTRO_FLAG] || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+    finishIntro()
+    return
   }
-  raf = requestAnimationFrame(tick)
+  introTimer = window.setTimeout(startIntro, INTRO_DELAY)
+}
+
+function startIntro() {
+  introTimer = 0
+  window[INTRO_FLAG] = true
+  introStart = performance.now()
+  introLast = introStart
+  introElapsed = 0
+
+  for (const node of nodes.value) {
+    node.x = CENTER_X
+    node.y = CENTER_Y
+    const angle = Math.random() * Math.PI * 2
+    const speed = 0.35 + Math.random() * 0.9
+    node.vx = Math.cos(angle) * speed
+    node.vy = Math.sin(angle) * speed
+  }
+
+  introRaf = requestAnimationFrame(introTick)
+}
+
+function introTick(now) {
+  const dt = Math.min((now - introLast) / 1000, 0.032)
+  introLast = now
+  introElapsed = now - introStart
+  const step = Math.min(dt * 60, 2)
+
+  applyForces(step)
+
+  let maxSpeed = 0
+  for (const node of nodes.value) {
+    node.x += node.vx * step
+    node.y += node.vy * step
+    node.x = Math.max(16, Math.min(WIDTH - 16, node.x))
+    node.y = Math.max(16, Math.min(HEIGHT - 16, node.y))
+    maxSpeed = Math.max(maxSpeed, Math.hypot(node.vx, node.vy))
+  }
+
+  if (introElapsed > INTRO_MAX || (introElapsed > INTRO_SETTLE && maxSpeed < 0.12)) {
+    finishIntro()
+    return
+  }
+  introRaf = requestAnimationFrame(introTick)
+}
+
+function applyForces(step) {
+  const list = nodes.value
+  for (const node of list) {
+    node.vx += (node.ax - node.x) * 0.003 * step
+    node.vy += (node.ay - node.y) * 0.003 * step
+  }
+
+  for (let i = 0; i < list.length; i += 1) {
+    const a = list[i]
+    for (let j = i + 1; j < list.length; j += 1) {
+      const b = list[j]
+      let dx = b.x - a.x
+      let dy = b.y - a.y
+      let dist2 = dx * dx + dy * dy
+      if (dist2 < 0.01) {
+        dx = Math.random() - 0.5
+        dy = Math.random() - 0.5
+        dist2 = 0.25
+      }
+      const dist = Math.sqrt(dist2)
+      const repulsion = Math.min(0.6, 130 / (dist2 + 900))
+      const ux = dx / dist
+      const uy = dy / dist
+      a.vx -= (ux * repulsion * step) / a.mass
+      a.vy -= (uy * repulsion * step) / a.mass
+      b.vx += (ux * repulsion * step) / b.mass
+      b.vy += (uy * repulsion * step) / b.mass
+    }
+  }
+
+  for (const edge of edges.value) {
+    const a = nodeById(edge.sourceId)
+    const b = nodeById(edge.targetId)
+    let dx = b.x - a.x
+    let dy = b.y - a.y
+    const dist = Math.hypot(dx, dy) || 1
+    const stretch = dist - edge.rest
+    const force = stretch * 0.003
+    const ux = dx / dist
+    const uy = dy / dist
+    a.vx += (ux * force * step) / a.mass
+    a.vy += (uy * force * step) / a.mass
+    b.vx -= (ux * force * step) / b.mass
+    b.vy -= (uy * force * step) / b.mass
+  }
+
+  for (const node of list) {
+    node.vx *= Math.pow(0.90, step)
+    node.vy *= Math.pow(0.90, step)
+    const speed = Math.hypot(node.vx, node.vy)
+    if (speed > 18) {
+      node.vx = (node.vx / speed) * 18
+      node.vy = (node.vy / speed) * 18
+    }
+  }
+}
+
+function finishIntro() {
+  if (introTimer) {
+    window.clearTimeout(introTimer)
+    introTimer = 0
+  }
+  if (introRaf) {
+    cancelAnimationFrame(introRaf)
+    introRaf = 0
+  }
+  for (const node of nodes.value) {
+    node.x = node.ax
+    node.y = node.ay
+    node.vx = 0
+    node.vy = 0
+  }
+}
+
+function toSvgPoint(event) {
+  const svg = event.currentTarget.ownerSVGElement
+  const point = svg.createSVGPoint()
+  point.x = event.clientX
+  point.y = event.clientY
+  return point.matrixTransform(svg.getScreenCTM().inverse())
+}
+
+function startDrag(node, event) {
+  if (event.button !== 0) return
+  finishIntro()
+  const point = toSvgPoint(event)
+  dragOffsetX = node.x - point.x
+  dragOffsetY = node.y - point.y
+  draggingId.value = node.id
+  try {
+    event.currentTarget.setPointerCapture?.(event.pointerId)
+  } catch {
+    // Synthetic pointers can reject capture; movement still works through the element.
+  }
+}
+
+function moveDrag(node, event) {
+  if (draggingId.value !== node.id) return
+  const point = toSvgPoint(event)
+  node.x = Math.max(16, Math.min(WIDTH - 16, point.x + dragOffsetX))
+  node.y = Math.max(16, Math.min(HEIGHT - 16, point.y + dragOffsetY))
+}
+
+function endDrag(node, event) {
+  if (draggingId.value !== node.id) return
+  draggingId.value = ''
+  try {
+    event.currentTarget.releasePointerCapture?.(event.pointerId)
+  } catch {
+    // Ignore capture release failures on synthetic pointers.
+  }
 }
 
 function selectNode(node) {
@@ -224,7 +404,8 @@ async function load() {
 onMounted(load)
 
 onBeforeUnmount(() => {
-  cancelAnimationFrame(raf)
+  if (introTimer) window.clearTimeout(introTimer)
+  cancelAnimationFrame(introRaf)
 })
 </script>
 
@@ -287,6 +468,10 @@ onBeforeUnmount(() => {
                 :style="{ '--node-color': node.color || '#294866' }"
                 @mouseenter="hoveredId = node.id"
                 @mouseleave="hoveredId = ''"
+                @pointerdown.stop.prevent="startDrag(node, $event)"
+                @pointermove.stop.prevent="moveDrag(node, $event)"
+                @pointerup.stop.prevent="endDrag(node, $event)"
+                @pointercancel.stop.prevent="endDrag(node, $event)"
                 @click.stop="selectNode(node)"
               >
                 <circle class="node-halo" :r="node.r + 8" />
@@ -509,6 +694,7 @@ onBeforeUnmount(() => {
 .node {
   cursor: pointer;
   outline: none;
+  touch-action: none;
 }
 
 .node-halo {
