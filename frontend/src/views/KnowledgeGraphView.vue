@@ -35,7 +35,6 @@ const edges = ref([])
 const loading = ref(true)
 const error = ref('')
 const selectedId = ref('')
-const hoveredId = ref('')
 const draggingId = ref('')
 const graphSvg = ref(null)
 
@@ -50,8 +49,12 @@ let introElapsed = 0
 let dragOffsetX = 0
 let dragOffsetY = 0
 let draggingNode = null
+let cursorRaf = 0
+let cursorLast = 0
+const cursorPoint = { x: 0, y: 0, active: false }
+const CURSOR_RADIUS = 100
 
-const activeId = computed(() => hoveredId.value || selectedId.value)
+const activeId = computed(() => selectedId.value)
 const selectedPoint = computed(() => points.value.find((item) => `kp-${item.id}` === selectedId.value) || null)
 const neighbors = computed(() => {
   if (!activeId.value) return new Set()
@@ -336,8 +339,74 @@ function toSvgPoint(event) {
   return point.matrixTransform(svg.getScreenCTM().inverse())
 }
 
+function handleGraphPointerMove(event) {
+  if (event.pointerType === 'touch' || draggingNode) return
+  if (introRaf || introTimer) return
+  if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
+  const point = toSvgPoint(event)
+  cursorPoint.x = point.x
+  cursorPoint.y = point.y
+  cursorPoint.active = true
+  if (!cursorRaf) {
+    cursorLast = performance.now()
+    cursorRaf = requestAnimationFrame(cursorTick)
+  }
+}
+
+function handleGraphPointerLeave() {
+  cursorPoint.active = false
+}
+
+function stopCursorLoop() {
+  cursorPoint.active = false
+  if (cursorRaf) {
+    cancelAnimationFrame(cursorRaf)
+    cursorRaf = 0
+  }
+}
+
+function cursorTick(now) {
+  const dt = Math.min((now - cursorLast) / 1000, 0.032)
+  cursorLast = now
+  const step = Math.min(dt * 60, 2)
+
+  if (cursorPoint.active) {
+    for (const node of nodes.value) {
+      const dx = node.x - cursorPoint.x
+      const dy = node.y - cursorPoint.y
+      const dist = Math.hypot(dx, dy) || 1
+      if (dist >= CURSOR_RADIUS) continue
+      const push = (1 - dist / CURSOR_RADIUS) * 1.8
+      const ux = dx / dist
+      const uy = dy / dist
+      // 随机切向扰动，避免所有节点沿同一条直线退开。
+      const jitter = (Math.random() - 0.5) * 0.45
+      node.vx += (ux * push - uy * jitter) * step
+      node.vy += (uy * push + ux * jitter) * step
+    }
+  }
+
+  applyForces(step)
+
+  let maxSpeed = 0
+  for (const node of nodes.value) {
+    node.x += node.vx * step
+    node.y += node.vy * step
+    node.x = Math.max(16, Math.min(WIDTH - 16, node.x))
+    node.y = Math.max(16, Math.min(HEIGHT - 16, node.y))
+    maxSpeed = Math.max(maxSpeed, Math.hypot(node.vx, node.vy))
+  }
+
+  if (!cursorPoint.active && maxSpeed < 0.05) {
+    cursorRaf = 0
+    return
+  }
+  cursorRaf = requestAnimationFrame(cursorTick)
+}
+
 function startDrag(node, event) {
   if (event.button !== 0) return
+  stopCursorLoop()
   finishIntro()
   const point = toSvgPoint(event)
   draggingNode = node
@@ -407,6 +476,7 @@ onMounted(load)
 
 onBeforeUnmount(() => {
   endDrag()
+  stopCursorLoop()
   if (introTimer) window.clearTimeout(introTimer)
   cancelAnimationFrame(introRaf)
 })
@@ -444,6 +514,8 @@ onBeforeUnmount(() => {
             :viewBox="`0 0 ${WIDTH} ${HEIGHT}`"
             role="img"
             aria-label="知识点关系网络"
+            @pointermove="handleGraphPointerMove"
+            @pointerleave="handleGraphPointerLeave"
           >
             <g class="graph-edges">
               <line
@@ -471,8 +543,6 @@ onBeforeUnmount(() => {
                 ]"
                 :transform="`translate(${node.x} ${node.y})`"
                 :style="{ '--node-color': node.color || '#294866' }"
-                @mouseenter="hoveredId = node.id"
-                @mouseleave="hoveredId = ''"
                 @pointerdown.stop.prevent="startDrag(node, $event)"
                 @click.stop="selectNode(node)"
               >
@@ -514,8 +584,6 @@ onBeforeUnmount(() => {
             :class="{ 'is-active': selectedId === `kp-${point.id}` }"
             type="button"
             @click="selectPoint(point)"
-            @mouseenter="hoveredId = `kp-${point.id}`"
-            @mouseleave="hoveredId = ''"
           >
             <span class="kp-index">{{ String(index + 1).padStart(2, '0') }}</span>
             <span class="kp-copy">
