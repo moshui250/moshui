@@ -1,9 +1,10 @@
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { ArrowRight, CircleCheck, Picture, Refresh, Search } from '@element-plus/icons-vue'
 import { listKnowledgePoints, listQuestions } from '@/api/question'
 
+const route = useRoute()
 const router = useRouter()
 
 const filters = reactive({
@@ -34,6 +35,54 @@ const hasFilters = computed(
 
 const pageCount = computed(() => Math.ceil(total.value / size.value))
 
+function queryValue(value) {
+  return Array.isArray(value) ? value[0] : value
+}
+
+// 从 URL 还原筛选条件，保证刷新、分享和浏览器后退都能恢复。
+function readQuery() {
+  const keyword = queryValue(route.query.keyword)
+  const knowledgePointId = Number(queryValue(route.query.kp))
+  const difficulty = Number(queryValue(route.query.difficulty))
+  const pageNumber = Number(queryValue(route.query.page))
+  const scopeValue = queryValue(route.query.scope)
+
+  scope.value = scopeValue === 'PERSONAL' ? 'PERSONAL' : 'PUBLIC'
+  filters.keyword = typeof keyword === 'string' ? keyword : ''
+  filters.knowledgePointId =
+    Number.isInteger(knowledgePointId) && knowledgePointId > 0 ? knowledgePointId : null
+  filters.difficulty = [1, 2, 3].includes(difficulty) ? difficulty : null
+  page.value = Number.isInteger(pageNumber) && pageNumber > 0 ? pageNumber : 1
+}
+
+function buildQuery() {
+  const query = {}
+  if (scope.value === 'PERSONAL') query.scope = 'PERSONAL'
+  if (filters.keyword.trim()) query.keyword = filters.keyword.trim()
+  if (filters.knowledgePointId !== null) query.kp = String(filters.knowledgePointId)
+  if (filters.difficulty !== null) query.difficulty = String(filters.difficulty)
+  if (page.value > 1) query.page = String(page.value)
+  return query
+}
+
+function syncQuery() {
+  const target = router.resolve({ name: 'question-list', query: buildQuery() })
+  if (target.fullPath === route.fullPath) {
+    loadQuestions()
+    return
+  }
+  router.replace({ name: 'question-list', query: buildQuery() })
+}
+
+watch(
+  () => route.query,
+  () => {
+    if (route.name !== 'question-list') return
+    readQuery()
+    loadQuestions()
+  }
+)
+
 function difficultyInfo(level) {
   return difficultyMap[level] || { label: '未分级', className: 'is-unknown' }
 }
@@ -55,7 +104,7 @@ function switchScope(value) {
   if (scope.value === value) return
   scope.value = value
   page.value = 1
-  loadQuestions()
+  syncQuery()
 }
 
 async function loadKnowledgeOptions() {
@@ -94,23 +143,28 @@ async function loadQuestions() {
 
 function search() {
   page.value = 1
-  loadQuestions()
+  syncQuery()
 }
 
 function resetFilters() {
   filters.keyword = ''
   filters.difficulty = null
   filters.knowledgePointId = null
-  search()
+  page.value = 1
+  syncQuery()
 }
 
 function changePage(nextPage) {
   page.value = nextPage
-  loadQuestions()
+  syncQuery()
 }
 
 function openQuestion(row) {
-  router.push({ name: 'question-detail', params: { id: row.id } })
+  router.push({
+    name: 'question-detail',
+    params: { id: row.id },
+    query: { from: route.fullPath }
+  })
 }
 
 function randomQuestion() {
@@ -123,6 +177,7 @@ function randomQuestion() {
 }
 
 onMounted(async () => {
+  readQuery()
   await Promise.all([loadKnowledgeOptions(), loadQuestions()])
 })
 </script>

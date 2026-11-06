@@ -72,12 +72,23 @@ function startPractice() {
   router.push({ name: 'question-solve', params: { id: question.value.id } })
 }
 
+const prefetchSolve = () => import('@/views/QuestionSolveView.vue')
+
+function backToList() {
+  const from = route.query.from
+  if (typeof from === 'string' && from.startsWith('/question') && !from.startsWith('//')) {
+    router.push(from)
+    return
+  }
+  router.push({ name: 'question-list' })
+}
+
 onMounted(loadQuestion)
 </script>
 
 <template>
   <div class="detail-page">
-    <button class="back-link" type="button" @click="router.push({ name: 'question-list' })">
+    <button class="back-link" type="button" @click="backToList">
       <el-icon><ArrowLeft /></el-icon>
       返回题库
     </button>
@@ -88,7 +99,7 @@ onMounted(loadQuestion)
 
     <div v-else-if="!question" class="empty-panel">
       <el-empty :description="loadError || '题目不存在，或已被删除'" :image-size="96">
-        <el-button type="primary" @click="router.push({ name: 'question-list' })">回到题库</el-button>
+        <el-button type="primary" @click="backToList">回到题库</el-button>
         <el-button @click="loadQuestion">重新加载</el-button>
       </el-empty>
     </div>
@@ -113,7 +124,7 @@ onMounted(loadQuestion)
 
         <div class="head-cta">
           <span class="sample-count">{{ samples.length }} 组公开样例</span>
-          <el-button type="primary" size="large" :icon="VideoPlay" @click="startPractice">
+          <el-button type="primary" size="large" :icon="VideoPlay" @mouseenter="prefetchSolve" @focus="prefetchSolve" @click="startPractice">
             开始作答
           </el-button>
         </div>

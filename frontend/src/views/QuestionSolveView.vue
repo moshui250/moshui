@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
@@ -50,6 +50,7 @@ const questionId = computed(() => Number(route.params.questionId || route.params
 const loading = ref(true)
 const loadError = ref('')
 const question = ref(null)
+const lowerPanel = ref(null)
 
 const language = ref('CPP')
 const code = ref('')
@@ -407,6 +408,7 @@ function runDemoJudge() {
     if (disposed) return
     judgeResult.value = buildDemoResult()
     judging.value = false
+    scrollToResult()
     ElMessage.info('判题接口尚未接入，当前展示演示结果')
     startAgent('HINT')
   }, 900)
@@ -433,6 +435,7 @@ async function pollJudge(submitId) {
       const status = String(data?.status || '').toUpperCase()
       if (TERMINAL_STATUSES.has(status)) {
         judging.value = false
+        scrollToResult()
         return
       }
     } catch (error) {
@@ -553,6 +556,17 @@ function resetJudge() {
   sampleOnly.value = false
 }
 
+function scrollToResult() {
+  nextTick(() => {
+    const el = lowerPanel.value
+    if (!el) return
+    const rect = el.getBoundingClientRect()
+    if (rect.top >= 0 && rect.bottom <= window.innerHeight) return
+    const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    el.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'nearest' })
+  })
+}
+
 /**
  * 只运行公开样例：结果不会写入提交记录，失败也不会自动触发 AI 调试。
  * @returns {Promise<void>} 样例运行结束后完成
@@ -589,6 +603,7 @@ async function runSample() {
     ElMessage.error(judgeError.value)
   } finally {
     judging.value = false
+    scrollToResult()
   }
 }
 
@@ -789,15 +804,34 @@ onBeforeRouteLeave(() => {
 </script>
 
 <template>
-  <div v-loading="loading" class="solve-page">
-    <div v-if="!loading && !question" class="panel empty-panel">
+  <div class="solve-page">
+    <div v-if="loading" class="solve-skeleton" aria-busy="true" aria-label="正在加载答题页面">
+      <div class="skeleton-top">
+        <span class="skeleton-block skeleton-back"></span>
+        <span class="skeleton-block skeleton-title"></span>
+      </div>
+      <div class="skeleton-grid">
+        <div class="skeleton-pane skeleton-statement">
+          <span class="skeleton-block skeleton-line is-short"></span>
+          <span class="skeleton-block skeleton-line"></span>
+          <span class="skeleton-block skeleton-line"></span>
+          <span class="skeleton-block skeleton-code"></span>
+        </div>
+        <div class="skeleton-pane skeleton-workspace">
+          <span class="skeleton-block skeleton-toolbar"></span>
+          <span class="skeleton-block skeleton-editor"></span>
+        </div>
+      </div>
+    </div>
+
+    <div v-else-if="!question" class="panel empty-panel">
       <el-empty :description="loadError || '题目不存在，或已被删除'" :image-size="100">
         <el-button type="primary" @click="router.push('/question')">回到题库</el-button>
         <el-button @click="loadQuestion">重新加载</el-button>
       </el-empty>
     </div>
 
-    <template v-else-if="question">
+    <template v-else>
       <header class="solve-top">
         <button class="back-link" @click="goBack">
           <el-icon><ArrowLeft /></el-icon>
@@ -954,7 +988,7 @@ onBeforeRouteLeave(() => {
             </div>
           </div>
 
-          <div class="panel workspace-lower">
+          <div ref="lowerPanel" class="panel workspace-lower">
             <div class="lower-tabs">
               <button
                 class="lower-tab"
@@ -1732,6 +1766,94 @@ onBeforeRouteLeave(() => {
 }
 
 /* Public platform workspace */
+.solve-skeleton {
+  padding: 4px 0 18px;
+}
+
+.skeleton-top {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e8edf5;
+}
+
+.skeleton-block {
+  display: block;
+  border-radius: 6px;
+  background: #e8edf4;
+}
+
+.skeleton-back {
+  width: 88px;
+  height: 30px;
+}
+
+.skeleton-title {
+  width: min(320px, 44vw);
+  height: 30px;
+}
+
+.skeleton-grid {
+  display: grid;
+  grid-template-columns: minmax(340px, 0.82fr) minmax(0, 1.18fr);
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.skeleton-pane {
+  min-height: calc(100vh - 176px);
+  padding: 18px;
+  border: 1px solid #e8edf5;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.skeleton-statement {
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+}
+
+.skeleton-line {
+  width: 100%;
+  height: 12px;
+}
+
+.skeleton-line.is-short {
+  width: 42%;
+  height: 18px;
+}
+
+.skeleton-code {
+  width: 100%;
+  height: 168px;
+  margin-top: 8px;
+}
+
+.skeleton-workspace {
+  padding: 14px;
+}
+
+.skeleton-toolbar {
+  width: 100%;
+  height: 32px;
+}
+
+.skeleton-editor {
+  width: 100%;
+  height: calc(100% - 48px);
+  min-height: 330px;
+  margin-top: 14px;
+  background: repeating-linear-gradient(
+    to bottom,
+    #eef2f6 0,
+    #eef2f6 10px,
+    transparent 10px,
+    transparent 26px
+  );
+}
+
 .solve-page {
   width: min(1440px, 100%);
   margin: 0 auto;
@@ -2047,6 +2169,26 @@ onBeforeRouteLeave(() => {
 
   .solve-grid {
     grid-template-columns: 1fr;
+  }
+
+  .skeleton-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .skeleton-pane {
+    min-height: auto;
+  }
+
+  .skeleton-statement {
+    min-height: 250px;
+  }
+
+  .skeleton-workspace {
+    min-height: 430px;
+  }
+
+  .skeleton-editor {
+    min-height: 330px;
   }
 
   .problem-pane {

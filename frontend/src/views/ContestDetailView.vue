@@ -87,6 +87,8 @@
                 type="button"
                 class="problem-action"
                 :disabled="contest.status === 'ENDED' || !contest.registered"
+                @mouseenter="prefetchSolve"
+                @focus="prefetchSolve"
                 @click="goSolve(problem)"
               >
                 {{ contest.status === 'ENDED' ? '已结束' : contest.registered ? '去做题' : '报名后解锁' }}
@@ -296,6 +298,8 @@ function goSolve(problem) {
     params: { id: contest.value.id, questionId: problem.questionId }
   })
 }
+
+const prefetchSolve = () => import('@/views/QuestionSolveView.vue')
 
 onMounted(async () => {
   await loadContest()
