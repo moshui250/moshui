@@ -39,7 +39,6 @@ const hoveredId = ref('')
 const draggingId = ref('')
 const graphSvg = ref(null)
 
-const INTRO_FLAG = '__codeagentKnowledgeIntroPlayed'
 const INTRO_DELAY = 260
 const INTRO_MAX = 4200
 const INTRO_SETTLE = 3000
@@ -193,7 +192,7 @@ function buildGraph(list) {
   nodes.value = allNodes
   edges.value = nextEdges
   selectedId.value = ''
-  if (!window[INTRO_FLAG] && !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+  if (!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
     for (const node of allNodes) {
       node.x = CENTER_X
       node.y = CENTER_Y
@@ -205,7 +204,7 @@ function buildGraph(list) {
 }
 
 function scheduleIntro() {
-  if (window[INTRO_FLAG] || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+  if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
     finishIntro()
     return
   }
@@ -214,7 +213,6 @@ function scheduleIntro() {
 
 function startIntro() {
   introTimer = 0
-  window[INTRO_FLAG] = true
   introStart = performance.now()
   introLast = introStart
   introElapsed = 0
