@@ -170,31 +170,31 @@ onBeforeUnmount(() => {
 }
 
 .site-inner {
-  width: min(1240px, calc(100% - 48px));
-  height: 68px;
+  width: min(1200px, calc(100% - 48px));
+  height: 64px;
   margin: 0 auto;
   display: flex;
   align-items: center;
-  gap: 36px;
+  gap: 28px;
 }
 
 .brand {
   display: inline-flex;
   align-items: center;
-  gap: 11px;
-  min-width: 180px;
+  gap: 9px;
+  min-width: 140px;
   color: inherit;
 }
 
 .brand-mark {
-  width: 38px;
-  height: 38px;
-  border-radius: 11px;
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
   display: grid;
   place-items: center;
   color: #fff;
   background: #1f3a5f;
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 700;
   letter-spacing: -1px;
   box-shadow: none;
@@ -207,43 +207,39 @@ onBeforeUnmount(() => {
 }
 
 .brand-copy strong {
-  color: #0f172a;
-  font-size: 17px;
+  color: #111827;
+  font-size: 16px;
   letter-spacing: -0.3px;
 }
 
 .brand-copy em {
-  margin-top: 4px;
-  color: #94a3b8;
-  font-size: 10px;
-  font-style: normal;
-  letter-spacing: 0.12em;
+  display: none;
 }
 
 .site-nav {
   display: flex;
   align-items: center;
-  gap: 26px;
+  gap: 20px;
   flex: 1;
 }
 
 .site-nav a {
-  color: #475569;
-  font-size: 14px;
-  font-weight: 600;
+  color: #6b7280;
+  font-size: 13.5px;
+  font-weight: 500;
   text-decoration: none;
   transition: color 0.16s ease;
 }
 
 .site-nav a:hover,
 .site-nav a.router-link-active {
-  color: #1f3a5f;
+  color: #111827;
 }
 
 .header-right {
   display: flex;
   align-items: center;
-  gap: 18px;
+  gap: 14px;
 }
 
 .command-trigger {
@@ -268,9 +264,9 @@ onBeforeUnmount(() => {
 .health {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  color: #64748b;
-  font-size: 12px;
+  gap: 6px;
+  color: #6b7280;
+  font-size: 11.5px;
   white-space: nowrap;
 }
 
@@ -294,19 +290,18 @@ onBeforeUnmount(() => {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  height: 36px;
+  height: 34px;
   padding: 0 10px 0 5px;
-  border: 1px solid #e1e5ee;
+  border: 1px solid #e5e7eb;
   border-radius: 999px;
   background: #fff;
-  color: #0f172a;
+  color: #111827;
   cursor: pointer;
-  transition: border-color 0.16s ease, box-shadow 0.16s ease;
+  transition: border-color 0.16s ease;
 }
 
 .user-pill:hover {
-  border-color: #c8d2dc;
-  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
+  border-color: #d1d5db;
 }
 
 .avatar {
@@ -339,15 +334,20 @@ onBeforeUnmount(() => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 36px;
-  padding: 0 18px;
+  height: 34px;
+  padding: 0 16px;
+  border: 1px solid #d1d5db;
   border-radius: 999px;
-  background: #1f3a5f;
-  color: #fff;
+  background: #fff;
+  color: #111827;
   font-size: 13px;
-  font-weight: 650;
+  font-weight: 500;
   text-decoration: none;
-  box-shadow: 0 8px 16px rgba(15, 23, 42, 0.10);
+}
+
+.login-link:hover {
+  background: #f9fafb;
+  border-color: #9ca3af;
 }
 
 .menu-toggle {
@@ -374,7 +374,7 @@ onBeforeUnmount(() => {
 
 .mobile-menu {
   position: absolute;
-  top: 67px;
+  top: 65px;
   left: 16px;
   right: 16px;
   z-index: 21;
