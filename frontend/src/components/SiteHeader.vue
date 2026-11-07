@@ -165,8 +165,8 @@ onBeforeUnmount(() => {
   position: sticky;
   top: 0;
   z-index: 20;
-  background: #ffffff;
-  border-bottom: 1px solid #e8eaf0;
+  background: #f5f6f7;
+  border-bottom: 0;
 }
 
 .site-inner {
@@ -374,7 +374,7 @@ onBeforeUnmount(() => {
 
 .mobile-menu {
   position: absolute;
-  top: 65px;
+  top: 64px;
   left: 16px;
   right: 16px;
   z-index: 21;
