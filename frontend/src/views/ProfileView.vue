@@ -203,8 +203,8 @@ onMounted(loadStats)
       </el-button>
     </header>
 
-    <div class="profile-top">
-      <section v-reveal="{ delay: 0 }" class="panel identity-card">
+    <section v-reveal="{ delay: 0 }" v-loading="loadingStats" class="profile-hero">
+      <div class="hero-identity">
         <div class="identity-main">
           <UserAvatar :name="displayName" :avatar="userStore.user?.avatar" size="lg" />
           <div class="identity-copy">
@@ -235,20 +235,18 @@ onMounted(loadStats)
             </el-button>
           </template>
         </div>
-      </section>
+      </div>
 
-      <section v-reveal="{ delay: 45 }" v-loading="loadingStats" class="panel stats-card">
-        <div class="panel-head">
-          <div>
-            <div class="panel-title">学习概览</div>
-          </div>
-          <router-link class="text-link" to="/dashboard">
+      <div class="hero-stats">
+        <div class="hero-stats-head">
+          <span class="section-label">练习数据</span>
+          <router-link class="hero-link" to="/dashboard">
             完整看板
             <el-icon><ArrowRight /></el-icon>
           </router-link>
         </div>
 
-        <div class="stat-grid">
+        <div class="stat-strip">
           <div class="stat-item">
             <strong>{{ stats.totalSubmit }}</strong>
             <span>总提交</span>
@@ -266,14 +264,12 @@ onMounted(loadStats)
             <span>未掌握错题</span>
           </div>
         </div>
-      </section>
-    </div>
+      </div>
+    </section>
 
-    <section v-if="rankInfo" v-reveal="{ delay: 90 }" class="panel level-card">
-      <div class="panel-head">
-        <div>
-          <div class="panel-title">段位与排名</div>
-        </div>
+    <section v-if="rankInfo" v-reveal="{ delay: 45 }" class="profile-section level-section">
+      <div class="section-heading">
+        <h2 class="section-title">段位与排名</h2>
         <button class="tier-help" type="button" aria-label="查看段位规则" @click="helpVisible = true">
           <el-icon><QuestionFilled /></el-icon>
         </button>
@@ -320,12 +316,10 @@ onMounted(loadStats)
       </div>
     </section>
 
-    <div class="profile-main">
-      <section v-reveal="{ delay: 135 }" class="panel prefs-card">
-        <div class="panel-head">
-          <div>
-            <div class="panel-title">编辑器偏好</div>
-          </div>
+    <div class="profile-lower">
+      <section v-reveal="{ delay: 90 }" class="profile-section prefs-section">
+        <div class="section-heading">
+          <h2 class="section-title">编辑器偏好</h2>
           <el-icon class="head-icon"><Setting /></el-icon>
         </div>
 
@@ -367,9 +361,9 @@ onMounted(loadStats)
         </div>
       </section>
 
-      <aside class="profile-side">
-        <section v-reveal="{ delay: 180 }" class="panel quick-card">
-          <div class="panel-title">快捷入口</div>
+      <aside v-reveal="{ delay: 135 }" class="profile-side">
+        <section class="side-section">
+          <h2 class="section-title">快捷入口</h2>
           <div class="quick-list">
             <router-link
               v-for="item in quickLinks"
@@ -388,18 +382,16 @@ onMounted(loadStats)
           </div>
         </section>
 
-        <section v-reveal="{ delay: 225 }" class="panel security-card">
-          <div class="security-icon">
-            <el-icon><Aim /></el-icon>
+        <div class="side-note">
+          <div class="side-note-copy">
+            <span class="side-note-label"><el-icon><Aim /></el-icon> 继续练习</span>
+            <span>把错题再做一遍，比看答案更有用。</span>
           </div>
-          <div>
-            <h3>继续练习</h3>
-            <router-link class="security-link" to="/wrong-book">
-              去错题本
-              <el-icon><ArrowRight /></el-icon>
-            </router-link>
-          </div>
-        </section>
+          <router-link class="side-note-link" to="/wrong-book">
+            去错题本
+            <el-icon><ArrowRight /></el-icon>
+          </router-link>
+        </div>
       </aside>
     </div>
 
@@ -1184,6 +1176,397 @@ onMounted(loadStats)
 
   .level-foot a {
     margin-left: 0;
+  }
+}
+
+/* 2026-11 layout pass: profile becomes a page of sections, not a stack of cards. */
+.profile-page {
+  max-width: 1120px;
+  padding: 36px 24px 64px;
+}
+
+.page-head {
+  margin-bottom: 0;
+  padding-bottom: 26px;
+}
+
+.page-title {
+  color: #111827;
+  font-size: 32px;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+}
+
+.head-action {
+  border-radius: 8px;
+}
+
+.profile-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(360px, 0.95fr);
+  gap: 56px;
+  padding: 30px 0 32px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.hero-identity {
+  min-width: 0;
+}
+
+.identity-main {
+  gap: 16px;
+}
+
+.identity-name {
+  color: #111827;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+}
+
+.identity-tier {
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.identity-rank {
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.identity-actions {
+  margin-top: 20px;
+}
+
+.hero-stats {
+  min-width: 0;
+  padding-left: 40px;
+  border-left: 1px solid #e5e7eb;
+}
+
+.hero-stats-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.section-label {
+  color: #6b7280;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.hero-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #1f3a5f;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.stat-strip {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 22px 28px;
+  margin-top: 22px;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 0;
+  border: 0;
+}
+
+.stat-item strong {
+  color: #111827;
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.stat-item span {
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.profile-section {
+  padding: 28px 0;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.level-section {
+  margin: 0;
+}
+
+.section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.section-title {
+  margin: 0;
+  color: #111827;
+  font-size: 16px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.head-icon {
+  color: #9ca3af;
+  font-size: 17px;
+}
+
+.level-body {
+  grid-template-columns: minmax(0, 1.4fr) 300px;
+  gap: 34px;
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid #eef0f3;
+}
+
+.level-ac {
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.level-progress-head {
+  margin-top: 20px;
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.level-hint {
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.level-foot {
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.ratio-hole {
+  background: #f5f6f7;
+}
+
+.profile-lower {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.65fr);
+  gap: 48px;
+  padding: 28px 0 0;
+}
+
+.prefs-section {
+  padding: 0;
+  border-bottom: 0;
+}
+
+.prefs-body {
+  margin-top: 8px;
+}
+
+.pref-row {
+  padding: 17px 0;
+  border-bottom: 1px solid #eef0f3;
+}
+
+.pref-row:last-of-type {
+  border-bottom: 0;
+}
+
+.pref-row strong {
+  color: #111827;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.slider-value {
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.save-hint {
+  padding-top: 8px;
+  color: #9ca3af;
+  font-size: 12px;
+}
+
+.profile-side {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding-left: 36px;
+  border-left: 1px solid #e5e7eb;
+}
+
+.side-section {
+  min-width: 0;
+}
+
+.quick-list {
+  display: grid;
+  gap: 0;
+  margin-top: 10px;
+}
+
+.quick-item {
+  padding: 10px 0;
+  border-bottom: 1px solid #eef0f3;
+  border-radius: 0;
+}
+
+.quick-item:hover {
+  background: transparent;
+}
+
+.quick-item:hover .quick-copy strong,
+.quick-item:hover .quick-arrow {
+  color: #1f3a5f;
+}
+
+.quick-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+}
+
+.quick-copy strong {
+  color: #374151;
+  font-size: 13px;
+}
+
+.quick-arrow {
+  font-size: 12px;
+}
+
+.side-note {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding-top: 18px;
+  border-top: 1px solid #eef0f3;
+}
+
+.side-note-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  color: #6b7280;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.side-note-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #374151;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.side-note-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+  color: #1f3a5f;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+@media (max-width: 960px) {
+  .profile-hero,
+  .profile-lower {
+    grid-template-columns: 1fr;
+  }
+
+  .hero-stats {
+    padding-top: 24px;
+    padding-left: 0;
+    border-top: 1px solid #eef0f3;
+    border-left: 0;
+  }
+
+  .profile-side {
+    padding-top: 24px;
+    padding-left: 0;
+    border-top: 1px solid #e5e7eb;
+    border-left: 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .profile-page {
+    padding: 24px 14px 48px;
+  }
+
+  .page-title {
+    font-size: 30px;
+  }
+
+  .profile-hero {
+    gap: 22px;
+    padding-top: 20px;
+  }
+
+  .identity-name {
+    font-size: 22px;
+  }
+
+  .stat-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px 20px;
+  }
+
+  .stat-item strong {
+    font-size: 26px;
+  }
+
+  .level-body {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+
+  .ratio-block {
+    padding-top: 18px;
+    padding-left: 0;
+    border-top: 1px solid #eef0f3;
+    border-left: 0;
+  }
+
+  .level-foot {
+    flex-wrap: wrap;
+  }
+
+  .level-foot a {
+    margin-left: 0;
+  }
+
+  .pref-row {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 9px;
+  }
+
+  .pref-control {
+    width: 100%;
+    flex-basis: auto;
+    justify-content: flex-start;
+  }
+
+  .slider-wrap {
+    width: 100%;
   }
 }
 </style>

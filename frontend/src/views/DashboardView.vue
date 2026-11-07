@@ -210,7 +210,7 @@ onBeforeUnmount(() => {
         <p class="page-subtitle">正确率、薄弱点与最近提交。</p>
       </div>
       <div class="head-actions">
-        <span class="date-chip">{{ today }}</span>
+        <span class="date-text">{{ today }}</span>
         <button class="btn-primary" type="button" @click="router.push('/question')">
           去题库
           <el-icon><ArrowRight /></el-icon>
@@ -237,24 +237,24 @@ onBeforeUnmount(() => {
       </article>
     </section>
 
-    <section class="dashboard-grid">
-      <article class="panel chart-card">
-        <div class="panel-head">
+    <section class="analytics-surface">
+      <article class="chart-section">
+        <div class="section-head">
           <div>
-            <h2 class="panel-title">知识点错误率</h2>
-            <p class="panel-subtitle">未提交的知识点显示 —</p>
+            <h2 class="section-title">知识点错误率</h2>
+            <p class="section-caption">未提交的知识点显示 —</p>
           </div>
-          <span class="panel-chip">错误率</span>
         </div>
         <div class="chart-wrap">
           <div ref="chartRef" class="chart" />
         </div>
       </article>
 
-      <aside class="panel insight-card">
-        <div class="panel-head">
+      <aside class="insight-section">
+        <div class="section-head">
           <div>
-            <h2 class="panel-title">薄弱知识点</h2>
+            <h2 class="section-title">薄弱知识点</h2>
+            <p class="section-caption">错误率从高到低</p>
           </div>
         </div>
 
@@ -282,19 +282,20 @@ onBeforeUnmount(() => {
           <span v-else>先完成一次判题，再看复盘建议。</span>
         </div>
 
-        <button class="panel-link" type="button" @click="router.push('/wrong-book')">
+        <button class="text-link" type="button" @click="router.push('/wrong-book')">
           去错题本复盘
           <span>→</span>
         </button>
       </aside>
     </section>
 
-    <section class="panel recent-card">
-      <div class="panel-head">
+    <section class="recent-section">
+      <div class="recent-section-head">
         <div>
-          <h2 class="panel-title">最近提交</h2>
+          <h2 class="section-title">最近提交</h2>
+          <p class="section-caption">最近 5 次判题记录</p>
         </div>
-        <span class="panel-chip">{{ stat.recentSubmits.length }} 条</span>
+        <span class="recent-count">{{ stat.recentSubmits.length }} 条</span>
       </div>
 
       <div v-if="stat.recentSubmits.length" class="recent-table">
@@ -847,6 +848,337 @@ onBeforeUnmount(() => {
   .recent-row > span:nth-child(4),
   .recent-row > span:nth-child(5) {
     display: none;
+  }
+}
+
+/* 2026-11 layout pass: fewer surfaces, larger type, one analytics surface. */
+.dashboard-page {
+  max-width: 1200px;
+  padding: 36px 24px 72px;
+}
+
+.page-head {
+  align-items: flex-end;
+  padding-bottom: 28px;
+}
+
+.page-title {
+  margin: 0 0 8px;
+  color: #111827;
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+}
+
+.page-subtitle {
+  color: #4b5563;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.head-actions {
+  gap: 16px;
+}
+
+.date-text {
+  color: #6b7280;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.btn-primary {
+  min-height: 36px;
+  padding: 0 16px;
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.metric-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin: 24px 0 22px;
+}
+
+.metric-card {
+  padding: 22px 24px 20px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: none;
+}
+
+.metric-label {
+  gap: 8px;
+  color: #4b5563;
+  font-size: 13px;
+}
+
+.metric-number {
+  margin-top: 14px;
+  color: #111827;
+  font-size: 40px;
+  font-weight: 700;
+  letter-spacing: -0.035em;
+}
+
+.metric-number small {
+  margin-left: 4px;
+  color: #6b7280;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.metric-foot {
+  margin-top: 10px;
+  color: #9ca3af;
+  font-size: 12px;
+}
+
+.analytics-surface {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(280px, 0.72fr);
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.chart-section {
+  min-width: 0;
+  padding: 24px;
+  border-right: 1px solid #e5e7eb;
+}
+
+.insight-section {
+  display: flex;
+  flex-direction: column;
+  padding: 24px;
+}
+
+.section-head {
+  margin-bottom: 18px;
+}
+
+.section-title {
+  margin: 0;
+  color: #111827;
+  font-size: 16px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.section-caption {
+  margin: 5px 0 0;
+  color: #9ca3af;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.chart {
+  height: 300px;
+}
+
+.weak-list {
+  gap: 18px;
+  margin-top: 2px;
+}
+
+.weak-name {
+  color: #374151;
+  font-size: 14px;
+}
+
+.weak-value {
+  color: #1f3a5f;
+  font-size: 12px;
+}
+
+.weak-track {
+  height: 5px;
+  background: #eef0f3;
+}
+
+.weak-foot {
+  color: #9ca3af;
+  font-size: 12px;
+}
+
+.weak-empty {
+  color: #9ca3af;
+  font-size: 13px;
+}
+
+.insight-note {
+  margin-top: auto;
+  padding-top: 16px;
+  border-top: 1px solid #eef0f3;
+  color: #4b5563;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.text-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  margin-top: 10px;
+  padding: 10px 0 0;
+  border: 0;
+  background: transparent;
+  color: #1f3a5f;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.text-link:hover {
+  color: #152a45;
+}
+
+.recent-section {
+  margin-top: 30px;
+  padding-top: 22px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.recent-section-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.recent-count {
+  color: #9ca3af;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.recent-table {
+  margin-top: 14px;
+}
+
+.recent-head {
+  padding: 0 10px 10px;
+  border-bottom: 1px solid #e5e7eb;
+  color: #9ca3af;
+  font-size: 12px;
+}
+
+.recent-row {
+  min-height: 48px;
+  padding: 0 10px;
+  border: 0;
+  border-bottom: 1px solid #eef0f3;
+  background: transparent;
+  color: #4b5563;
+  font-size: 13px;
+}
+
+.recent-row:hover {
+  background: #fff;
+}
+
+.recent-title {
+  color: #111827;
+  font-size: 14px;
+}
+
+.recent-lang,
+.recent-time,
+.recent-date {
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.status-pill {
+  padding: 2px 8px;
+  font-size: 11px;
+}
+
+.recent-empty {
+  padding: 38px 20px 30px;
+}
+
+.recent-empty h3 {
+  font-size: 15px;
+}
+
+.recent-empty p {
+  font-size: 12px;
+}
+
+@media (max-width: 1000px) {
+  .analytics-surface {
+    grid-template-columns: 1fr;
+  }
+
+  .chart-section {
+    border-right: 0;
+    border-bottom: 1px solid #e5e7eb;
+  }
+}
+
+@media (max-width: 760px) {
+  .dashboard-page {
+    padding: 24px 14px 52px;
+  }
+
+  .page-head {
+    align-items: flex-start;
+  }
+
+  .page-title {
+    font-size: 30px;
+  }
+
+  .page-subtitle {
+    font-size: 13px;
+  }
+
+  .metric-grid {
+    gap: 12px;
+    margin-top: 20px;
+  }
+
+  .metric-card {
+    padding: 18px 16px 16px;
+  }
+
+  .metric-label {
+    font-size: 12px;
+  }
+
+  .metric-number {
+    font-size: 32px;
+  }
+
+  .metric-foot {
+    font-size: 11px;
+  }
+
+  .chart-section,
+  .insight-section {
+    padding: 18px;
+  }
+
+  .chart {
+    height: 250px;
+  }
+
+  .recent-section {
+    margin-top: 24px;
+  }
+
+  .recent-row {
+    grid-template-columns: minmax(0, 1fr) 58px 92px;
+    gap: 8px;
+    padding: 10px 0;
   }
 }
 </style>
