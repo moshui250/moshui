@@ -16,12 +16,13 @@ public interface ContestService {
      * 分页查询竞赛，公开可访问。
      *
      * @param userId 当前登录用户 ID，可为 null
-     * @param status 状态过滤：UPCOMING/RUNNING/ENDED，null 表示全部
-     * @param page   页码，从 1 开始
-     * @param size   每页条数，限制 1~50
+     * @param status  状态过滤：UPCOMING/RUNNING/ENDED，null 表示全部
+     * @param keyword 标题/说明关键词，可为空
+     * @param page    页码，从 1 开始
+     * @param size    每页条数，限制 1~50
      * @return 分页竞赛列表
      */
-    PageResult<ContestListItemVO> list(Long userId, String status, long page, long size);
+    PageResult<ContestListItemVO> list(Long userId, String status, String keyword, long page, long size);
 
     /**
      * 查询竞赛详情和题单，公开可访问。

@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { ArrowRight, CircleCheck, Filter, Picture, Refresh, Search } from '@element-plus/icons-vue'
 import { listKnowledgePoints, listQuestions } from '@/api/question'
 import QuestionFilterNav from '@/components/QuestionFilterNav.vue'
+import ListPager from '@/components/ListPager.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -328,17 +329,14 @@ onMounted(async () => {
             </el-button>
           </el-empty>
 
-          <div v-if="total > 0" class="board-foot">
-            <span class="foot-count">第 {{ page }} / {{ pageCount }} 页</span>
-            <el-pagination
-              background
-              layout="prev, pager, next"
-              :current-page="page"
-              :page-size="size"
-              :total="total"
-              @current-change="changePage"
-            />
-          </div>
+          <ListPager
+            v-if="total > 0"
+            class="board-foot"
+            :page="page"
+            :page-size="size"
+            :total="total"
+            @change="changePage"
+          />
         </section>
       </section>
     </div>

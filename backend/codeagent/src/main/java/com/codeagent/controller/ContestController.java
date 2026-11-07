@@ -31,17 +31,19 @@ public class ContestController {
     /**
      * 分页查询竞赛列表。
      *
-     * @param status 状态过滤 UPCOMING/RUNNING/ENDED，null 表示全部
-     * @param page   页码
-     * @param size   每页条数
+     * @param status  状态过滤 UPCOMING/RUNNING/ENDED，null 表示全部
+     * @param keyword 标题/说明关键词，可为空
+     * @param page    页码
+     * @param size    每页条数
      * @return 分页竞赛列表
      */
     @GetMapping
     public R<PageResult<ContestListItemVO>> list(
             @RequestParam(required = false) String status,
+            @RequestParam(required = false) String keyword,
             @RequestParam(defaultValue = "1") long page,
             @RequestParam(defaultValue = "10") long size) {
-        return R.ok(contestService.list(UserContext.getUserId(), status, page, size));
+        return R.ok(contestService.list(UserContext.getUserId(), status, keyword, page, size));
     }
 
     /**

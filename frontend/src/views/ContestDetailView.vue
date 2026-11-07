@@ -110,48 +110,70 @@
             </button>
           </div>
 
+          <p class="rank-scroll-hint">左右滑动查看各题</p>
+
           <div v-loading="rankLoading" class="rank-table-wrap">
             <table v-if="rankRows.length" class="rank-table">
               <thead>
                 <tr>
                   <th class="rank-col">排名</th>
-                  <th>参赛者</th>
-                  <th>通过</th>
-                  <th>总分</th>
-                  <th>罚时</th>
-                  <th>最近通过</th>
+                  <th class="rank-user-col">参赛者</th>
+                  <th class="rank-number-col">通过</th>
+                  <th class="rank-number-col">罚时</th>
+                  <th
+                    v-for="problem in contest.problems"
+                    :key="problem.questionId"
+                    class="problem-column"
+                  >
+                    {{ problem.label }}
+                  </th>
+                  <th class="rank-number-col">得分</th>
                 </tr>
               </thead>
               <tbody>
                 <tr v-for="row in rankRows" :key="row.userId" :class="{ me: row.me }">
                   <td class="rank-col"><span class="rank-number">{{ row.rank }}</span></td>
-                  <td>
+                  <td class="rank-user-col">
                     <div class="rank-user">
                       <span class="rank-avatar">{{ (row.nickname || 'U').slice(0, 1) }}</span>
                       <span>{{ row.nickname || '匿名用户' }}</span>
                       <em v-if="row.me">我</em>
                     </div>
                   </td>
-                  <td>{{ row.solvedCount }}</td>
-                  <td class="score-cell">{{ row.score }}</td>
-                  <td>{{ row.penaltyMinutes }} 分</td>
-                  <td>{{ row.lastAcTime ? formatDate(row.lastAcTime) : '—' }}</td>
+                  <td class="rank-number-col">{{ row.solvedCount }}</td>
+                  <td class="rank-number-col">{{ row.penaltyMinutes }}</td>
+                  <td
+                    v-for="problem in contest.problems"
+                    :key="problem.questionId"
+                    class="problem-column"
+                    :class="cellClass(row, problem)"
+                  >
+                    <template v-if="cellFor(row, problem)?.status === 'AC'">
+                      <span class="cell-time">{{ formatAcTime(cellFor(row, problem).acTimeSeconds) }}</span>
+                      <span v-if="cellFor(row, problem).attempts" class="cell-try">
+                        -{{ cellFor(row, problem).attempts }}
+                      </span>
+                    </template>
+                    <template v-else-if="cellFor(row, problem)?.status === 'WA'">
+                      <span class="cell-try">-{{ cellFor(row, problem).attempts }}</span>
+                    </template>
+                    <span v-else class="cell-empty">·</span>
+                  </td>
+                  <td class="rank-number-col score-cell">{{ row.score }}</td>
                 </tr>
               </tbody>
             </table>
             <div v-else class="empty-block">还没有人提交，第一名等你来拿。</div>
           </div>
 
-          <div v-if="rankTotal > rankSize" class="rank-pager">
-            <el-pagination
-              background
-              layout="prev, pager, next"
-              :current-page="rankPage"
-              :page-size="rankSize"
-              :total="rankTotal"
-              @current-change="changeRankPage"
-            />
-          </div>
+          <ListPager
+            v-if="rankTotal > rankSize"
+            class="rank-pager"
+            :page="rankPage"
+            :page-size="rankSize"
+            :total="rankTotal"
+            @change="changeRankPage"
+          />
         </div>
       </template>
 
@@ -168,6 +190,7 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { getContest, getContestRank, registerContest } from '@/api/contest'
+import ListPager from '@/components/ListPager.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -233,6 +256,25 @@ function formatDate(value) {
   if (Number.isNaN(date.getTime())) return value
   const pad = (n) => String(n).padStart(2, '0')
   return `${date.getMonth() + 1}月${pad(date.getDate())}日 ${pad(date.getHours())}:${pad(date.getMinutes())}`
+}
+
+function cellFor(row, problem) {
+  return (row.cells || []).find((cell) => cell.questionId === problem.questionId)
+}
+
+function cellClass(row, problem) {
+  const cell = cellFor(row, problem)
+  if (!cell || cell.status === 'UNSOLVED') return 'is-empty'
+  return cell.status === 'AC' ? 'is-ac' : 'is-wrong'
+}
+
+function formatAcTime(seconds) {
+  const total = Math.max(0, Number(seconds) || 0)
+  const h = Math.floor(total / 3600)
+  const m = Math.floor((total % 3600) / 60)
+  const s = total % 60
+  const pad = (n) => String(n).padStart(2, '0')
+  return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`
 }
 
 async function loadContest() {
@@ -667,7 +709,62 @@ h1 {
 
 .rank-table {
   width: 100%;
+  min-width: 720px;
   border-collapse: collapse;
+}
+
+.rank-user-col {
+  min-width: 150px;
+}
+
+.rank-number-col {
+  width: 58px;
+  text-align: center;
+}
+
+.problem-column {
+  width: 58px;
+  padding-right: 4px !important;
+  padding-left: 4px !important;
+  text-align: center !important;
+  border-left: 1px solid #f0f2f7;
+  font-family: 'JetBrains Mono', Consolas, monospace;
+  font-size: 10px !important;
+  white-space: nowrap;
+}
+
+.rank-table td.problem-column {
+  height: 44px;
+  background: #fbfcfd;
+}
+
+.rank-table td.problem-column.is-ac {
+  background: #edf5f1;
+  color: #2f6f52;
+  font-weight: 650;
+}
+
+.rank-table td.problem-column.is-wrong {
+  background: #fff4f1;
+  color: #a33a32;
+}
+
+.rank-table td.problem-column.is-empty {
+  color: #c7ced8;
+}
+
+.cell-time {
+  font-size: 10px;
+}
+
+.cell-try {
+  margin-left: 2px;
+  font-size: 9px;
+  opacity: 0.8;
+}
+
+.cell-empty {
+  font-size: 13px;
 }
 
 .rank-table th {
@@ -753,10 +850,20 @@ h1 {
   font-weight: 700;
 }
 
+.rank-scroll-hint {
+  display: none;
+  margin: 10px 0 0;
+  color: #9ca3af;
+  font-size: 11px;
+  text-align: right;
+}
+
 .refresh-button {
+  flex: 0 0 auto;
   height: 30px;
   padding: 0 12px;
   border: 1px solid #e1e5ee;
+  white-space: nowrap;
   border-radius: 8px;
   background: #fff;
   color: #64748b;
@@ -831,6 +938,10 @@ h1 {
   .problem-panel,
   .rank-panel {
     padding: 20px 16px;
+  }
+
+  .rank-scroll-hint {
+    display: block;
   }
 }
 </style>

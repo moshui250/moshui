@@ -27,13 +27,15 @@ public interface ContestMapper {
     /**
      * 分页查询竞赛列表，可按状态过滤。
      *
-     * @param status UPCOMING/RUNNING/ENDED，null 表示全部
-     * @param userId 当前登录用户 ID，可为 null
-     * @param offset 分页偏移
-     * @param size   每页条数
+     * @param status  UPCOMING/RUNNING/ENDED，null 表示全部
+     * @param keyword 标题/说明关键词，可为空
+     * @param userId  当前登录用户 ID，可为 null
+     * @param offset  分页偏移
+     * @param size    每页条数
      * @return 竞赛列表
      */
     List<ContestRow> selectList(@Param("status") String status,
+                                @Param("keyword") String keyword,
                                 @Param("userId") Long userId,
                                 @Param("offset") long offset,
                                 @Param("size") long size);
@@ -41,10 +43,11 @@ public interface ContestMapper {
     /**
      * 统计竞赛列表总数，条件与 selectList 一致。
      *
-     * @param status UPCOMING/RUNNING/ENDED，null 表示全部
+     * @param status  UPCOMING/RUNNING/ENDED，null 表示全部
+     * @param keyword 标题/说明关键词，可为空
      * @return 总条数
      */
-    long countList(@Param("status") String status);
+    long countList(@Param("status") String status, @Param("keyword") String keyword);
 
     /**
      * 查询竞赛题单，按题号排序。

@@ -17,6 +17,7 @@ import com.codeagent.service.ContestService;
 import com.codeagent.service.QuestionService;
 import com.codeagent.vo.ContestDetailVO;
 import com.codeagent.vo.ContestListItemVO;
+import com.codeagent.vo.ContestProblemCellVO;
 import com.codeagent.vo.ContestProblemVO;
 import com.codeagent.vo.ContestRankVO;
 import com.codeagent.vo.ContestRegisterVO;
@@ -55,16 +56,22 @@ public class ContestServiceImpl implements ContestService {
     private final QuestionMapper questionMapper;
 
     @Override
-    public PageResult<ContestListItemVO> list(Long userId, String status, long page, long size) {
+    public PageResult<ContestListItemVO> list(Long userId, String status, String keyword,
+                                               long page, long size) {
         long safePage = Math.max(page, 1L);
         long safeSize = size < 1 ? DEFAULT_PAGE_SIZE : Math.min(size, MAX_PAGE_SIZE);
         String normalizedStatus = normalizeStatus(status);
-        long total = contestMapper.countList(normalizedStatus);
+        String normalizedKeyword = keyword == null ? null : keyword.trim();
+        if (normalizedKeyword != null && normalizedKeyword.isEmpty()) {
+            normalizedKeyword = null;
+        }
+        long total = contestMapper.countList(normalizedStatus, normalizedKeyword);
         if (total == 0) {
             return PageResult.empty(safePage, safeSize);
         }
         long offset = (safePage - 1L) * safeSize;
-        List<ContestRow> rows = contestMapper.selectList(normalizedStatus, userId, offset, safeSize);
+        List<ContestRow> rows = contestMapper.selectList(
+                normalizedStatus, normalizedKeyword, userId, offset, safeSize);
         List<ContestListItemVO> records = rows == null ? List.of() : rows.stream()
                 .map(this::toListItem)
                 .toList();
@@ -132,10 +139,11 @@ public class ContestServiceImpl implements ContestService {
 
         Map<Long, Integer> problemScores = new HashMap<>();
         List<ContestProblemRow> problems = contestMapper.selectProblems(contestId);
-        if (problems != null) {
-            for (ContestProblemRow problem : problems) {
-                problemScores.put(problem.getQuestionId(), problem.getScore() == null ? 100 : problem.getScore());
-            }
+        if (problems == null) {
+            problems = List.of();
+        }
+        for (ContestProblemRow problem : problems) {
+            problemScores.put(problem.getQuestionId(), problem.getScore() == null ? 100 : problem.getScore());
         }
 
         Map<Long, RankAccumulator> participants = new HashMap<>();
@@ -158,7 +166,13 @@ public class ContestServiceImpl implements ContestService {
                     continue;
                 }
                 Long questionId = submission.getQuestionId();
+                ContestCell cell = item.cells.computeIfAbsent(questionId, key -> new ContestCell());
                 if ("AC".equals(submission.getStatus())) {
+                    if (!cell.accepted) {
+                        cell.accepted = true;
+                        cell.acSeconds = Math.max(0L,
+                                Duration.between(contestRow.getStartTime(), submission.getCreateTime()).getSeconds());
+                    }
                     if (!item.solved.contains(questionId)) {
                         item.solved.add(questionId);
                         item.solvedCount++;
@@ -171,8 +185,11 @@ public class ContestServiceImpl implements ContestService {
                             item.lastAcTime = submission.getCreateTime();
                         }
                     }
-                } else if (WRONG_STATUSES.contains(submission.getStatus()) && !item.solved.contains(questionId)) {
-                    item.wrong.merge(questionId, 1, Integer::sum);
+                } else if (WRONG_STATUSES.contains(submission.getStatus()) && !cell.accepted) {
+                    cell.attempts++;
+                    if (!item.solved.contains(questionId)) {
+                        item.wrong.merge(questionId, 1, Integer::sum);
+                    }
                 }
             }
         }
@@ -204,6 +221,23 @@ public class ContestServiceImpl implements ContestService {
             vo.setPenaltyMinutes(item.penaltySeconds / 60L);
             vo.setLastAcTime(item.lastAcTime);
             vo.setMe(userId != null && userId.equals(item.userId));
+            List<ContestProblemCellVO> cells = new ArrayList<>();
+            for (ContestProblemRow problem : problems) {
+                ContestCell cell = item.cells.get(problem.getQuestionId());
+                ContestProblemCellVO cellVO = new ContestProblemCellVO();
+                cellVO.setQuestionId(problem.getQuestionId());
+                cellVO.setAttempts(cell == null ? 0 : cell.attempts);
+                if (cell != null && cell.accepted) {
+                    cellVO.setStatus("AC");
+                    cellVO.setAcTimeSeconds(cell.acSeconds);
+                } else if (cell != null && cell.attempts > 0) {
+                    cellVO.setStatus("WA");
+                } else {
+                    cellVO.setStatus("UNSOLVED");
+                }
+                cells.add(cellVO);
+            }
+            vo.setCells(cells);
             records.add(vo);
         }
         return PageResult.of(records, total, safePage, safeSize);
@@ -347,5 +381,12 @@ public class ContestServiceImpl implements ContestService {
         private LocalDateTime lastAcTime;
         private final Set<Long> solved = new HashSet<>();
         private final Map<Long, Integer> wrong = new HashMap<>();
+        private final Map<Long, ContestCell> cells = new HashMap<>();
+    }
+
+    private static final class ContestCell {
+        private boolean accepted;
+        private int attempts;
+        private long acSeconds;
     }
 }

@@ -1,23 +1,15 @@
 <template>
   <section class="contest-page">
     <div class="page-inner">
-      <div class="contest-hero">
-        <div class="hero-copy">
-          <p class="eyebrow">CONTEST ARENA</p>
-          <h1>把练习，变成一次短跑。</h1>
-          <p class="hero-desc">
-            在限定时间里完成一套题单。排名只看真实提交，
-            每一次通过都会留下时间与罚时记录。
-          </p>
+      <header class="page-head">
+        <div>
+          <h1>竞赛</h1>
+          <p>在限定时间里完成一套题单，排名只看真实提交。</p>
         </div>
-        <div class="hero-stat">
-          <span>全部竞赛</span>
-          <strong>{{ total }}</strong>
-          <em>场</em>
-        </div>
-      </div>
+        <span class="page-count">共 {{ total }} 场</span>
+      </header>
 
-      <div class="filter-row">
+      <div class="contest-toolbar">
         <div class="filter-tabs" role="tablist" aria-label="竞赛状态">
           <button
             v-for="item in filters"
@@ -29,73 +21,81 @@
             {{ item.label }}
           </button>
         </div>
-        <span class="filter-note">按赛事状态排序</span>
-      </div>
-
-      <div v-if="loading" class="contest-grid">
-        <div v-for="i in 4" :key="i" class="contest-card skeleton">
-          <el-skeleton :rows="3" animated />
-        </div>
-      </div>
-
-      <div v-else-if="contests.length" class="contest-grid">
-        <article
-          v-for="(contest, index) in contests"
-          :key="contest.id"
-          v-reveal="{ delay: index * 35 }"
-          class="contest-card"
-          :class="'is-' + contest.status.toLowerCase()"
-          @click="openContest(contest)"
+        <el-input
+          v-model="keyword"
+          class="contest-search"
+          placeholder="搜索竞赛"
+          clearable
+          @keyup.enter="search"
+          @clear="search"
         >
-          <div class="card-top">
-            <span class="status-pill" :class="'status-' + contest.status.toLowerCase()">
-              {{ statusLabel(contest.status) }}
-            </span>
-            <span class="contest-id">{{ String(contest.id).padStart(2, '0') }}</span>
-          </div>
+          <template #prefix>
+            <el-icon><Search /></el-icon>
+          </template>
+        </el-input>
+      </div>
 
-          <h2>{{ contest.title }}</h2>
-          <p class="contest-desc">{{ contest.description || '暂无竞赛说明。' }}</p>
+      <div v-if="loading" class="contest-table-wrap">
+        <el-skeleton :rows="5" animated />
+      </div>
 
-          <div class="contest-meta">
-            <span><b>{{ contest.problemCount }}</b> 道题</span>
-            <span><b>{{ contest.participantCount }}</b> 人报名</span>
-          </div>
-
-          <div class="time-line">
-            <span>{{ formatDate(contest.startTime) }}</span>
-            <i></i>
-            <span>{{ formatDate(contest.endTime) }}</span>
-          </div>
-
-          <div class="card-footer">
-            <span v-if="contest.registered" class="registered-mark">已报名</span>
-            <span v-else-if="contest.status === 'ENDED'" class="muted">已结束</span>
-            <span v-else class="muted">进入后可报名</span>
-            <button type="button">
-              {{ contest.status === 'ENDED' ? '查看结果' : '进入竞赛' }}
-              <span aria-hidden="true">→</span>
-            </button>
-          </div>
-        </article>
+      <div v-else-if="contests.length" class="contest-table-wrap">
+        <table class="contest-table">
+          <thead>
+            <tr>
+              <th class="cell-competition">竞赛</th>
+              <th class="cell-status">状态</th>
+              <th class="cell-number">题数</th>
+              <th class="cell-number">报名</th>
+              <th class="cell-time">时间</th>
+              <th class="cell-action">操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              v-for="contest in contests"
+              :key="contest.id"
+              tabindex="0"
+              @click="openContest(contest)"
+              @keydown.enter="openContest(contest)"
+            >
+              <td class="cell-competition">
+                <strong>{{ contest.title }}</strong>
+                <p>{{ contest.description || '暂无竞赛说明。' }}</p>
+              </td>
+              <td class="cell-status">
+                <span class="status-pill" :class="'status-' + contest.status.toLowerCase()">
+                  {{ statusLabel(contest.status) }}
+                </span>
+              </td>
+              <td class="cell-number">{{ contest.problemCount }}</td>
+              <td class="cell-number">{{ contest.participantCount }}</td>
+              <td class="cell-time">
+                <span>{{ formatDate(contest.startTime) }}</span>
+                <em>— {{ formatDate(contest.endTime) }}</em>
+              </td>
+              <td class="cell-action">
+                <span v-if="contest.registered" class="registered-mark">已报名</span>
+                <span v-else class="muted">{{ contest.status === 'ENDED' ? '已结束' : '可报名' }}</span>
+                <b>{{ contest.status === 'ENDED' ? '查看结果' : '进入竞赛' }} <span aria-hidden="true">→</span></b>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <ListPager
+          v-if="total > size"
+          :page="page"
+          :page-size="size"
+          :total="total"
+          @change="changePage"
+        />
       </div>
 
       <div v-else class="empty-state">
         <div class="empty-mark">◎</div>
-        <h3>这个状态下还没有竞赛</h3>
-        <p>可以先看看其他场次，或者从题库开始保持手感。</p>
+        <h3>没有匹配的竞赛</h3>
+        <p>换个状态或关键词，也可以从题库开始保持手感。</p>
         <router-link to="/question" class="empty-link">去题库练习</router-link>
-      </div>
-
-      <div v-if="total > size" class="pager">
-        <el-pagination
-          background
-          layout="prev, pager, next"
-          :current-page="page"
-          :page-size="size"
-          :total="total"
-          @current-change="changePage"
-        />
       </div>
     </div>
   </section>
@@ -105,7 +105,9 @@
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { Search } from '@element-plus/icons-vue'
 import { listContests } from '@/api/contest'
+import ListPager from '@/components/ListPager.vue'
 
 const router = useRouter()
 const filters = [
@@ -118,8 +120,9 @@ const filters = [
 const contests = ref([])
 const total = ref(0)
 const page = ref(1)
-const size = ref(6)
+const size = ref(8)
 const status = ref('')
+const keyword = ref('')
 const loading = ref(true)
 
 function statusLabel(value) {
@@ -140,7 +143,8 @@ async function load() {
     const data = await listContests({
       page: page.value,
       size: size.value,
-      status: status.value || undefined
+      status: status.value || undefined,
+      keyword: keyword.value.trim() || undefined
     })
     contests.value = data.records || []
     total.value = Number(data.total || 0)
@@ -156,6 +160,11 @@ async function load() {
 function changeStatus(value) {
   if (status.value === value) return
   status.value = value
+  page.value = 1
+  load()
+}
+
+function search() {
   page.value = 1
   load()
 }
@@ -471,27 +480,284 @@ h2 {
   margin-top: 32px;
 }
 
+/* 2026-11 table layout */
+.page-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 8px 0 22px;
+}
+
+.page-head h1 {
+  margin: 0;
+  color: #111827;
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+}
+
+.page-head p {
+  margin: 8px 0 0;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.page-count {
+  color: #9ca3af;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.contest-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 0 14px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.filter-tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.filter-tabs button {
+  height: 30px;
+  padding: 0 11px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #6b7280;
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.filter-tabs button:hover,
+.filter-tabs button.active {
+  background: #e9edf1;
+  color: #111827;
+}
+
+.contest-search {
+  width: 260px;
+}
+
+.contest-table-wrap {
+  overflow-x: auto;
+}
+
+.contest-table {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
+}
+
+.contest-table th {
+  padding: 12px 10px;
+  color: #9ca3af;
+  font-size: 12px;
+  font-weight: 500;
+  text-align: left;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.contest-table td {
+  padding: 16px 10px;
+  border-bottom: 1px solid #e9ecef;
+  color: #4b5563;
+  font-size: 13px;
+  vertical-align: middle;
+}
+
+.contest-table tbody tr {
+  cursor: pointer;
+}
+
+.contest-table tbody tr:hover {
+  background: #eef1f4;
+}
+
+.contest-table tbody tr:focus-visible {
+  outline: 2px solid #1f3a5f;
+  outline-offset: -2px;
+}
+
+.cell-competition {
+  width: 42%;
+}
+
+.cell-competition strong {
+  display: block;
+  color: #111827;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.cell-competition p {
+  max-width: 520px;
+  margin: 5px 0 0;
+  overflow: hidden;
+  color: #9ca3af;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cell-status {
+  width: 90px;
+}
+
+.cell-number {
+  width: 64px;
+  text-align: center !important;
+  font-variant-numeric: tabular-nums;
+}
+
+.cell-time {
+  width: 150px;
+  color: #6b7280 !important;
+  font-size: 12px !important;
+  font-variant-numeric: tabular-nums;
+}
+
+.cell-time span,
+.cell-time em {
+  display: block;
+  font-style: normal;
+  white-space: nowrap;
+}
+
+.cell-time em {
+  margin-top: 3px;
+  color: #9ca3af;
+}
+
+.cell-action {
+  width: 150px;
+  text-align: right !important;
+  white-space: nowrap;
+}
+
+.cell-action b {
+  display: block;
+  margin-top: 4px;
+  color: #1f3a5f;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.contest-table-wrap :deep(.list-pager) {
+  margin-top: 4px;
+}
+
 @media (max-width: 860px) {
   .page-inner {
     width: calc(100% - 32px);
   }
 
-  .contest-hero {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 22px;
+  .page-head h1 {
+    font-size: 30px;
   }
 
-  .hero-stat strong {
-    font-size: 34px;
+  .contest-toolbar {
+    flex-wrap: wrap;
   }
 
-  .contest-grid {
-    grid-template-columns: 1fr;
+  .contest-search {
+    width: 100%;
+    order: 2;
   }
 
-  .filter-note {
+  .contest-table {
+    min-width: 0;
+  }
+
+  .contest-table thead {
     display: none;
+  }
+
+  .contest-table,
+  .contest-table tbody,
+  .contest-table tr,
+  .contest-table td {
+    display: block;
+  }
+
+  .contest-table tr {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 5px 12px;
+    padding: 16px 2px;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  .contest-table tr:hover {
+    background: transparent;
+  }
+
+  .contest-table td {
+    width: auto !important;
+    padding: 0 !important;
+    border: 0;
+    text-align: left !important;
+  }
+
+  .cell-competition {
+    grid-column: 1 / 3;
+  }
+
+  .cell-competition p {
+    max-width: none;
+  }
+
+  .cell-status {
+    grid-column: 1;
+  }
+
+  .cell-number {
+    grid-column: 2;
+    justify-self: end;
+    color: #9ca3af !important;
+    text-align: right !important;
+  }
+
+  .cell-number::before {
+    content: '题数 ';
+    font-size: 11px;
+  }
+
+  .cell-number:nth-of-type(4)::before {
+    content: '报名 ';
+  }
+
+  .cell-time {
+    grid-column: 1 / 3;
+    margin-top: 3px;
+  }
+
+  .cell-time span,
+  .cell-time em {
+    display: inline;
+  }
+
+  .cell-time em {
+    margin-top: 0;
+  }
+
+  .cell-action {
+    grid-column: 1 / 3;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 4px;
+  }
+
+  .cell-action b {
+    margin-top: 0;
   }
 }
 </style>

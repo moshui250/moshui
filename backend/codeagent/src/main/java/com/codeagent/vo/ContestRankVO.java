@@ -3,6 +3,7 @@ package com.codeagent.vo;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * 竞赛排名项。
@@ -27,4 +28,6 @@ public class ContestRankVO {
     private LocalDateTime lastAcTime;
 
     private Boolean me;
+
+    private List<ContestProblemCellVO> cells;
 }
