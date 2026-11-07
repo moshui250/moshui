@@ -1,6 +1,7 @@
 <script setup>
 import { onBeforeUnmount, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import GlobalCommandPalette from '@/components/GlobalCommandPalette.vue'
 
 const router = useRouter()
 const routeLoading = ref(false)
@@ -41,6 +42,7 @@ onBeforeUnmount(() => {
     aria-hidden="true"
   ></div>
   <router-view />
+  <GlobalCommandPalette />
 </template>
 
 <style>

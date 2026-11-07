@@ -31,6 +31,9 @@
       </button>
 
       <div class="header-right">
+        <button class="command-trigger" type="button" aria-label="全局搜索" title="全局搜索 (Ctrl/Cmd+K)" @click="openCommand">
+          <el-icon><Search /></el-icon>
+        </button>
         <span class="health" :class="healthClass">
           <i></i>{{ healthText }}
         </span>
@@ -57,6 +60,10 @@
     </div>
 
     <nav v-if="menuOpen" class="mobile-menu" aria-label="移动端导航">
+      <button class="mobile-command" type="button" @click="openCommandFromMenu">
+        <el-icon><Search /></el-icon>
+        搜索题目、知识点或竞赛
+      </button>
       <router-link to="/" @click="menuOpen = false">首页</router-link>
       <router-link to="/question" @click="menuOpen = false">题库</router-link>
       <router-link to="/knowledge" @click="menuOpen = false">知识点</router-link>
@@ -73,6 +80,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { Search } from '@element-plus/icons-vue'
 import { getHealth } from '@/api/health'
 import { useUserStore } from '@/store/user'
 import UserAvatar from '@/components/UserAvatar.vue'
@@ -100,6 +108,15 @@ const healthText = computed(() => {
   return health.value.db === 'UP' ? '服务正常' : '数据库未连接'
 })
 const isAdmin = computed(() => userStore.user?.role === 'ADMIN')
+
+function openCommand() {
+  window.dispatchEvent(new CustomEvent('command:open'))
+}
+
+function openCommandFromMenu() {
+  menuOpen.value = false
+  openCommand()
+}
 
 async function loadHealth() {
   try {
@@ -227,6 +244,25 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   gap: 18px;
+}
+
+.command-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+}
+
+.command-trigger:hover {
+  border-color: #e1e5ee;
+  background: #f8fafc;
+  color: #1f3a5f;
 }
 
 .health {
@@ -359,6 +395,22 @@ onBeforeUnmount(() => {
   text-decoration: none;
 }
 
+.mobile-command {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+  padding: 11px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: #f4f6f8;
+  color: #1f3a5f;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
 .mobile-menu a:hover,
 .mobile-menu a.router-link-active {
   background: #f4f6f8;
@@ -376,6 +428,10 @@ onBeforeUnmount(() => {
   }
 
   .site-nav {
+    display: none;
+  }
+
+  .command-trigger {
     display: none;
   }
 
