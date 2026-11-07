@@ -1,8 +1,9 @@
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ArrowRight, CircleCheck, Picture, Refresh, Search } from '@element-plus/icons-vue'
+import { ArrowRight, CircleCheck, Filter, Picture, Refresh, Search } from '@element-plus/icons-vue'
 import { listKnowledgePoints, listQuestions } from '@/api/question'
+import QuestionFilterNav from '@/components/QuestionFilterNav.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -22,6 +23,7 @@ const page = ref(1)
 const size = ref(10)
 const loading = ref(false)
 const loadError = ref('')
+const mobileFilterOpen = ref(false)
 
 const difficultyMap = {
   1: { label: '入门', className: 'is-easy' },
@@ -32,6 +34,14 @@ const difficultyMap = {
 const hasFilters = computed(
   () => Boolean(filters.keyword.trim()) || filters.difficulty !== null || filters.knowledgePointId !== null
 )
+
+const activeFilterCount = computed(() => {
+  let count = 0
+  if (filters.keyword.trim()) count += 1
+  if (filters.knowledgePointId !== null) count += 1
+  if (filters.difficulty !== null) count += 1
+  return count
+})
 
 const pageCount = computed(() => Math.ceil(total.value / size.value))
 
@@ -103,6 +113,20 @@ function typeLabel(row) {
 function switchScope(value) {
   if (scope.value === value) return
   scope.value = value
+  page.value = 1
+  syncQuery()
+}
+
+function selectKnowledgePoint(value) {
+  if (filters.knowledgePointId === value) return
+  filters.knowledgePointId = value
+  page.value = 1
+  syncQuery()
+}
+
+function selectDifficulty(value) {
+  if (filters.difficulty === value) return
+  filters.difficulty = value
   page.value = 1
   syncQuery()
 }
@@ -184,183 +208,165 @@ onMounted(async () => {
 
 <template>
   <div class="catalog-page">
-    <section class="catalog-head">
+    <header class="catalog-head">
       <div class="head-copy">
         <h1>题库</h1>
-        <p>按知识点练习，提交后看判题结果。</p>
+        <p>按知识点筛选，提交后看判题结果。</p>
       </div>
+    </header>
 
-      <div class="head-side">
-        <div class="head-stats">
-          <div>
-            <strong>{{ total || '—' }}</strong>
-            <span>道练习题</span>
-          </div>
-          <div>
-            <strong>{{ knowledgePoints.length || '—' }}</strong>
-            <span>个知识点</span>
-          </div>
-          <div>
-            <strong>2</strong>
-            <span>种语言</span>
-          </div>
-        </div>
-        <div class="head-actions">
-          <el-button :icon="Refresh" @click="randomQuestion">随机一题</el-button>
-          <el-button type="primary" :icon="Picture" @click="router.push('/question/import')">
-            图片录题
-          </el-button>
-        </div>
-      </div>
-    </section>
-
-    <section class="scope-bar">
-      <button
-        type="button"
-        class="scope-tab"
-        :class="{ active: scope === 'PUBLIC' }"
-        @click="switchScope('PUBLIC')"
-      >
-        公共题库
-      </button>
-      <button
-        type="button"
-        class="scope-tab"
-        :class="{ active: scope === 'PERSONAL' }"
-        @click="switchScope('PERSONAL')"
-      >
-        我的题目
-      </button>
-      <span class="scope-note">共享题计入累计 AC，不计入段位</span>
-    </section>
-
-    <section class="filter-bar">
-      <el-input
-        v-model="filters.keyword"
-        class="search-input"
-        placeholder="搜索题目"
-        clearable
-        @keyup.enter="search"
-        @clear="search"
-      >
-        <template #prefix>
-          <el-icon><Search /></el-icon>
-        </template>
-      </el-input>
-
-      <el-select
-        v-model="filters.knowledgePointId"
-        class="filter-select"
-        placeholder="全部知识点"
-        clearable
-        @change="search"
-      >
-        <el-option
-          v-for="item in knowledgePoints"
-          :key="item.id"
-          :label="item.name"
-          :value="item.id"
+    <div class="catalog-layout">
+      <aside class="filter-rail">
+        <QuestionFilterNav
+          :scope="scope"
+          :knowledge-points="knowledgePoints"
+          :knowledge-point-id="filters.knowledgePointId"
+          :difficulty="filters.difficulty"
+          :has-filters="hasFilters"
+          @update:scope="switchScope"
+          @update:knowledge-point-id="selectKnowledgePoint"
+          @update:difficulty="selectDifficulty"
+          @reset="resetFilters"
         />
-      </el-select>
+      </aside>
 
-      <el-select
-        v-model="filters.difficulty"
-        class="filter-select level-select"
-        placeholder="全部难度"
-        clearable
-        @change="search"
-      >
-        <el-option label="入门" :value="1" />
-        <el-option label="进阶" :value="2" />
-        <el-option label="挑战" :value="3" />
-      </el-select>
+      <section class="catalog-main">
+        <div class="list-toolbar">
+          <el-input
+            v-model="filters.keyword"
+            class="search-input"
+            placeholder="搜索题目"
+            clearable
+            @keyup.enter="search"
+            @clear="search"
+          >
+            <template #prefix>
+              <el-icon><Search /></el-icon>
+            </template>
+          </el-input>
 
-      <el-button type="primary" @click="search">筛选</el-button>
-      <el-button text :disabled="!hasFilters" @click="resetFilters">重置</el-button>
+          <span class="toolbar-count">共 {{ total }} 道</span>
 
-      <span class="filter-count">共 {{ total }} 道</span>
-    </section>
+          <div class="toolbar-actions">
+            <button class="mobile-filter" type="button" @click="mobileFilterOpen = true">
+              <el-icon><Filter /></el-icon>
+              筛选
+              <span v-if="activeFilterCount" class="filter-badge">{{ activeFilterCount }}</span>
+            </button>
+            <el-button :icon="Refresh" @click="randomQuestion">随机一题</el-button>
+            <el-button type="primary" :icon="Picture" @click="router.push('/question/import')">
+              图片录题
+            </el-button>
+          </div>
+        </div>
 
-    <el-alert
-      v-if="loadError"
-      class="load-alert"
-      type="error"
-      :closable="false"
-      show-icon
-      :title="loadError"
-    />
+        <el-alert
+          v-if="loadError"
+          class="load-alert"
+          type="error"
+          :closable="false"
+          show-icon
+          :title="loadError"
+        />
 
-    <section class="problem-board">
-      <div class="board-head">
-        <span class="col-status">状态</span>
-        <span class="col-title">题目</span>
-        <span class="col-kp">知识点</span>
-        <span class="col-level">难度</span>
-        <span class="col-action">操作</span>
-      </div>
+        <section class="problem-board">
+          <div class="board-head">
+            <span class="col-status">状态</span>
+            <span class="col-title">题目</span>
+            <span class="col-kp">知识点</span>
+            <span class="col-level">难度</span>
+            <span class="col-action">操作</span>
+          </div>
 
-      <div v-if="loading" class="board-loading">
-        <el-skeleton :rows="6" animated />
-      </div>
+          <div v-if="loading" class="board-loading">
+            <el-skeleton :rows="6" animated />
+          </div>
 
-      <div v-else-if="rows.length" class="board-body">
-        <button
-          v-for="row in rows"
-          :key="row.id"
-          type="button"
-          class="problem-row"
-          :class="{ 'is-solved': row.solved }"
-          @click="openQuestion(row)"
-        >
-          <span class="status-cell">
-            <span v-if="row.solved" class="status-icon is-done">
-              <el-icon><CircleCheck /></el-icon>
-            </span>
-            <span v-else class="status-icon"></span>
-          </span>
+          <div v-else-if="rows.length" class="board-body">
+            <button
+              v-for="row in rows"
+              :key="row.id"
+              type="button"
+              class="problem-row"
+              :class="{ 'is-solved': row.solved }"
+              @click="openQuestion(row)"
+            >
+              <span class="status-cell">
+                <span v-if="row.solved" class="status-icon is-done">
+                  <el-icon><CircleCheck /></el-icon>
+                </span>
+                <span v-else class="status-icon"></span>
+              </span>
 
-          <span class="title-cell">
-            <strong>{{ row.title }}</strong>
-            <em>{{ typeLabel(row) }}</em>
-          </span>
+              <span class="title-cell">
+                <strong>{{ row.title }}</strong>
+                <em>{{ typeLabel(row) }}</em>
+              </span>
 
-          <span class="kp-cell">{{ knowledgeName(row) }}</span>
+              <span class="kp-cell">{{ knowledgeName(row) }}</span>
 
-          <span class="level-cell">
-            <span class="level-dot" :class="difficultyInfo(row.difficulty).className"></span>
-            {{ difficultyInfo(row.difficulty).label }}
-          </span>
+              <span class="level-cell">
+                <span class="level-dot" :class="difficultyInfo(row.difficulty).className"></span>
+                {{ difficultyInfo(row.difficulty).label }}
+              </span>
 
-          <span class="action-cell">
-            开始练习
-            <el-icon><ArrowRight /></el-icon>
-          </span>
-        </button>
-      </div>
+              <span class="action-cell">
+                开始练习
+                <el-icon><ArrowRight /></el-icon>
+              </span>
+            </button>
+          </div>
 
-      <el-empty
-        v-else
-        class="board-empty"
-        :description="hasFilters ? '没有匹配的题目，换个条件试试' : '题库暂时还没有题目'"
-        :image-size="88"
-      >
-        <el-button v-if="hasFilters" type="primary" plain @click="resetFilters">
-          清空筛选
+          <el-empty
+            v-else
+            class="board-empty"
+            :description="hasFilters ? '没有匹配的题目，换个条件试试' : '题库暂时还没有题目'"
+            :image-size="88"
+          >
+            <el-button v-if="hasFilters" type="primary" plain @click="resetFilters">
+              清空筛选
+            </el-button>
+          </el-empty>
+
+          <div v-if="total > 0" class="board-foot">
+            <span class="foot-count">第 {{ page }} / {{ pageCount }} 页</span>
+            <el-pagination
+              background
+              layout="prev, pager, next"
+              :current-page="page"
+              :page-size="size"
+              :total="total"
+              @current-change="changePage"
+            />
+          </div>
+        </section>
+      </section>
+    </div>
+
+    <el-drawer
+      v-model="mobileFilterOpen"
+      class="filter-drawer"
+      direction="btt"
+      size="82%"
+      :with-header="false"
+    >
+      <div class="drawer-inner">
+        <QuestionFilterNav
+          :scope="scope"
+          :knowledge-points="knowledgePoints"
+          :knowledge-point-id="filters.knowledgePointId"
+          :difficulty="filters.difficulty"
+          :has-filters="hasFilters"
+          @update:scope="switchScope"
+          @update:knowledge-point-id="selectKnowledgePoint"
+          @update:difficulty="selectDifficulty"
+          @reset="resetFilters"
+        />
+        <el-button class="drawer-done" type="primary" @click="mobileFilterOpen = false">
+          查看 {{ total }} 道题
         </el-button>
-      </el-empty>
-
-      <div v-if="total > 0" class="board-foot">
-        <span class="foot-count">第 {{ page }} / {{ pageCount }} 页</span>
-        <el-pagination
-          background
-          layout="prev, pager, next"
-          :current-page="page"
-          :page-size="size"
-          :total="total"
-          @current-change="changePage"
-        />
       </div>
-    </section>
+    </el-drawer>
   </div>
 </template>
 
@@ -807,6 +813,272 @@ onMounted(async () => {
 
   .board-foot .el-pagination {
     margin: 0 auto;
+  }
+}
+
+/* 2026-11 layout pass: left filter navigation + borderless list. */
+.catalog-page {
+  width: min(1200px, calc(100% - 48px));
+  padding: 34px 0 64px;
+}
+
+.catalog-head {
+  display: block;
+  padding: 0 0 24px;
+  border-bottom: 0;
+}
+
+.head-copy h1 {
+  color: #111827;
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+}
+
+.head-copy p {
+  margin-top: 8px;
+  color: #6b7280;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.catalog-layout {
+  display: grid;
+  grid-template-columns: 216px minmax(0, 1fr);
+  gap: 34px;
+  align-items: start;
+}
+
+.filter-rail {
+  position: sticky;
+  top: 84px;
+  padding-right: 24px;
+  border-right: 1px solid #e5e7eb;
+}
+
+.catalog-main {
+  min-width: 0;
+}
+
+.list-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 40px;
+  margin-bottom: 14px;
+}
+
+.search-input {
+  width: 340px;
+}
+
+.toolbar-count {
+  color: #9ca3af;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.mobile-filter {
+  display: none;
+  align-items: center;
+  gap: 5px;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 7px;
+  background: #fff;
+  color: #374151;
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.filter-badge {
+  display: inline-grid;
+  place-items: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 99px;
+  background: #1f3a5f;
+  color: #fff;
+  font-size: 10px;
+}
+
+.problem-board {
+  overflow: visible;
+  border: 0;
+  border-top: 1px solid #e5e7eb;
+  border-radius: 0;
+  background: transparent;
+}
+
+.board-head {
+  min-height: 38px;
+  padding: 0 10px;
+  border-bottom: 1px solid #e5e7eb;
+  background: transparent;
+  color: #9ca3af;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+.problem-row {
+  min-height: 64px;
+  padding: 0 10px;
+  border-bottom: 1px solid #e9ecef;
+  background: transparent;
+}
+
+.problem-row:hover {
+  background: #eef1f4;
+}
+
+.problem-row.is-solved .title-cell strong {
+  color: #374151;
+}
+
+.title-cell strong {
+  color: #111827;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.title-cell em {
+  color: #9ca3af;
+  font-size: 11px;
+}
+
+.kp-cell,
+.level-cell {
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.action-cell {
+  color: #1f3a5f;
+  font-size: 12px;
+}
+
+.board-foot {
+  padding: 14px 10px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.foot-count {
+  color: #9ca3af;
+  font-size: 12px;
+}
+
+.drawer-inner {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  padding: 2px 4px 0;
+}
+
+.drawer-inner :deep(.filter-nav) {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.drawer-done {
+  flex: 0 0 auto;
+  width: 100%;
+  margin: 16px 0 0;
+}
+
+:global(.filter-drawer .el-drawer__body) {
+  height: 100%;
+  padding: 16px 18px;
+  overflow: hidden;
+}
+
+@media (max-width: 1080px) {
+  .catalog-layout {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .filter-rail {
+    display: none;
+  }
+
+  .mobile-filter {
+    display: inline-flex;
+  }
+}
+
+@media (max-width: 760px) {
+  .catalog-page {
+    width: calc(100% - 28px);
+    padding: 24px 0 44px;
+  }
+
+  .head-copy h1 {
+    font-size: 30px;
+    letter-spacing: -0.025em;
+  }
+
+  .head-copy p {
+    margin-top: 7px;
+    font-size: 13px;
+  }
+
+  .catalog-head {
+    padding-bottom: 18px;
+  }
+
+  .list-toolbar {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .search-input {
+    width: 100%;
+  }
+
+  .toolbar-count {
+    order: 3;
+  }
+
+  .toolbar-actions {
+    order: 4;
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .toolbar-actions .el-button {
+    flex: 1;
+  }
+
+  .mobile-filter {
+    flex: 0 0 auto;
+  }
+
+  .problem-row {
+    min-height: 78px;
+    padding: 12px 10px;
+  }
+
+  .title-cell strong {
+    font-size: 13px;
+  }
+
+  .board-foot {
+    padding: 12px 10px;
   }
 }
 </style>
