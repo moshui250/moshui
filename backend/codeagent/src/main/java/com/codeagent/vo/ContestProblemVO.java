@@ -19,4 +19,8 @@ public class ContestProblemVO {
     private String knowledgePoint;
 
     private Integer score;
+
+    private Long submitCount;
+
+    private Long acCount;
 }

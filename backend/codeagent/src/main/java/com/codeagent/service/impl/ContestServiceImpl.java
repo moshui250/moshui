@@ -357,6 +357,8 @@ public class ContestServiceImpl implements ContestService {
         vo.setDifficulty(row.getDifficulty());
         vo.setKnowledgePoint(row.getKnowledgePointName());
         vo.setScore(row.getScore());
+        vo.setSubmitCount(row.getSubmitCount());
+        vo.setAcCount(row.getAcCount());
         return vo;
     }
 

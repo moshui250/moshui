@@ -11,7 +11,9 @@
                    WHERE sr.question_id = q.id
                      AND sr.user_id = #{userId}
                      AND sr.status = 'AC'
-               ) THEN 1 ELSE 0 END AS solved
+               ) THEN 1 ELSE 0 END AS solved,
+               (SELECT COUNT(*) FROM submit_record sr WHERE sr.question_id = q.id) AS submit_count,
+               (SELECT COUNT(*) FROM submit_record sr WHERE sr.question_id = q.id AND sr.status = 'AC') AS ac_count
         FROM question q
         LEFT JOIN knowledge_point kp ON kp.id = q.knowledge_point_id
         WHERE q.deleted = 0

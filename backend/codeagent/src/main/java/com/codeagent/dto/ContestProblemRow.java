@@ -21,4 +21,8 @@ public class ContestProblemRow {
     private Integer score;
 
     private Integer sortNo;
+
+    private Long submitCount;
+
+    private Long acCount;
 }

@@ -83,6 +83,10 @@
                 </div>
               </div>
               <span class="problem-score">{{ problem.score }} 分</span>
+              <span class="problem-counts">
+                <b>{{ problem.acCount || 0 }}</b>
+                <em>通过 / {{ problem.submitCount || 0 }} 提交</em>
+              </span>
               <button
                 type="button"
                 class="problem-action"
@@ -130,7 +134,7 @@
                   <th class="rank-number-col">得分</th>
                 </tr>
               </thead>
-              <tbody>
+              <TransitionGroup name="rank-row" tag="tbody">
                 <tr v-for="row in rankRows" :key="row.userId" :class="{ me: row.me }">
                   <td class="rank-col"><span class="rank-number">{{ row.rank }}</span></td>
                   <td class="rank-user-col">
@@ -161,7 +165,7 @@
                   </td>
                   <td class="rank-number-col score-cell">{{ row.score }}</td>
                 </tr>
-              </tbody>
+              </TransitionGroup>
             </table>
             <div v-else class="empty-block">还没有人提交，第一名等你来拿。</div>
           </div>
@@ -617,7 +621,7 @@ h1 {
 
 .problem-row {
   display: grid;
-  grid-template-columns: 42px minmax(0, 1fr) 78px 108px;
+  grid-template-columns: 42px minmax(0, 1fr) 78px 112px 108px;
   align-items: center;
   gap: 16px;
   padding: 17px 2px;
@@ -683,6 +687,24 @@ h1 {
   text-align: right;
 }
 
+.problem-counts {
+  color: #94a3b8;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.problem-counts b {
+  color: #2f6f52;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.problem-counts em {
+  margin-left: 2px;
+  font-style: normal;
+}
+
 .problem-action {
   border: 0;
   background: transparent;
@@ -711,6 +733,26 @@ h1 {
   width: 100%;
   min-width: 720px;
   border-collapse: collapse;
+}
+
+.rank-row-move {
+  transition: transform 0.42s cubic-bezier(0.22, 0.8, 0.24, 1);
+}
+
+.rank-row-enter-active {
+  transition: opacity 0.24s ease, transform 0.32s cubic-bezier(0.22, 0.8, 0.24, 1);
+}
+
+.rank-row-enter-from {
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rank-row-move,
+  .rank-row-enter-active {
+    transition: none;
+  }
 }
 
 .rank-user-col {
@@ -933,6 +975,10 @@ h1 {
 
   .problem-score {
     text-align: right;
+  }
+
+  .problem-counts {
+    display: none;
   }
 
   .problem-panel,

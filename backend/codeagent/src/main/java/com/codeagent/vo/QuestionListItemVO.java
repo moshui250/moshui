@@ -25,4 +25,6 @@ public class QuestionListItemVO implements Serializable {
     private Long userId;
     private LocalDateTime createTime;
     private Boolean solved;
+    private Long submitCount;
+    private Long acCount;
 }

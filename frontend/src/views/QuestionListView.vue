@@ -111,6 +111,13 @@ function typeLabel(row) {
   return row.visibility === 'SHARED' ? '共享题' : '私有题'
 }
 
+function passRateLabel(row) {
+  const submitCount = Number(row.submitCount || 0)
+  const acCount = Number(row.acCount || 0)
+  if (!submitCount) return '--'
+  return `${Math.round((acCount / submitCount) * 100)}%`
+}
+
 function switchScope(value) {
   if (scope.value === value) return
   scope.value = value
@@ -276,6 +283,7 @@ onMounted(async () => {
             <span class="col-title">题目</span>
             <span class="col-kp">知识点</span>
             <span class="col-level">难度</span>
+            <span class="col-rate">通过率</span>
             <span class="col-action">操作</span>
           </div>
 
@@ -310,6 +318,8 @@ onMounted(async () => {
                 <span class="level-dot" :class="difficultyInfo(row.difficulty).className"></span>
                 {{ difficultyInfo(row.difficulty).label }}
               </span>
+
+              <span class="rate-cell">{{ passRateLabel(row) }}</span>
 
               <span class="action-cell">
                 开始练习
@@ -520,8 +530,8 @@ onMounted(async () => {
 .board-head,
 .problem-row {
   display: grid;
-  grid-template-columns: 54px minmax(0, 1fr) 132px 100px 112px;
-  grid-template-areas: 'status title kp level action';
+  grid-template-columns: 54px minmax(0, 1fr) 132px 100px 72px 112px;
+  grid-template-areas: 'status title kp level rate action';
   align-items: center;
   gap: 12px;
 }
@@ -541,6 +551,7 @@ onMounted(async () => {
 .col-title { grid-area: title; }
 .col-kp { grid-area: kp; }
 .col-level { grid-area: level; }
+.col-rate { grid-area: rate; text-align: right; }
 .col-action { grid-area: action; text-align: right; }
 
 .problem-row {
@@ -793,6 +804,10 @@ onMounted(async () => {
     display: none;
   }
 
+  .rate-cell {
+    display: none;
+  }
+
   .level-cell {
     font-size: 10.5px;
   }
@@ -960,6 +975,13 @@ onMounted(async () => {
 .level-cell {
   color: #6b7280;
   font-size: 12px;
+}
+
+.rate-cell {
+  color: #64748b;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
 }
 
 .action-cell {

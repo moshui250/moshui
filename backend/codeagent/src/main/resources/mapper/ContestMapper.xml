@@ -78,7 +78,12 @@
 
     <select id="selectProblems" resultType="com.codeagent.dto.ContestProblemRow">
         SELECT cp.label, cp.question_id, q.title, q.difficulty,
-               kp.name AS knowledge_point_name, cp.score, cp.sort_no
+               kp.name AS knowledge_point_name, cp.score, cp.sort_no,
+               (SELECT COUNT(*) FROM submit_record sr
+                WHERE sr.contest_id = cp.contest_id AND sr.question_id = cp.question_id) AS submit_count,
+               (SELECT COUNT(*) FROM submit_record sr
+                WHERE sr.contest_id = cp.contest_id AND sr.question_id = cp.question_id
+                  AND sr.status = 'AC') AS ac_count
         FROM contest_problem cp
         JOIN question q ON q.id = cp.question_id AND q.deleted = 0
         LEFT JOIN knowledge_point kp ON kp.id = q.knowledge_point_id

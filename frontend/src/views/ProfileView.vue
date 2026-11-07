@@ -239,7 +239,7 @@ onMounted(loadStats)
 
       <div class="hero-stats">
         <div class="hero-stats-head">
-          <span class="section-label">练习数据</span>
+          <span class="section-label">学习档案</span>
           <router-link class="hero-link" to="/dashboard">
             完整看板
             <el-icon><ArrowRight /></el-icon>
