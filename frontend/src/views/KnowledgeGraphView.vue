@@ -52,6 +52,7 @@
                 {
                   'is-active': activeId === node.id,
                   'is-dim': activeId && !nodeVisible(node),
+                  'is-related': activeId && nodeVisible(node) && node.id !== activeId,
                   'is-dragging': draggingId === node.id
                 }
               ]"
@@ -111,17 +112,17 @@ import { ArrowRight, Close } from '@element-plus/icons-vue'
 import { listKnowledgePoints } from '@/api/question'
 
 const CONCEPTS = {
-  array: ['遍历', '子段和'],
-  string: ['回文', '滑动窗口'],
-  linked_list: ['反转', '双指针'],
-  recursion: ['分治', '边界'],
-  sort: ['比较器', '稳定性'],
-  algorithm: ['二分', '贪心'],
-  tree: ['遍历', '二叉搜索'],
-  graph: ['BFS', '最短路'],
-  dp: ['状态', '转移'],
-  math: ['数论', '组合'],
-  hash: ['计数', '去重']
+  array: ['遍历', '前缀和', '滑动窗口', '双指针'],
+  string: ['回文', '子串', 'KMP', '字典树'],
+  linked_list: ['反转', '双指针', '环形链表', '合并'],
+  recursion: ['分治', '回溯', '记忆化', '递归树'],
+  sort: ['快排', '归并', '堆', '稳定性'],
+  algorithm: ['二分', '贪心', '模拟', '枚举'],
+  tree: ['遍历', '二叉搜索', '深度', 'LCA'],
+  graph: ['BFS', 'DFS', '最短路', '拓扑'],
+  dp: ['状态', '转移', '背包', '区间'],
+  math: ['数论', '组合', '快速幂', '概率'],
+  hash: ['计数', '去重', '前缀哈希', '冲突']
 }
 
 const COLORS = [
@@ -151,6 +152,7 @@ const ROOT_LABEL = '编程基础'
 const INTRO_DELAY = 180
 const INTRO_MAX = 2800
 const INTRO_SETTLE = 1550
+const SETTLE_MS = 320
 const CURSOR_RADIUS = 96
 const MIN_ZOOM = 0.5
 const MAX_ZOOM = 2.5
@@ -181,6 +183,8 @@ let loopState = 'idle'
 let loopStart = 0
 let loopLast = 0
 let loopElapsed = 0
+let settleStart = 0
+let settleFrom = []
 let dragState = null
 let panState = null
 let resizeObserver = null
@@ -299,6 +303,9 @@ function makeGraph(list, animate = true) {
   const centerY = height / 2
   const ringX = Math.min(width * 0.34, 430)
   const ringY = Math.min(height * 0.34, 300)
+  const compact = width < 700
+  const conceptFan = compact ? 1.5 : 2.2
+  const conceptDistance = compact ? 78 : 100
   const root = {
     id: ROOT_ID,
     label: ROOT_LABEL,
@@ -346,8 +353,9 @@ function makeGraph(list, animate = true) {
 
     const concepts = CONCEPTS[point.code] || ['概念', '练习']
     concepts.forEach((concept, conceptIndex) => {
-      const offsetAngle = angle + (conceptIndex === 0 ? -0.32 : 0.32)
-      const distance = 74
+      const fan = concepts.length > 1 ? (conceptIndex / (concepts.length - 1) - 0.5) * conceptFan : 0
+      const offsetAngle = angle + fan
+      const distance = conceptDistance
       const conceptNode = {
         id: `concept-${point.id}-${conceptIndex}`,
         label: concept,
@@ -458,7 +466,7 @@ function stopLoop() {
 }
 
 function startInteractionLoop() {
-  if (reduced.value || loopState === 'intro') return
+  if (reduced.value || loopState === 'intro' || loopState === 'settle') return
   if (loopState === 'interact') return
   if (raf) cancelAnimationFrame(raf)
   loopState = 'interact'
@@ -469,6 +477,10 @@ function startInteractionLoop() {
 }
 
 function tick(now) {
+  if (loopState === 'settle') {
+    settleTick(now)
+    return
+  }
   if (!loopLast) loopLast = now
   const dt = Math.min((now - loopLast) / 1000, 0.032)
   loopLast = now
@@ -486,7 +498,8 @@ function tick(now) {
 
   if (loopState === 'intro') {
     if (loopElapsed > INTRO_MAX || (loopElapsed > INTRO_SETTLE && maxSpeed < 0.09)) {
-      finishIntro()
+      beginSettle(now)
+      raf = requestAnimationFrame(tick)
       return
     }
   } else if (loopState === 'interact') {
@@ -499,17 +512,42 @@ function tick(now) {
   raf = requestAnimationFrame(tick)
 }
 
+function beginSettle(now) {
+  if (loopState !== 'intro') return
+  loopState = 'settle'
+  settleStart = now
+  settleFrom = nodes.value.map((node) => ({ x: node.x, y: node.y }))
+}
+
+function settleTick(now) {
+  const progress = Math.min(1, (now - settleStart) / SETTLE_MS)
+  const eased = 1 - Math.pow(1 - progress, 3)
+  nodes.value.forEach((node, index) => {
+    const from = settleFrom[index]
+    if (!from) return
+    node.x = from.x + (node.ax - from.x) * eased
+    node.y = from.y + (node.ay - from.y) * eased
+    node.vx = 0
+    node.vy = 0
+  })
+  if (progress < 1) {
+    raf = requestAnimationFrame(tick)
+    return
+  }
+  finishIntro()
+}
+
 function applyForces(step) {
   const list = nodes.value
   for (const node of list) {
-    if (node.type === 'root') continue
-    node.vx += (node.ax - node.x) * 0.0055 * step
-    node.vy += (node.ay - node.y) * 0.0055 * step
+    const strength = node.type === 'root' ? 0.0018 : 0.0055
+    node.vx += (node.ax - node.x) * strength * step
+    node.vy += (node.ay - node.y) * strength * step
   }
 
   if (cursor.active && !reduced.value) {
     for (const node of list) {
-      if (node.type === 'root' || node.id === draggingId.value || node.id === hoveredId.value) continue
+      if (node.id === draggingId.value || node.id === hoveredId.value) continue
       const dx = node.x - cursor.x
       const dy = node.y - cursor.y
       const dist = Math.hypot(dx, dy) || 1
@@ -565,13 +603,6 @@ function applyForces(step) {
   }
 
   for (const node of list) {
-    if (node.type === 'root') {
-      node.x = node.ax
-      node.y = node.ay
-      node.vx = 0
-      node.vy = 0
-      continue
-    }
     node.vx *= Math.pow(0.9, step)
     node.vy *= Math.pow(0.9, step)
     const speed = Math.hypot(node.vx, node.vy)
@@ -584,7 +615,6 @@ function applyForces(step) {
 
 function integrate(step) {
   for (const node of nodes.value) {
-    if (node.type === 'root') continue
     node.x += node.vx * step
     node.y += node.vy * step
     clampNode(node)
@@ -681,9 +711,9 @@ function selectNode(node) {
 }
 
 function startNodeDrag(node, event) {
-  if (event.button !== 0 || node.type === 'root') return
+  if (event.button !== 0) return
   stopCursor()
-  if (loopState === 'intro') finishIntro()
+  if (loopState === 'intro' || loopState === 'settle') finishIntro()
   const point = toWorld(event)
   dragState = {
     node,
@@ -725,6 +755,10 @@ function onDragEnd() {
   window.removeEventListener('blur', onDragEnd)
 
   if (moved) {
+    if (node.type === 'root') {
+      node.ax = node.x
+      node.ay = node.y
+    }
     if (reduced.value) {
       node.x = node.ax
       node.y = node.ay
@@ -741,7 +775,7 @@ function onCanvasPointerDown(event) {
   if (event.target.closest?.('.kg-node')) return
   if (event.target.closest?.('.kg-card')) return
   stopCursor()
-  if (loopState === 'intro') finishIntro()
+  if (loopState === 'intro' || loopState === 'settle') finishIntro()
   panState = {
     startX: event.clientX,
     startY: event.clientY,
@@ -1109,6 +1143,21 @@ onBeforeUnmount(() => {
   font-size: 9.5px;
   font-weight: 500;
   opacity: 0.92;
+}
+
+@media (max-width: 640px) {
+  .kg-node-concept .kg-label {
+    display: none;
+  }
+
+  .kg-node-concept.is-related .kg-label,
+  .kg-node-concept.is-active .kg-label {
+    display: block;
+  }
+
+  .kg-node-concept .kg-label {
+    font-size: 9px;
+  }
 }
 
 .kg-card {
