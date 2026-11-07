@@ -8,7 +8,7 @@
         </Transition>
       </RouterView>
     </main>
-    <SiteFooter />
+    <SiteFooter v-if="$route.name !== 'knowledge'" />
   </div>
 </template>
 
