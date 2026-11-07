@@ -57,12 +57,12 @@
         </div>
 
         <div v-if="tab === 'problems'" class="problem-panel">
-          <div class="panel-head">
-            <div>
-              <h2>本场题单</h2>
-              <p>按顺序完成，提交后成绩实时进入排名。</p>
+          <div class="contest-rules">
+            <div class="rules-main">
+              <strong>竞赛规则</strong>
+              <p>按总分、通过题数、罚时依次排序。每题 100 分；每题以首次 AC 用时计罚时，首次 AC 前每次错误提交加 20 分钟；未通过不计分。</p>
             </div>
-            <span class="panel-note">总分 {{ totalScore }}</span>
+            <span class="rules-total">总分 {{ totalScore }}</span>
           </div>
 
           <div v-if="contest.problems.length" class="problem-list">
@@ -75,12 +75,6 @@
               <span class="problem-label">{{ problem.label }}</span>
               <div class="problem-main">
                 <strong>{{ problem.title }}</strong>
-                <div class="problem-meta">
-                  <span class="difficulty" :class="'level-' + problem.difficulty">
-                    {{ difficultyLabel(problem.difficulty) }}
-                  </span>
-                  <span>{{ problem.knowledgePoint }}</span>
-                </div>
               </div>
               <span class="problem-score">{{ problem.score }} 分</span>
               <span class="problem-counts">
@@ -248,10 +242,6 @@ function toTime(value) {
 
 function statusLabel(value) {
   return { RUNNING: '进行中', UPCOMING: '即将开始', ENDED: '已结束' }[value] || value
-}
-
-function difficultyLabel(value) {
-  return { 1: '入门', 2: '进阶', 3: '挑战' }[value] || '入门'
 }
 
 function formatDate(value) {
@@ -587,7 +577,7 @@ h1 {
   background: #fff;
 }
 
-.panel-head {
+.contest-rules {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -596,22 +586,25 @@ h1 {
   border-bottom: 1px solid #f0f2f7;
 }
 
-.panel-head h2 {
-  margin: 0;
+.rules-main strong {
+  display: block;
   color: #0f172a;
-  font-size: 18px;
-  letter-spacing: -0.02em;
+  font-size: 14px;
 }
 
-.panel-head p {
+.rules-main p {
+  max-width: 720px;
   margin: 6px 0 0;
-  color: #94a3b8;
-  font-size: 12px;
-}
-
-.panel-note {
   color: #64748b;
   font-size: 12px;
+  line-height: 1.7;
+}
+
+.rules-total {
+  flex-shrink: 0;
+  color: #64748b;
+  font-size: 12px;
+  white-space: nowrap;
 }
 
 .problem-list {
@@ -649,36 +642,6 @@ h1 {
   color: #1e293b;
   font-size: 14px;
   font-weight: 650;
-}
-
-.problem-meta {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  margin-top: 7px;
-  color: #94a3b8;
-  font-size: 11px;
-}
-
-.difficulty {
-  padding: 1px 6px;
-  border-radius: 4px;
-  font-size: 10px;
-}
-
-.level-1 {
-  background: #edf5f1;
-  color: #2f7d5b;
-}
-
-.level-2 {
-  background: #f7f1e7;
-  color: #a16207;
-}
-
-.level-3 {
-  background: #fff0f0;
-  color: #b42318;
 }
 
 .problem-score {
@@ -963,22 +926,39 @@ h1 {
   }
 
   .problem-row {
-    grid-template-columns: 34px minmax(0, 1fr) 60px;
-    gap: 10px;
+    grid-template-columns: 34px minmax(0, 1fr) 82px;
+    gap: 8px 10px;
   }
 
   .problem-action {
     grid-column: 2 / -1;
-    text-align: left;
+    grid-row: 3;
+    text-align: right;
     padding-bottom: 2px;
   }
 
   .problem-score {
+    grid-column: 3;
+    grid-row: 1;
     text-align: right;
   }
 
   .problem-counts {
-    display: none;
+    display: flex;
+    grid-column: 3;
+    grid-row: 2;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 3px;
+    margin-top: 2px;
+    font-size: 9px;
+    white-space: nowrap;
+  }
+
+  .contest-rules {
+    flex-direction: column;
+    gap: 6px;
   }
 
   .problem-panel,

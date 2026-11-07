@@ -219,7 +219,6 @@ onMounted(async () => {
     <header class="catalog-head">
       <div class="head-copy">
         <h1>题库</h1>
-        <p>按知识点筛选，提交后看判题结果。</p>
       </div>
     </header>
 

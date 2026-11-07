@@ -286,9 +286,7 @@ onBeforeUnmount(revokePreview)
   <div class="import-page">
     <header class="import-head">
       <div>
-        <div class="eyebrow">IMAGE TO DRAFT</div>
         <h1>图片录题</h1>
-        <p>上传题目截图或照片，AI 先识别成草稿；核对、修改并确认后，才会写入个人题库。</p>
       </div>
       <div class="head-badge">
         <span class="badge-dot"></span>

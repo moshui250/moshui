@@ -207,7 +207,6 @@ onBeforeUnmount(() => {
     <header class="page-head">
       <div class="head-copy">
         <h1 class="page-title">学习看板</h1>
-        <p class="page-subtitle">正确率、薄弱点与最近提交。</p>
       </div>
       <div class="head-actions">
         <span class="date-text">{{ today }}</span>

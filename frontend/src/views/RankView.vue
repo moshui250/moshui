@@ -81,7 +81,6 @@ onBeforeUnmount(() => {
     <header class="page-head">
       <div>
         <h1 class="page-title">排名</h1>
-        <p class="page-subtitle">按全站唯一 AC 题数排序。同题重复通过不会重复计数。</p>
       </div>
       <div class="refresh-block">
         <span>{{ refreshText }}</span>

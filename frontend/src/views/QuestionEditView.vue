@@ -7,7 +7,6 @@
 
     <header class="edit-head">
       <h1>编辑题目</h1>
-      <p>修改题面信息；已有样例和参考代码保持不变。</p>
     </header>
 
     <div v-if="loading" class="edit-panel">

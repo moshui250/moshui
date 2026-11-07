@@ -4,7 +4,6 @@
       <header class="page-head">
         <div>
           <h1>竞赛</h1>
-          <p>在限定时间里完成一套题单，排名只看真实提交。</p>
         </div>
         <span class="page-count">共 {{ total }} 场</span>
       </header>

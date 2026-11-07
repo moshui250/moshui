@@ -204,7 +204,6 @@ onMounted(loadRows)
     <header class="page-head">
       <div class="head-copy">
         <h1 class="page-title">错题本</h1>
-        <p class="page-subtitle">先看上次错因，再用同类题巩固。</p>
       </div>
       <button class="btn-primary" type="button" @click="router.push('/question')">
         去题库练习

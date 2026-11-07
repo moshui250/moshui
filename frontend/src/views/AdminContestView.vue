@@ -5,7 +5,6 @@
         <div>
           <router-link class="back-link" to="/contests">返回竞赛</router-link>
           <h1>创建竞赛</h1>
-          <p>从题库选题，或直接添加只属于本场竞赛的题目。</p>
         </div>
         <span class="admin-badge">管理员</span>
       </header>
