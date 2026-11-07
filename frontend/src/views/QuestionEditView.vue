@@ -40,17 +40,12 @@
         </label>
         <label class="field">
           <span>知识点</span>
-          <el-select
+          <KnowledgePointCombobox
             v-model="form.knowledgePointIds"
-            multiple
-            filterable
-            collapse-tags
-            collapse-tags-tooltip
-            :max-collapse-tags="2"
-            placeholder="可多选知识点"
-          >
-            <el-option v-for="point in knowledgePoints" :key="point.id" :label="point.name" :value="point.id" />
-          </el-select>
+            :options="knowledgePoints"
+            :max="8"
+            placeholder="搜索并选择知识点"
+          />
         </label>
         <label class="field">
           <span>难度</span>
@@ -86,6 +81,7 @@ import { ElMessage } from 'element-plus'
 import { ArrowLeft } from '@element-plus/icons-vue'
 import { getQuestion, listKnowledgePoints, updateQuestion } from '@/api/question'
 import { useUserStore } from '@/store/user'
+import KnowledgePointCombobox from '@/components/KnowledgePointCombobox.vue'
 
 const route = useRoute()
 const router = useRouter()

@@ -11,6 +11,7 @@ import {
   uploadQuestionImage
 } from '@/api/question'
 import { useUserStore } from '@/store/user'
+import KnowledgePointCombobox from '@/components/KnowledgePointCombobox.vue'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -422,23 +423,12 @@ onBeforeUnmount(revokePreview)
               </label>
               <label class="field">
                 <span>知识点 <em>*</em></span>
-                <el-select
+                <KnowledgePointCombobox
                   v-model="form.knowledgePointIds"
-                  multiple
-                  filterable
-                  collapse-tags
-                  collapse-tags-tooltip
-                  :max-collapse-tags="2"
-                  placeholder="可多选知识点"
-                  class="full-width"
-                >
-                  <el-option
-                    v-for="item in knowledgePoints"
-                    :key="item.id"
-                    :label="item.name"
-                    :value="item.id"
-                  />
-                </el-select>
+                  :options="knowledgePoints"
+                  :max="8"
+                  placeholder="搜索并选择知识点"
+                />
               </label>
               <label class="field">
                 <span>难度 <em>*</em></span>

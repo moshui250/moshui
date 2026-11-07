@@ -103,17 +103,12 @@
                 </label>
                 <label class="field">
                   <span>知识点</span>
-                  <el-select
+                  <KnowledgePointCombobox
                     v-model="draft.knowledgePointIds"
-                    multiple
-                    filterable
-                    collapse-tags
-                    collapse-tags-tooltip
-                    :max-collapse-tags="2"
-                    placeholder="可多选知识点"
-                  >
-                    <el-option v-for="kp in knowledgePoints" :key="kp.id" :label="kp.name" :value="kp.id" />
-                  </el-select>
+                    :options="knowledgePoints"
+                    :max="8"
+                    placeholder="搜索并选择知识点"
+                  />
                 </label>
                 <label class="field">
                   <span>难度</span>
@@ -165,6 +160,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { createAdminContest } from '@/api/contest'
 import { listKnowledgePoints, listQuestions } from '@/api/question'
+import KnowledgePointCombobox from '@/components/KnowledgePointCombobox.vue'
 
 const router = useRouter()
 const knowledgePoints = ref([])
