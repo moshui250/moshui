@@ -31,4 +31,25 @@ public class JudgeExecutorConfig {
         executor.initialize();
         return executor;
     }
+
+    /**
+     * 单个提交内部并行跑多个用例的线程池。
+     * Piston 每次调用都会重新编译，串行执行会把编译时间乘以用例数。
+     *
+     * @return 用例执行线程池
+     */
+    @Bean(name = "judgeCaseExecutor")
+    public ThreadPoolTaskExecutor judgeCaseExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(4);
+        executor.setMaxPoolSize(4);
+        executor.setQueueCapacity(64);
+        executor.setThreadNamePrefix("judge-case-");
+        executor.setTaskDecorator(new MdcTaskDecorator());
+        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.AbortPolicy());
+        executor.setWaitForTasksToCompleteOnShutdown(true);
+        executor.setAwaitTerminationSeconds(30);
+        executor.initialize();
+        return executor;
+    }
 }

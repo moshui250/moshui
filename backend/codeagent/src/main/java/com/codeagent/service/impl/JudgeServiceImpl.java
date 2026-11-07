@@ -38,6 +38,10 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.Semaphore;
 
 /**
  * 异步判题核心实现：落库、线程池、逐用例调用 Piston、状态归并和错题记录。
@@ -77,6 +81,11 @@ public class JudgeServiceImpl implements JudgeService {
 
     @Resource(name = "judgeExecutor")
     private ThreadPoolTaskExecutor judgeExecutor;
+
+    @Resource(name = "judgeCaseExecutor")
+    private ThreadPoolTaskExecutor judgeCaseExecutor;
+
+    private final Semaphore javaJudgeSlots = new Semaphore(1);
 
     /**
      * 校验参数和题目权限，插入 PENDING 记录后投递异步任务。
@@ -346,24 +355,57 @@ public class JudgeServiceImpl implements JudgeService {
         String compileOutput = null;
         String errorMessage = null;
 
-        for (int i = 0; i < cases.size(); i++) {
-            QuestionTestCase testCase = cases.get(i);
-            boolean sample = Integer.valueOf(1).equals(testCase.getIsSample());
-            long startedAt = System.currentTimeMillis();
-
-            PistonExecuteResponse response;
+        List<Future<PistonCall>> calls = new ArrayList<>(cases.size());
+        for (QuestionTestCase testCase : cases) {
             try {
-                response = pistonClient.execute(record.getLanguage(), record.getCode(), testCase.getInputData());
-            } catch (BizException e) {
+                calls.add(judgeCaseExecutor.submit(
+                        () -> callPiston(record.getLanguage(), record.getCode(), testCase.getInputData())));
+            } catch (RejectedExecutionException e) {
                 record.setStatus(SE);
                 record.setPassedCount(0);
                 record.setTotalCount(cases.size());
                 record.setRunTimeMs(maxRunTime);
-                record.setErrorMessage(e.getMessage());
+                record.setErrorMessage("判题繁忙，请稍后重试");
                 return record;
             }
-            long elapsed = Math.max(System.currentTimeMillis() - startedAt, 0L);
+        }
 
+        for (int i = 0; i < cases.size(); i++) {
+            QuestionTestCase testCase = cases.get(i);
+            boolean sample = Integer.valueOf(1).equals(testCase.getIsSample());
+
+            PistonCall call;
+            try {
+                call = calls.get(i).get();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                record.setStatus(SE);
+                record.setPassedCount(0);
+                record.setTotalCount(cases.size());
+                record.setRunTimeMs(maxRunTime);
+                record.setErrorMessage("判题服务异常，请稍后重试");
+                return record;
+            } catch (ExecutionException e) {
+                log.error("执行测试用例异常, index={}", i + 1, e.getCause());
+                record.setStatus(SE);
+                record.setPassedCount(0);
+                record.setTotalCount(cases.size());
+                record.setRunTimeMs(maxRunTime);
+                record.setErrorMessage("判题服务异常，请稍后重试");
+                return record;
+            }
+
+            if (call.error != null) {
+                record.setStatus(SE);
+                record.setPassedCount(0);
+                record.setTotalCount(cases.size());
+                record.setRunTimeMs(maxRunTime);
+                record.setErrorMessage(call.error);
+                return record;
+            }
+
+            PistonExecuteResponse response = call.response;
+            long elapsed = call.elapsed;
             PistonExecuteResponse.Stage compile = response == null ? null : response.compile();
             if (compile != null && compile.code() != null && compile.code() != 0) {
                 String compileText = stageText(compile);
@@ -435,6 +477,51 @@ public class JudgeServiceImpl implements JudgeService {
         record.setErrorMessage(errorMessage);
         record.setCaseResultJson(serializeCases(caseResults));
         return record;
+    }
+
+    /**
+     * 调用一次 Piston，并记录本次调用耗时；异常不抛出，转为可读错误交给调用方归并。
+     *
+     * @param language 语言代码
+     * @param code     完整源码
+     * @param input    用例输入
+     * @return Piston 响应或错误
+     */
+    private PistonCall callPiston(String language, String code, String input) {
+        long startedAt = System.currentTimeMillis();
+        boolean javaSlot = false;
+        try {
+            if ("JAVA".equalsIgnoreCase(language)) {
+                javaJudgeSlots.acquire();
+                javaSlot = true;
+            }
+            PistonExecuteResponse response = pistonClient.execute(language, code, input);
+            return new PistonCall(response, null, Math.max(System.currentTimeMillis() - startedAt, 0L));
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return new PistonCall(null, "判题请求被中断", Math.max(System.currentTimeMillis() - startedAt, 0L));
+        } catch (BizException e) {
+            return new PistonCall(null, e.getMessage(), Math.max(System.currentTimeMillis() - startedAt, 0L));
+        } finally {
+            if (javaSlot) {
+                javaJudgeSlots.release();
+            }
+        }
+    }
+
+    /**
+     * 单个用例的 Piston 调用结果。
+     */
+    private static final class PistonCall {
+        private final PistonExecuteResponse response;
+        private final String error;
+        private final long elapsed;
+
+        private PistonCall(PistonExecuteResponse response, String error, long elapsed) {
+            this.response = response;
+            this.error = error;
+            this.elapsed = elapsed;
+        }
     }
 
     /**

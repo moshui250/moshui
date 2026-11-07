@@ -25,6 +25,7 @@ const imageUrl = ref('')
 const parseId = ref('')
 const recognizing = ref(false)
 const progress = ref(0)
+const recognizePhase = ref('upload')
 const submitting = ref(false)
 const missingFields = ref([])
 const warnText = ref('')
@@ -79,6 +80,7 @@ function onFileChange(uploadFile) {
   previewUrl.value = URL.createObjectURL(raw)
   stage.value = 'upload'
   progress.value = 0
+  recognizePhase.value = 'upload'
 }
 
 function addSample() {
@@ -131,13 +133,19 @@ async function recognize() {
 
   recognizing.value = true
   progress.value = 0
+  recognizePhase.value = 'upload'
   try {
     const uploaded = await uploadQuestionImage(file.value, (value) => {
       progress.value = value
     })
     imageUrl.value = uploaded?.url || ''
+    // 上传完成后 AI 识别耗时无法精确预估，改用不确定进度条，避免停在 100% 造成误解。
+    recognizePhase.value = 'parse'
+    progress.value = 100
     const parsed = await parseQuestionImage(file.value, imageUrl.value, (value) => {
-      progress.value = Math.max(progress.value, value)
+      if (recognizePhase.value === 'upload') {
+        progress.value = Math.max(progress.value, value)
+      }
     })
     applyDraft(parsed)
     ElMessage.success('识别完成，请核对草稿')
@@ -363,10 +371,28 @@ onBeforeUnmount(revokePreview)
           <div v-if="recognizing" class="recognizing">
             <div class="recognizing-copy">
               <span class="scan-dot"></span>
-              <strong>正在识别题面与样例</strong>
-              <span>{{ progress }}%</span>
+              <strong>{{ recognizePhase === 'parse' ? 'AI 正在识别题面与样例' : '正在上传并压缩图片' }}</strong>
+              <span>{{ recognizePhase === 'parse' ? '识别中' : `${progress}%` }}</span>
             </div>
-            <el-progress :percentage="progress" :show-text="false" :stroke-width="6" color="#1f3a5f" />
+            <el-progress
+              v-if="recognizePhase === 'upload'"
+              :percentage="progress"
+              :show-text="false"
+              :stroke-width="6"
+              color="#1f3a5f"
+            />
+            <el-progress
+              v-else
+              :percentage="100"
+              :indeterminate="true"
+              :duration="2"
+              :show-text="false"
+              :stroke-width="6"
+              color="#1f3a5f"
+            />
+            <p v-if="recognizePhase === 'parse'" class="recognizing-note">
+              识别耗时取决于题面复杂度，完成后会自动填入草稿。
+            </p>
             <div class="skeleton-lines">
               <i></i><i></i><i class="short"></i>
             </div>
@@ -898,6 +924,13 @@ onBeforeUnmount(revokePreview)
   50% {
     opacity: 0.35;
   }
+}
+
+.recognizing-note {
+  margin: 8px 0 0;
+  color: #7b8794;
+  font-size: 10.5px;
+  line-height: 1.6;
 }
 
 .skeleton-lines {

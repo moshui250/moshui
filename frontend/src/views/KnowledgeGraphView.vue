@@ -547,7 +547,7 @@ function applyForces(step) {
 
   if (cursor.active && !reduced.value) {
     for (const node of list) {
-      if (node.id === draggingId.value || node.id === hoveredId.value) continue
+      if (node.id === draggingId.value) continue
       const dx = node.x - cursor.x
       const dy = node.y - cursor.y
       const dist = Math.hypot(dx, dy) || 1
