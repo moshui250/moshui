@@ -204,8 +204,8 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="dashboard-page">
-    <header class="page-head">
-      <h1 class="sr-only">学习看板</h1>
+    <header class="page-head compact-head">
+      <h1 class="compact-page-title">学习看板</h1>
       <div class="head-actions">
         <span class="date-text">{{ today }}</span>
         <button class="btn-primary" type="button" @click="router.push('/question')">

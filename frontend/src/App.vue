@@ -85,6 +85,37 @@ onBeforeUnmount(() => {
   border: 0;
 }
 
+.compact-head {
+  justify-content: space-between !important;
+  gap: 16px !important;
+  padding-bottom: 18px !important;
+}
+
+.compact-page-title {
+  margin: 0 !important;
+  color: #111827 !important;
+  font-size: 20px !important;
+  font-weight: 650 !important;
+  letter-spacing: -0.015em !important;
+  line-height: 1.25 !important;
+}
+
+.edit-title {
+  margin: 10px 0 18px;
+}
+
+@media (min-width: 761px) {
+  .compact-head {
+    align-items: center !important;
+  }
+}
+
+@media (max-width: 760px) {
+  .compact-page-title {
+    font-size: 19px !important;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .route-progress,
   .route-progress.is-active,

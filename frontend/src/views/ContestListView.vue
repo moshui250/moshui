@@ -1,8 +1,8 @@
 <template>
   <section class="contest-page">
     <div class="page-inner">
-      <header class="page-head">
-        <h1 class="sr-only">竞赛</h1>
+      <header class="page-head compact-head">
+        <h1 class="compact-page-title">竞赛</h1>
         <span class="page-count">共 {{ total }} 场</span>
       </header>
 

@@ -5,7 +5,7 @@
       返回题目
     </button>
 
-    <h1 class="sr-only">编辑题目</h1>
+    <h1 class="compact-page-title edit-title">编辑题目</h1>
 
     <div v-if="loading" class="edit-panel">
       <el-skeleton :rows="8" animated />

@@ -284,8 +284,8 @@ onBeforeUnmount(revokePreview)
 
 <template>
   <div class="import-page">
-    <header class="import-head">
-      <h1 class="sr-only">图片录题</h1>
+    <header class="import-head compact-head">
+      <h1 class="compact-page-title">图片录题</h1>
       <div class="head-badge">
         <span class="badge-dot"></span>
         识别结果不直接入库

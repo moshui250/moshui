@@ -193,8 +193,8 @@ onMounted(loadStats)
 
 <template>
   <div class="profile-page">
-    <header class="page-head">
-      <h1 class="sr-only">个人中心</h1>
+    <header class="page-head compact-head">
+      <h1 class="compact-page-title">个人中心</h1>
       <el-button class="head-action" plain @click="router.push('/question')">
         去题库
         <el-icon><ArrowRight /></el-icon>

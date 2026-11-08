@@ -78,8 +78,8 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="rank-page">
-    <header class="page-head">
-      <h1 class="sr-only">排名</h1>
+    <header class="page-head compact-head">
+      <h1 class="compact-page-title">排名</h1>
       <div class="refresh-block">
         <span>{{ refreshText }}</span>
         <el-button :icon="Refresh" :loading="loading" plain @click="loadRanking">刷新</el-button>
