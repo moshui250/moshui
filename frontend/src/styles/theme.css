@@ -1,0 +1,693 @@
+html[data-theme='dark'] {
+  color-scheme: dark;
+
+  --ca-bg: #0d1117;
+  --ca-surface: #151b24;
+  --ca-ink: #e6edf7;
+  --ca-text: #c9d1d9;
+  --ca-muted: #8b949e;
+  --ca-line: #2b3441;
+  --ca-primary: #c9d8ea;
+  --ca-primary-soft: #1a2431;
+
+  --el-bg-color: #151b24;
+  --el-bg-color-page: #0d1117;
+  --el-bg-color-overlay: #1a212b;
+  --el-fill-color-blank: #151b24;
+  --el-fill-color-light: #1b2430;
+  --el-fill-color: #1b2430;
+  --el-fill-color-lighter: #222c39;
+  --el-fill-color-dark: #0f141b;
+  --el-text-color-primary: #e6edf7;
+  --el-text-color-regular: #c9d1d9;
+  --el-text-color-secondary: #8b949e;
+  --el-text-color-placeholder: #6e7681;
+  --el-text-color-disabled: #5c6673;
+  --el-border-color: #2b3441;
+  --el-border-color-light: #262f3b;
+  --el-border-color-lighter: #222a35;
+  --el-border-color-extra-light: #1d2530;
+  --el-color-primary: #dbe7f4;
+  --el-color-primary-light-3: #aebdcd;
+  --el-color-primary-light-5: #8494a7;
+  --el-color-primary-light-7: #4d5b6d;
+  --el-color-primary-light-8: #354252;
+  --el-color-primary-light-9: #1c2632;
+  --el-color-primary-dark-2: #f2f7fd;
+  --el-mask-color: rgba(0, 0, 0, 0.72);
+}
+
+html[data-theme='dark'] body,
+html[data-theme='dark'] .public-shell {
+  background: #0d1117 !important;
+  color: #c9d1d9;
+}
+
+html[data-theme='dark'] .site-header {
+  background: #0d1117 !important;
+  color: #c9d1d9;
+}
+
+html[data-theme='dark'] .brand-mark {
+  filter: brightness(0) invert(1);
+}
+
+html[data-theme='dark'] .site-nav a {
+  color: #8b949e;
+}
+
+html[data-theme='dark'] .site-nav a:hover,
+html[data-theme='dark'] .site-nav a.router-link-active {
+  color: #f0f6fc;
+}
+
+html[data-theme='dark'] .user-pill,
+html[data-theme='dark'] .login-link,
+html[data-theme='dark'] .command-trigger,
+html[data-theme='dark'] .surface-trigger,
+html[data-theme='dark'] .menu-toggle {
+  border-color: #303946 !important;
+  background: #161b22 !important;
+  color: #c9d1d9 !important;
+}
+
+html[data-theme='dark'] :is(
+  .metric-card,
+  .highlight-card,
+  .analytics-surface,
+  .profile-hero,
+  .profile-section,
+  .profile-side,
+  .filter-rail,
+  .board,
+  .contest-banner,
+  .contest-problems,
+  .rank-table-wrap,
+  .my-rank,
+  .review-card,
+  .same-card,
+  .work-card,
+  .step-card,
+  .form-card,
+  .side-card,
+  .preview-card,
+  .coach-card,
+  .weekly-card,
+  .knowledge-card,
+  .auth-dialog,
+  .command-dialog,
+  .kp-panel,
+  .statement-panel,
+  .info-panel,
+  .sample-card,
+  .editor-panel,
+  .lower-panel,
+  .recent-section,
+  .panel
+) {
+  background: #151b24 !important;
+  border-color: #2b3441 !important;
+  box-shadow: none !important;
+}
+
+html[data-theme='dark'] :is(
+  .recent-row,
+  .problem-row,
+  .weak-row,
+  .pref-row,
+  .quick-link,
+  .side-note,
+  .problem-head,
+  .recent-head,
+  .contest-table th,
+  .contest-table td,
+  .rank-table th,
+  .rank-table td
+) {
+  border-color: #2b3441 !important;
+}
+
+html[data-theme='dark'] :is(
+  .recent-row:hover,
+  .problem-row:hover,
+  .quick-link:hover,
+  .weak-row:hover
+) {
+  background: #1b2430 !important;
+}
+
+html[data-theme='dark'] :is(
+  h1,
+  h2,
+  h3,
+  h4,
+  .page-title,
+  .compact-page-title,
+  .section-title,
+  .metric-number,
+  .highlight-card strong,
+  .weak-name,
+  .recent-title,
+  .contest-title,
+  .profile-name
+) {
+  color: #f0f6fc !important;
+}
+
+html[data-theme='dark'] :is(
+  .page-subtitle,
+  .section-caption,
+  .metric-label,
+  .metric-foot,
+  .highlight-top,
+  .highlight-card p,
+  .weak-foot,
+  .recent-head,
+  .recent-date,
+  .recent-time,
+  .recent-lang,
+  .date-text,
+  .problem-meta,
+  .contest-meta,
+  .profile-label,
+  .pref-label,
+  .stat-label,
+  .question-meta
+) {
+  color: #8b949e !important;
+}
+
+html[data-theme='dark'] :is(.metric-number, .section-title, .weak-value, .recent-count) {
+  color: #f0f6fc !important;
+}
+
+html[data-theme='dark'] :is(.text-link, .recent-title, .problem-title, .title-cell strong, .quick-link, .back-link) {
+  color: #c9d8ea !important;
+}
+
+html[data-theme='dark'] .title-cell em {
+  color: #8b949e !important;
+}
+
+html[data-theme='dark'] :is(
+  .filter-nav-head,
+  .filter-label,
+  .filter-meta,
+  .filter-note,
+  .toolbar-count,
+  .board-head
+) {
+  color: #8b949e !important;
+}
+
+html[data-theme='dark'] .filter-item {
+  color: #c9d1d9 !important;
+}
+
+html[data-theme='dark'] .filter-item:hover {
+  background: #1b2430 !important;
+}
+
+html[data-theme='dark'] .filter-item.active {
+  background: #222c39 !important;
+  color: #f0f6fc !important;
+}
+
+html[data-theme='dark'] .filter-chip {
+  border-color: #2b3441 !important;
+  background: #151b24 !important;
+  color: #c9d1d9 !important;
+}
+
+html[data-theme='dark'] .filter-chip.active {
+  border-color: #465262 !important;
+  background: #222c39 !important;
+  color: #f0f6fc !important;
+}
+
+html[data-theme='dark'] .title-cell em,
+html[data-theme='dark'] .kp-cell,
+html[data-theme='dark'] .level-cell,
+html[data-theme='dark'] .rate-cell,
+html[data-theme='dark'] .action-cell {
+  color: #8b949e !important;
+}
+
+html[data-theme='dark'] .btn-primary {
+  background: #e6edf7 !important;
+  color: #0d1117 !important;
+}
+
+html[data-theme='dark'] .btn-primary:hover {
+  background: #ffffff !important;
+}
+
+html[data-theme='dark'] .el-button {
+  --el-button-bg-color: #161b22;
+  --el-button-border-color: #303946;
+  --el-button-text-color: #c9d1d9;
+  --el-button-hover-bg-color: #1f2937;
+  --el-button-hover-border-color: #465262;
+  --el-button-hover-text-color: #f0f6fc;
+}
+
+html[data-theme='dark'] .el-button--primary {
+  --el-button-bg-color: #e6edf7;
+  --el-button-border-color: #e6edf7;
+  --el-button-text-color: #0d1117;
+  --el-button-hover-bg-color: #ffffff;
+  --el-button-hover-border-color: #ffffff;
+  --el-button-hover-text-color: #0d1117;
+}
+
+html[data-theme='dark'] :is(.el-input__wrapper, .el-textarea__inner, .el-select__wrapper) {
+  background: #111722 !important;
+  box-shadow: 0 0 0 1px #2b3441 inset !important;
+  color: #e6edf7 !important;
+}
+
+html[data-theme='dark'] :is(.el-input__inner, .el-textarea__inner) {
+  color: #e6edf7 !important;
+}
+
+html[data-theme='dark'] .el-input__inner::placeholder,
+html[data-theme='dark'] .el-textarea__inner::placeholder {
+  color: #6e7681 !important;
+}
+
+html[data-theme='dark'] :is(.el-popper, .el-dropdown__popper, .el-select__popper) {
+  background: #1a212b !important;
+  border-color: #303946 !important;
+}
+
+html[data-theme='dark'] .el-dropdown-menu {
+  background: #1a212b;
+}
+
+html[data-theme='dark'] .el-dropdown-menu__item {
+  color: #c9d1d9;
+}
+
+html[data-theme='dark'] .el-dropdown-menu__item:hover {
+  background: #222c39;
+  color: #f0f6fc;
+}
+
+html[data-theme='dark'] :is(.el-dialog, .el-message-box) {
+  background: #151b24 !important;
+  border-color: #2b3441 !important;
+}
+
+html[data-theme='dark'] .el-table {
+  --el-table-bg-color: #151b24;
+  --el-table-tr-bg-color: #151b24;
+  --el-table-header-bg-color: #151b24;
+  --el-table-row-hover-bg-color: #1b2430;
+  --el-table-border-color: #2b3441;
+  --el-table-text-color: #c9d1d9;
+  --el-table-header-text-color: #8b949e;
+}
+
+html[data-theme='dark'] .el-pagination {
+  --el-pagination-bg-color: #151b24;
+  --el-pagination-text-color: #c9d1d9;
+  --el-pagination-button-bg-color: #151b24;
+  --el-pagination-hover-color: #e6edf7;
+}
+
+html[data-theme='dark'] .el-pager li {
+  color: #8b949e;
+}
+
+html[data-theme='dark'] .el-pager li.is-active {
+  background: #e6edf7 !important;
+  color: #0d1117 !important;
+}
+
+html[data-theme='dark'] .el-progress-bar__outer {
+  background: #222c39;
+}
+
+html[data-theme='dark'] .el-breadcrumb__inner,
+html[data-theme='dark'] .el-breadcrumb__separator {
+  color: #8b949e !important;
+}
+
+html[data-theme='dark'] .surface-popover.el-popover {
+  background: #1a212b !important;
+  border-color: #303946 !important;
+}
+
+html[data-theme='dark'] .surface-option:hover {
+  background: #222c39 !important;
+}
+
+html[data-theme='dark'] .surface-option.is-active {
+  border-color: #465262 !important;
+  background: #222c39 !important;
+}
+
+html[data-theme='dark'] .surface-head {
+  color: #e6edf7;
+}
+
+html[data-theme='dark'] .surface-head small {
+  color: #8b949e;
+}
+
+html[data-theme='dark'] .monaco-editor,
+html[data-theme='dark'] .monaco-editor-background,
+html[data-theme='dark'] .monaco-editor .margin {
+  background: #0d1117 !important;
+}
+
+/* Profile: identity, stats, level, preferences, quick links */
+html[data-theme='dark'] :is(
+  .identity-name,
+  .stat-item strong,
+  .level-ac,
+  .level-progress-head strong,
+  .level-foot strong,
+  .pref-row strong,
+  .quick-copy strong
+) {
+  color: #f0f6fc !important;
+}
+
+html[data-theme='dark'] :is(
+  .hero-stats-head,
+  .hero-stats-head .section-label,
+  .hero-link,
+  .stat-item span,
+  .identity-rank,
+  .level-progress-head span,
+  .level-hint,
+  .level-foot,
+  .pref-row p,
+  .quick-copy small,
+  .quick-arrow
+) {
+  color: #8b949e !important;
+}
+
+html[data-theme='dark'] :is(.level-track, .pref-control .el-radio-group, .el-switch__core) {
+  border-color: #2b3441 !important;
+}
+
+/* Contest: countdown and problem list */
+html[data-theme='dark'] :is(
+  .countdown,
+  .ended-note,
+  .banner-meta b,
+  .contest-rules,
+  .problem-main strong,
+  .problem-score,
+  .problem-counts b
+) {
+  color: #f0f6fc !important;
+}
+
+html[data-theme='dark'] :is(
+  .countdown-label,
+  .banner-meta,
+  .problem-counts em,
+  .problem-action
+) {
+  color: #8b949e !important;
+}
+
+html[data-theme='dark'] .problem-row {
+  color: #c9d1d9 !important;
+}
+
+html[data-theme='dark'] .problem-panel {
+  background: #151b24 !important;
+  border-color: #2b3441 !important;
+}
+
+html[data-theme='dark'] .problem-panel .problem-row {
+  border-color: #2b3441 !important;
+}
+
+html[data-theme='dark'] .problem-panel .contest-rules {
+  border-color: #2b3441 !important;
+}
+
+html[data-theme='dark'] .problem-label {
+  background: #1b2430 !important;
+  color: #c9d8ea !important;
+}
+
+html[data-theme='dark'] .problem-action:disabled {
+  color: #5c6673 !important;
+}
+
+html[data-theme='dark'] .contest-rules p {
+  color: #8b949e !important;
+}
+
+/* Solve: statement pane and lower result panel */
+html[data-theme='dark'] :is(.problem-pane, .pane-bar) {
+  background: #151b24 !important;
+  border-color: #2b3441 !important;
+  color: #c9d1d9 !important;
+}
+
+html[data-theme='dark'] .problem-pane :is(h1, h2, h3, h4, p, li, td, blockquote) {
+  color: #c9d1d9 !important;
+}
+
+html[data-theme='dark'] .problem-pane :is(.pane-id, .pane-label) {
+  color: #8b949e !important;
+}
+
+html[data-theme='dark'] .problem-pane :is(pre, code) {
+  background: #0d1117 !important;
+  color: #c9d1d9 !important;
+}
+
+html[data-theme='dark'] :is(.editor-toolbar, .action-bar) {
+  background: #151b24 !important;
+  border-color: #2b3441 !important;
+}
+
+html[data-theme='dark'] :is(.file-name, .autosave-tip, .editor-file) {
+  color: #c9d1d9 !important;
+}
+
+html[data-theme='dark'] .file-save {
+  color: #8b949e !important;
+}
+
+html[data-theme='dark'] .action-bar .el-button {
+  background: #161b22 !important;
+  border-color: #303946 !important;
+  color: #c9d1d9 !important;
+}
+
+html[data-theme='dark'] .action-bar .el-button--primary {
+  background: #e6edf7 !important;
+  border-color: #e6edf7 !important;
+  color: #0d1117 !important;
+}
+
+html[data-theme='dark'] .head-title-line h1 {
+  color: #f0f6fc !important;
+}
+
+html[data-theme='dark'] .el-radio-button__inner {
+  background: #161b22 !important;
+  border-color: #303946 !important;
+  color: #c9d1d9 !important;
+}
+
+html[data-theme='dark'] .el-radio-button.is-active .el-radio-button__inner {
+  background: #e6edf7 !important;
+  border-color: #e6edf7 !important;
+  color: #0d1117 !important;
+}
+
+html[data-theme='dark'] .back-link {
+  background: #161b22 !important;
+  border-color: #303946 !important;
+  color: #c9d1d9 !important;
+}
+
+html[data-theme='dark'] .workspace-lower {
+  background: #151b24 !important;
+  border-color: #2b3441 !important;
+}
+
+html[data-theme='dark'] :is(.my-card, .board-card, .review-strip, .wrong-card, .similar-card, .filter-bar, .empty-card) {
+  background: #151b24 !important;
+  border-color: #2b3441 !important;
+}
+
+html[data-theme='dark'] :is(
+  .my-label,
+  .my-number span,
+  .tier-copy span,
+  .progress-head span,
+  .progress-hint,
+  .board-head p,
+  .rank-head,
+  .card-kicker,
+  .card-meta,
+  .similar-meta,
+  .similar-reason,
+  .review-strip .metric-label,
+  .strip-note
+) {
+  color: #8b949e !important;
+}
+
+html[data-theme='dark'] :is(
+  .my-number strong,
+  .tier-copy strong,
+  .progress-head strong,
+  .board-head h2,
+  .rank-name,
+  .rank-ac,
+  .card-title,
+  .similar-name,
+  .review-strip .metric-value
+) {
+  color: #f0f6fc !important;
+}
+
+html[data-theme='dark'] .rank-row {
+  border-color: #2b3441 !important;
+  background: transparent !important;
+  color: #c9d1d9 !important;
+}
+
+html[data-theme='dark'] .rank-row.is-me {
+  background: #1b2430 !important;
+}
+
+html[data-theme='dark'] .filter-tab {
+  border-color: #2b3441 !important;
+  background: #151b24 !important;
+  color: #8b949e !important;
+}
+
+html[data-theme='dark'] .filter-tab.active {
+  background: #222c39 !important;
+  color: #f0f6fc !important;
+}
+
+html[data-theme='dark'] .contest-rules strong {
+  color: #f0f6fc !important;
+}
+
+html[data-theme='dark'] .strip-note {
+  background: #1b2430 !important;
+  color: #8b949e !important;
+}
+
+html[data-theme='dark'] .filter-tabs {
+  background: transparent !important;
+}
+
+/* Home uses its own --h-* token set; remap it for dark mode. */
+html[data-theme='dark'] .home-page {
+  --h-ink: #e6edf7;
+  --h-text: #c9d1d9;
+  --h-muted: #8b949e;
+  --h-line: #2b3441;
+  --h-primary: #c9d8ea;
+  --h-primary-soft: #1b2430;
+  --h-mint: #7fb69b;
+  --h-surface: #151b24;
+  background: #0d1117 !important;
+  color: #e6edf7 !important;
+}
+
+html[data-theme='dark'] .home-page :is(.preview-card, .coach-card, .preview-body, .coach-card p code) {
+  background: #151b24 !important;
+  border-color: #2b3441 !important;
+}
+
+html[data-theme='dark'] .home-page :is(.preview-head, .preview-body pre, .coach-tools span) {
+  background: #0f141b !important;
+  border-color: #2b3441 !important;
+}
+
+html[data-theme='dark'] .home-page .cta-panel {
+  background: #151b24 !important;
+  border: 1px solid #2b3441;
+}
+
+html[data-theme='dark'] .home-page .code-block {
+  background: #0f141b !important;
+}
+
+html[data-theme='dark'] .home-page .code-line code {
+  color: #c9d1d9 !important;
+}
+
+html[data-theme='dark'] .home-page .code-line span {
+  color: #6e7681 !important;
+}
+
+html[data-theme='dark'] .home-page .fail-line {
+  border-color: #4a2b2d !important;
+  background: #211417 !important;
+  color: #e0a3a3 !important;
+}
+
+html[data-theme='dark'] .home-page .coach-card :is(p, .coach-foot, .coach-head strong, .coach-count) {
+  color: #c9d1d9 !important;
+}
+
+html[data-theme='dark'] .home-page .coach-tools span {
+  color: #8b949e !important;
+}
+
+html[data-theme='dark'] .home-page .coach-icon {
+  background: #1b2430 !important;
+  color: #c9d8ea !important;
+}
+
+html[data-theme='dark'] .home-page .btn-ghost {
+  border-color: #303946 !important;
+  background: #161b22 !important;
+  color: #c9d1d9 !important;
+}
+
+html[data-theme='dark'] .home-page .code-line.is-error {
+  background: #2a1b1d !important;
+}
+
+html[data-theme='dark'] .site-footer {
+  background: #0d1117 !important;
+  border-color: #2b3441 !important;
+  color: #8b949e !important;
+}
+
+html[data-theme='dark'] .rank-row .rank-no,
+html[data-theme='dark'] .rank-row .rank-name,
+html[data-theme='dark'] .rank-row .rank-name strong,
+html[data-theme='dark'] .rank-row .rank-ac {
+  color: #c9d8ea !important;
+}
+
+html[data-theme='dark'] .rank-row .rank-name em {
+  color: #8b949e !important;
+}
+
+html[data-theme='dark'] .rank-avatar {
+  background: #222c39 !important;
+  color: #c9d8ea !important;
+}
+
+html[data-theme='dark'] .filter-tabs .filter-tab {
+  background: #151b24 !important;
+  border-color: #2b3441 !important;
+  color: #8b949e !important;
+}
+
+html[data-theme='dark'] .filter-tabs .filter-tab.active {
+  background: #222c39 !important;
+  color: #f0f6fc !important;
+}

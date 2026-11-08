@@ -32,13 +32,13 @@
         </button>
         <el-popover placement="bottom-end" :width="202" trigger="click" popper-class="surface-popover">
           <template #reference>
-            <button class="surface-trigger" type="button" aria-label="更换页面背景色" title="更换页面背景色">
-              <el-icon><Brush /></el-icon>
+            <button class="surface-trigger" type="button" aria-label="切换深浅色主题" title="切换深浅色主题">
+              <el-icon><component :is="themeKey === 'dark' ? Sunny : Moon" /></el-icon>
             </button>
           </template>
           <div class="surface-panel">
             <div class="surface-head">
-              <span>页面背景</span>
+              <span>页面主题</span>
               <small>{{ activeTheme.label }}</small>
             </div>
             <div class="surface-options">
@@ -99,7 +99,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Brush, Search } from '@element-plus/icons-vue'
+import { Moon, Search, Sunny } from '@element-plus/icons-vue'
 import { useUserStore } from '@/store/user'
 import { useAuthUiStore } from '@/store/auth-ui'
 import { useSurfaceTheme } from '@/store/theme'

@@ -46,6 +46,9 @@ public class ProfileStatVO implements Serializable {
     /** 最近 5 次提交。 */
     private List<RecentSubmitVO> recentSubmits = new ArrayList<>();
 
+    /** 当前用户最近 7 天的提交与通过趋势。 */
+    private List<HomeDailyVO> weekly = new ArrayList<>();
+
     /** 当前用户的全站排名与段位。 */
     private RankInfoVO rankInfo;
 

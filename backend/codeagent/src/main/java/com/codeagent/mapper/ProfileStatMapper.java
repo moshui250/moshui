@@ -1,6 +1,7 @@
 package com.codeagent.mapper;
 
 import com.codeagent.dto.ProfileStatRow;
+import com.codeagent.vo.HomeDailyVO;
 import com.codeagent.vo.RecentSubmitVO;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
@@ -48,6 +49,30 @@ public interface ProfileStatMapper {
             WHERE user_id = #{userId} AND mastered = 0
             """)
     long countWrong(@Param("userId") Long userId);
+
+    /**
+     * 查询当前用户最近 7 天每日的提交量和 AC 量。
+     * 只返回有提交的日期，缺失日期由服务层补齐。
+     *
+     * @param userId 当前用户 ID
+     * @return 按日期升序的每日统计
+     */
+    @Select("""
+            SELECT DATE_FORMAT(sr.create_time, '%m-%d') AS date,
+                   ELT(WEEKDAY(sr.create_time) + 1,
+                       '周一', '周二', '周三', '周四', '周五', '周六', '周日') AS label,
+                   COUNT(*) AS submit_count,
+                   CAST(SUM(CASE WHEN sr.status = 'AC' THEN 1 ELSE 0 END) AS SIGNED) AS ac_count
+            FROM submit_record sr
+            WHERE sr.user_id = #{userId}
+              AND sr.create_time >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)
+            GROUP BY DATE(sr.create_time),
+                     DATE_FORMAT(sr.create_time, '%m-%d'),
+                     ELT(WEEKDAY(sr.create_time) + 1,
+                         '周一', '周二', '周三', '周四', '周五', '周六', '周日')
+            ORDER BY DATE(sr.create_time)
+            """)
+    List<HomeDailyVO> selectWeekly(@Param("userId") Long userId);
 
     /**
      * 查询最近若干次提交，关联题目标题，供看板最近提交流水展示。

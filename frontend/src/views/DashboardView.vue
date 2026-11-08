@@ -1,18 +1,19 @@
 <script setup>
-import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import * as echarts from 'echarts/core'
-import { BarChart } from 'echarts/charts'
+import { LineChart } from 'echarts/charts'
 import { GridComponent, TooltipComponent } from 'echarts/components'
 import { CanvasRenderer } from 'echarts/renderers'
 import { ArrowRight, InfoFilled } from '@element-plus/icons-vue'
 import { getProfileStat } from '@/api/profile'
 import { emptyProfileStat } from '@/data/demo'
+import { useSurfaceTheme } from '@/store/theme'
 
-echarts.use([BarChart, GridComponent, TooltipComponent, CanvasRenderer])
+echarts.use([LineChart, GridComponent, TooltipComponent, CanvasRenderer])
 
 const router = useRouter()
-const stat = reactive({ ...emptyProfileStat, knowledgeStats: [], recentSubmits: [] })
+const stat = reactive({ ...emptyProfileStat, knowledgeStats: [], recentSubmits: [], weekly: [] })
 const loading = ref(true)
 const statError = ref('')
 const chartRef = ref(null)
@@ -68,6 +69,17 @@ const activeKnowledge = computed(() =>
 
 const weakPoints = computed(() => activeKnowledge.value.slice(0, 3))
 const weakest = computed(() => activeKnowledge.value[0] || null)
+const { themeKey } = useSurfaceTheme()
+
+const week = computed(() => (Array.isArray(stat.weekly) ? stat.weekly : []))
+const weekTotal = computed(() => week.value.reduce((sum, day) => sum + Number(day.submitCount || 0), 0))
+const weekAc = computed(() => week.value.reduce((sum, day) => sum + Number(day.acCount || 0), 0))
+const weekRate = computed(() => (weekTotal.value ? Math.round((weekAc.value / weekTotal.value) * 1000) / 10 : 0))
+const activeDays = computed(() => week.value.filter((day) => Number(day.submitCount || 0) > 0).length)
+const bestDay = computed(() => {
+  return [...week.value].sort((a, b) => Number(b.submitCount || 0) - Number(a.submitCount || 0))[0] || null
+})
+const maxDaySubmit = computed(() => Math.max(1, ...week.value.map((day) => Number(day.submitCount || 0))))
 
 const statusMeta = {
   AC: { label: '通过', className: 'ok' },
@@ -102,6 +114,7 @@ async function loadStat() {
     Object.assign(stat, emptyProfileStat, data || {})
     stat.knowledgeStats = Array.isArray(data?.knowledgeStats) ? data.knowledgeStats : []
     stat.recentSubmits = Array.isArray(data?.recentSubmits) ? data.recentSubmits : []
+    stat.weekly = Array.isArray(data?.weekly) ? data.weekly : []
   } catch (error) {
     statError.value = error.message || '学习看板加载失败，请稍后重试'
     Object.assign(stat, emptyProfileStat)
@@ -118,73 +131,77 @@ function renderChart() {
     chartInstance = echarts.init(chartRef.value)
   }
 
-  const items = stat.knowledgeStats || []
-  const labels = items.map((item) => item.name)
-  const values = items.map((item) => {
-    if (!item.hasData) {
-      return {
-        value: 0,
-        hasData: false,
-        label: {
-          show: true,
-          position: 'top',
-          formatter: '—',
-          color: '#94a3b8',
-          fontSize: 12
-        }
-      }
-    }
-    return { value: Number((Number(item.errorRate) * 100).toFixed(1)) }
-  })
+  const dark = themeKey.value === 'dark'
+  const labels = week.value.map((day) => day.label)
+  const submitData = week.value.map((day) => Number(day.submitCount || 0))
+  const acData = week.value.map((day) => Number(day.acCount || 0))
+  const gridColor = dark ? '#2b3441' : '#eef2f7'
+  const textColor = dark ? '#8b949e' : '#7c869c'
+  const submitColor = dark ? '#a8bdd3' : '#557596'
+  const acColor = dark ? '#6fa98b' : '#2f7d5b'
+  const submitFill = dark ? 'rgba(168, 189, 211, 0.20)' : 'rgba(85, 117, 150, 0.14)'
+  const acFill = dark ? 'rgba(111, 169, 139, 0.16)' : 'rgba(47, 125, 91, 0.10)'
 
   chartInstance.setOption({
-    animationDuration: 300,
-    grid: { left: 42, right: 16, top: 24, bottom: 32 },
+    animationDuration: 460,
+    grid: { left: 34, right: 18, top: 18, bottom: 28 },
     tooltip: {
       trigger: 'axis',
-      axisPointer: { type: 'shadow' },
+      axisPointer: { type: 'line', lineStyle: { color: dark ? '#465262' : '#dbe2ec' } },
+      backgroundColor: dark ? '#1a212b' : '#fff',
+      borderColor: dark ? '#303946' : '#e4e8ef',
+      textStyle: { color: dark ? '#e6edf7' : '#111827', fontSize: 12 },
       formatter: (params) => {
-        const item = params[0]
-        if (item.data?.hasData === false) return `${item.name}<br/>暂无提交数据`
-        return `${item.name}<br/>错误率 ${item.value}%`
+        const rows = params.map((item) => `${item.marker}${item.seriesName}：${item.value}`)
+        return `${params[0]?.axisValue || ''}<br/>${rows.join('<br/>')}`
       }
     },
     xAxis: {
       type: 'category',
+      boundaryGap: false,
       data: labels,
       axisTick: { show: false },
-      axisLine: { lineStyle: { color: '#e8edf5' } },
-      axisLabel: { color: '#7c869c', fontSize: 11 }
+      axisLine: { lineStyle: { color: gridColor } },
+      axisLabel: { color: textColor, fontSize: 11 }
     },
     yAxis: {
       type: 'value',
-      min: 0,
-      max: 100,
-      interval: 25,
-      axisLabel: {
-        color: '#a0a9ba',
-        fontSize: 10,
-        formatter: '{value}%'
-      },
-      splitLine: { lineStyle: { color: '#f1f4f9' } }
+      minInterval: 1,
+      axisLabel: { color: textColor, fontSize: 10 },
+      splitLine: { lineStyle: { color: gridColor, type: 'dashed' } }
     },
     series: [
       {
-        name: '错误率',
-        type: 'bar',
-        data: values,
-        barWidth: 34,
-        showBackground: true,
-        backgroundStyle: { color: '#f4f6fb', borderRadius: [6, 6, 0, 0] },
-        itemStyle: {
-          color: '#3d5a78',
-          borderRadius: [6, 6, 0, 0]
-        }
+        name: '提交',
+        type: 'line',
+        smooth: 0.36,
+        symbol: 'circle',
+        symbolSize: 6,
+        data: submitData,
+        lineStyle: { width: 2.2, color: submitColor },
+        itemStyle: { color: submitColor, borderColor: dark ? '#0d1117' : '#fff', borderWidth: 2 },
+        areaStyle: { color: submitFill }
+      },
+      {
+        name: '通过',
+        type: 'line',
+        smooth: 0.36,
+        symbol: 'circle',
+        symbolSize: 6,
+        data: acData,
+        lineStyle: { width: 2.2, color: acColor },
+        itemStyle: { color: acColor, borderColor: dark ? '#0d1117' : '#fff', borderWidth: 2 },
+        areaStyle: { color: acFill }
       }
     ]
   })
   chartInstance.resize()
 }
+
+watch(
+  () => themeKey.value,
+  () => renderChart()
+)
 
 function handleResize() {
   chartInstance?.resize()
@@ -236,11 +253,55 @@ onBeforeUnmount(() => {
 
     <section class="analytics-surface">
       <article class="chart-section">
-        <div class="section-head">
+        <div class="section-head chart-head">
           <div>
-            <h2 class="section-title">知识点错误率</h2>
-            <p class="section-caption">未提交的知识点显示 —</p>
+            <h2 class="section-title">本周提交趋势</h2>
+            <p class="section-caption">最近 7 天 · 提交与通过</p>
           </div>
+          <div class="chart-legend">
+            <span><i class="legend-dot legend-submit" />提交</span>
+            <span><i class="legend-dot legend-ac" />通过</span>
+          </div>
+        </div>
+        <div class="week-highlights">
+          <article class="highlight-card">
+            <div class="highlight-top"><span>本周提交</span><small>最近 7 天</small></div>
+            <strong>{{ weekTotal }}<small>次</small></strong>
+            <p>{{ activeDays }} / 7 天有练习</p>
+            <div class="spark-bars" aria-hidden="true">
+              <i
+                v-for="day in week"
+                :key="`submit-${day.date}`"
+                :style="{ height: `${Math.max(4, (Number(day.submitCount || 0) / maxDaySubmit) * 100)}%` }"
+              />
+            </div>
+          </article>
+          <article class="highlight-card">
+            <div class="highlight-top"><span>本周通过</span><small>AC</small></div>
+            <strong>{{ weekAc }}<small>次</small></strong>
+            <p>通过率 {{ weekRate }}%</p>
+            <div class="spark-bars is-ac" aria-hidden="true">
+              <i
+                v-for="day in week"
+                :key="`ac-${day.date}`"
+                :style="{ height: `${Math.max(4, (Number(day.acCount || 0) / maxDaySubmit) * 100)}%` }"
+              />
+            </div>
+          </article>
+          <article class="highlight-card">
+            <div class="highlight-top"><span>学习节奏</span><small>活跃度</small></div>
+            <strong>{{ activeDays }}<small>天</small></strong>
+            <p v-if="bestDay && bestDay.submitCount">最佳 {{ bestDay.label }} · {{ bestDay.submitCount }} 次</p>
+            <p v-else>本周还没有提交</p>
+            <div class="rhythm-dots" aria-hidden="true">
+              <i
+                v-for="day in week"
+                :key="`day-${day.date}`"
+                :class="{ 'is-active': Number(day.submitCount || 0) > 0 }"
+                :title="day.label"
+              />
+            </div>
+          </article>
         </div>
         <div class="chart-wrap">
           <div ref="chartRef" class="chart" />
@@ -1182,6 +1243,143 @@ onBeforeUnmount(() => {
 @media (min-width: 761px) {
   .page-head {
     justify-content: flex-end;
+  }
+}
+
+.chart-head {
+  align-items: center;
+}
+
+.chart-legend {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  color: #8b95a5;
+  font-size: 11px;
+}
+
+.chart-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.legend-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.legend-submit {
+  background: #557596;
+}
+
+.legend-ac {
+  background: #2f7d5b;
+}
+
+.week-highlights {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 14px 0 4px;
+}
+
+.highlight-card {
+  position: relative;
+  min-height: 106px;
+  padding: 12px 13px 10px;
+  overflow: hidden;
+  border: 1px solid #e8edf5;
+  border-radius: 10px;
+  background: #fbfcfd;
+}
+
+.highlight-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #7c869c;
+  font-size: 11px;
+}
+
+.highlight-top small {
+  color: #a0a9ba;
+  font-size: 10px;
+}
+
+.highlight-card strong {
+  display: block;
+  margin-top: 8px;
+  color: #0f172a;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+
+.highlight-card strong small {
+  margin-left: 3px;
+  color: #8b95a5;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.highlight-card p {
+  margin-top: 6px;
+  color: #94a3b8;
+  font-size: 10.5px;
+}
+
+.spark-bars {
+  position: absolute;
+  right: 12px;
+  bottom: 10px;
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  width: 84px;
+  height: 34px;
+  opacity: 0.8;
+}
+
+.spark-bars i {
+  flex: 1;
+  min-height: 3px;
+  border-radius: 2px 2px 0 0;
+  background: #8aa4bd;
+}
+
+.spark-bars.is-ac i {
+  background: #6f9a84;
+}
+
+.rhythm-dots {
+  position: absolute;
+  right: 12px;
+  bottom: 14px;
+  display: flex;
+  gap: 4px;
+}
+
+.rhythm-dots i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #dce3ec;
+}
+
+.rhythm-dots i.is-active {
+  background: #557596;
+}
+
+@media (max-width: 760px) {
+  .week-highlights {
+    grid-template-columns: 1fr;
+  }
+
+  .highlight-card {
+    min-height: 92px;
   }
 }
 </style>

@@ -1,20 +1,20 @@
 import { computed, ref, watch } from 'vue'
 
 const OPTIONS = [
-  { key: 'paper', label: '纸白', color: '#f5f6f7' },
-  { key: 'mist', label: '雾蓝', color: '#edf2f6' },
-  { key: 'sand', label: '暖沙', color: '#f6f2ea' },
-  { key: 'sage', label: '浅苔', color: '#eef4ef' },
+  { key: 'light', label: '浅色', color: '#f5f6f7' },
+  { key: 'dark', label: '深色', color: '#0d1117' },
 ]
 
-const saved = typeof localStorage !== 'undefined' ? localStorage.getItem('codeagent-surface') : ''
-const themeKey = ref(OPTIONS.some((item) => item.key === saved) ? saved : 'paper')
+const LEGACY_LIGHT = new Set(['paper', 'mist', 'sand', 'sage'])
+const stored = typeof localStorage !== 'undefined' ? localStorage.getItem('codeagent-surface') : ''
+const initial = stored === 'dark' ? 'dark' : LEGACY_LIGHT.has(stored) || stored === 'light' ? 'light' : 'light'
+const themeKey = ref(initial)
 const activeTheme = computed(() => OPTIONS.find((item) => item.key === themeKey.value) || OPTIONS[0])
 
 function applyTheme(option) {
   if (typeof document === 'undefined') return
   document.documentElement.style.setProperty('--page-bg', option.color)
-  document.documentElement.dataset.surface = option.key
+  document.documentElement.dataset.theme = option.key
   try {
     localStorage.setItem('codeagent-surface', option.key)
   } catch {
@@ -31,6 +31,9 @@ export function useSurfaceTheme() {
     activeTheme,
     setTheme(key) {
       if (OPTIONS.some((item) => item.key === key)) themeKey.value = key
+    },
+    toggleTheme() {
+      themeKey.value = themeKey.value === 'dark' ? 'light' : 'dark'
     },
   }
 }

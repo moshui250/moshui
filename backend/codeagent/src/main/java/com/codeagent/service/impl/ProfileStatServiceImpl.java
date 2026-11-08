@@ -6,6 +6,7 @@ import com.codeagent.exception.BizException;
 import com.codeagent.mapper.ProfileStatMapper;
 import com.codeagent.service.ProfileStatService;
 import com.codeagent.service.RankingService;
+import com.codeagent.vo.HomeDailyVO;
 import com.codeagent.vo.KnowledgeStatVO;
 import com.codeagent.vo.ProfileStatVO;
 import com.codeagent.vo.RecentSubmitVO;
@@ -14,8 +15,14 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -29,6 +36,9 @@ import java.util.concurrent.TimeUnit;
 public class ProfileStatServiceImpl implements ProfileStatService {
 
     private static final int RECENT_LIMIT = 5;
+    private static final ZoneId APP_ZONE = ZoneId.of("Asia/Shanghai");
+    private static final DateTimeFormatter DAY_FORMAT = DateTimeFormatter.ofPattern("MM-dd");
+    private static final String[] WEEK_LABELS = {"周一", "周二", "周三", "周四", "周五", "周六", "周日"};
 
     private final ProfileStatMapper profileStatMapper;
     private final RankingService rankingService;
@@ -125,7 +135,39 @@ public class ProfileStatServiceImpl implements ProfileStatService {
 
         List<RecentSubmitVO> recentSubmits = profileStatMapper.selectRecentSubmits(userId, RECENT_LIMIT);
         vo.setRecentSubmits(recentSubmits == null ? new ArrayList<>() : recentSubmits);
+        vo.setWeekly(buildWeekly(profileStatMapper.selectWeekly(userId)));
         return vo;
+    }
+
+    /**
+     * 把数据库返回的有提交日期补齐成最近 7 天，缺失日期补 0。
+     */
+    private List<HomeDailyVO> buildWeekly(List<HomeDailyVO> rows) {
+        Map<String, HomeDailyVO> byDate = new HashMap<>();
+        if (rows != null) {
+            for (HomeDailyVO row : rows) {
+                if (row != null && row.getDate() != null) {
+                    byDate.put(row.getDate(), row);
+                }
+            }
+        }
+
+        List<HomeDailyVO> weekly = new ArrayList<>(7);
+        LocalDate today = LocalDate.now(APP_ZONE);
+        for (int offset = 6; offset >= 0; offset--) {
+            LocalDate date = today.minusDays(offset);
+            String key = date.format(DAY_FORMAT);
+            HomeDailyVO row = byDate.get(key);
+            if (row == null) {
+                row = new HomeDailyVO(key, weekLabel(date.getDayOfWeek()), 0L, 0L);
+            }
+            weekly.add(row);
+        }
+        return weekly;
+    }
+
+    private String weekLabel(DayOfWeek dayOfWeek) {
+        return WEEK_LABELS[dayOfWeek.getValue() - 1];
     }
 
     /**
