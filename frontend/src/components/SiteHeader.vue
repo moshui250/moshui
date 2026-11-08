@@ -1,13 +1,9 @@
 <template>
   <header class="site-header">
     <div class="site-inner">
-      <div class="brand" aria-label="CodeAgent">
-        <img class="brand-mark" src="/favicon.svg" alt="" width="32" height="32" />
-        <span class="brand-copy">
-          <strong>CodeAgent</strong>
-          <em>AI 编程练习</em>
-        </span>
-      </div>
+      <router-link class="brand" to="/" aria-label="CodeAgent 首页" title="CodeAgent 首页">
+        <img class="brand-mark" src="/brand-mark.svg" alt="" width="32" height="32" />
+      </router-link>
 
       <nav class="site-nav" aria-label="主导航">
         <router-link to="/">首页</router-link>
@@ -34,9 +30,34 @@
         <button class="command-trigger" type="button" aria-label="全局搜索" title="全局搜索 (Ctrl/Cmd+K)" @click="openCommand">
           <el-icon><Search /></el-icon>
         </button>
-        <span class="health" :class="healthClass">
-          <i></i>{{ healthText }}
-        </span>
+        <el-popover placement="bottom-end" :width="202" trigger="click" popper-class="surface-popover">
+          <template #reference>
+            <button class="surface-trigger" type="button" aria-label="更换页面背景色" title="更换页面背景色">
+              <el-icon><Brush /></el-icon>
+            </button>
+          </template>
+          <div class="surface-panel">
+            <div class="surface-head">
+              <span>页面背景</span>
+              <small>{{ activeTheme.label }}</small>
+            </div>
+            <div class="surface-options">
+              <button
+                v-for="item in themeOptions"
+                :key="item.key"
+                class="surface-option"
+                :class="{ 'is-active': themeKey === item.key }"
+                type="button"
+                :aria-label="item.label"
+                :title="item.label"
+                @click="setTheme(item.key)"
+              >
+                <span class="surface-swatch" :style="{ background: item.color }"></span>
+                <span>{{ item.label }}</span>
+              </button>
+            </div>
+          </div>
+        </el-popover>
         <template v-if="userStore.user">
           <el-dropdown trigger="click" @command="handleCommand">
             <button class="user-pill" type="button">
@@ -75,26 +96,25 @@
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Search } from '@element-plus/icons-vue'
-import { getHealth } from '@/api/health'
+import { Brush, Search } from '@element-plus/icons-vue'
 import { useUserStore } from '@/store/user'
 import { useAuthUiStore } from '@/store/auth-ui'
+import { useSurfaceTheme } from '@/store/theme'
 import UserAvatar from '@/components/UserAvatar.vue'
 
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
 const authUi = useAuthUiStore()
+const { options: themeOptions, themeKey, activeTheme, setTheme } = useSurfaceTheme()
 
 function openLogin() {
   authUi.openAuth('login', route.name === 'home' ? '/question' : route.fullPath)
 }
-const health = ref(null)
 const menuOpen = ref(false)
-let timer = null
 
 watch(
   () => route.fullPath,
@@ -103,14 +123,6 @@ watch(
   }
 )
 
-const healthClass = computed(() => {  if (!health.value) return 'is-checking'
-  if (health.value.db === 'UP') return 'is-up'
-  return 'is-warn'
-})
-const healthText = computed(() => {
-  if (!health.value) return '检查服务'
-  return health.value.db === 'UP' ? '服务正常' : '数据库未连接'
-})
 const isAdmin = computed(() => userStore.user?.role === 'ADMIN')
 
 function openCommand() {
@@ -120,14 +132,6 @@ function openCommand() {
 function openCommandFromMenu() {
   menuOpen.value = false
   openCommand()
-}
-
-async function loadHealth() {
-  try {
-    health.value = await getHealth()
-  } catch {
-    health.value = null
-  }
 }
 
 function handleCommand(command) {
@@ -155,12 +159,6 @@ onMounted(() => {
   if (userStore.token && !userStore.user) {
     userStore.fetchMe().catch(() => {})
   }
-  loadHealth()
-  timer = window.setInterval(loadHealth, 60000)
-})
-
-onBeforeUnmount(() => {
-  if (timer) window.clearInterval(timer)
 })
 </script>
 
@@ -169,7 +167,7 @@ onBeforeUnmount(() => {
   position: sticky;
   top: 0;
   z-index: 20;
-  background: #f5f6f7;
+  background: var(--page-bg, #f5f6f7);
   border-bottom: 0;
 }
 
@@ -185,9 +183,10 @@ onBeforeUnmount(() => {
 .brand {
   display: inline-flex;
   align-items: center;
-  gap: 9px;
-  min-width: 140px;
+  gap: 0;
+  min-width: 32px;
   color: inherit;
+  text-decoration: none;
 }
 
 .brand-mark {
@@ -259,6 +258,91 @@ onBeforeUnmount(() => {
   border-color: #e1e5ee;
   background: #f8fafc;
   color: #1f3a5f;
+}
+
+.surface-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+}
+
+.surface-trigger:hover {
+  border-color: #e1e5ee;
+  background: #f8fafc;
+  color: #1f3a5f;
+}
+
+.surface-panel {
+  padding: 2px;
+}
+
+.surface-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 4px 8px;
+  color: #111827;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.surface-head small {
+  color: #8b95a5;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.surface-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+}
+
+.surface-option {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 34px;
+  padding: 5px 7px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: #4b5563;
+  font-size: 11.5px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.surface-option:hover {
+  background: #f7f8fa;
+}
+
+.surface-option.is-active {
+  border-color: #cfd8e4;
+  background: #f7f9fb;
+  color: #111827;
+}
+
+.surface-swatch {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  border-radius: 6px;
+}
+
+:global(.surface-popover.el-popover) {
+  padding: 10px;
+  border-color: #e4e8ef;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.10);
 }
 
 .health {

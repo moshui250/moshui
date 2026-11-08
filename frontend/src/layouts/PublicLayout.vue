@@ -31,7 +31,7 @@ function transitionName(route) {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: #f5f6f7;
+  background: var(--page-bg, #f5f6f7);
   color: #0f172a;
 }
 
