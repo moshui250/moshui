@@ -1,9 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="CodeAgent">
-  <rect x="2" y="2" width="60" height="60" rx="16" fill="#14263f"/>
-  <path d="M15.5 46 L26.5 37.5 L36.5 29" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="15.5" cy="46" r="3.4" fill="#ffffff"/>
-  <circle cx="26.5" cy="37.5" r="3.4" fill="#ffffff"/>
-  <circle cx="36.5" cy="29" r="3.4" fill="#ffffff"/>
-  <circle cx="43.5" cy="20.5" r="8.2" fill="none" stroke="#67e8f9" stroke-width="1.9"/>
-  <rect x="40" y="17" width="7" height="7" rx="1.2" fill="#ffffff"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="CodeAgent">
+  <rect width="128" height="128" fill="#ffffff"/>
+  <path
+    d="M98.75 29.25 L88.75 39.25 A35 35 0 1 0 88.75 88.75 L98.75 98.75"
+    fill="none"
+    stroke="#1F3A5F"
+    stroke-width="14"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <circle cx="64" cy="64" r="6.3" fill="#1F3A5F"/>
 </svg>

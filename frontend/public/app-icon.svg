@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="CodeAgent">
+  <rect width="128" height="128" fill="#ffffff"/>
+  <path
+    d="M98.75 29.25 L88.75 39.25 A35 35 0 1 0 88.75 88.75 L98.75 98.75"
+    fill="none"
+    stroke="#1F3A5F"
+    stroke-width="14"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <circle cx="64" cy="64" r="6.3" fill="#1F3A5F"/>
+</svg>

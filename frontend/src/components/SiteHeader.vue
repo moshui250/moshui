@@ -2,7 +2,7 @@
   <header class="site-header">
     <div class="site-inner">
       <div class="brand" aria-label="CodeAgent">
-        <span class="brand-mark">&lt;/&gt;</span>
+        <img class="brand-mark" src="/favicon.svg" alt="" width="32" height="32" />
         <span class="brand-copy">
           <strong>CodeAgent</strong>
           <em>AI 编程练习</em>
@@ -193,14 +193,10 @@ onBeforeUnmount(() => {
 .brand-mark {
   width: 32px;
   height: 32px;
-  border-radius: 9px;
-  display: grid;
-  place-items: center;
-  color: #fff;
-  background: #1f3a5f;
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: -1px;
+  flex: 0 0 32px;
+  display: block;
+  object-fit: contain;
+  border-radius: 0;
   box-shadow: none;
 }
 
