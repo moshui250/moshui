@@ -285,9 +285,7 @@ onBeforeUnmount(revokePreview)
 <template>
   <div class="import-page">
     <header class="import-head">
-      <div>
-        <h1>图片录题</h1>
-      </div>
+      <h1 class="sr-only">图片录题</h1>
       <div class="head-badge">
         <span class="badge-dot"></span>
         识别结果不直接入库
@@ -1334,6 +1332,12 @@ onBeforeUnmount(revokePreview)
 
   .flow-list p {
     display: none;
+  }
+}
+
+@media (min-width: 761px) {
+  .import-head {
+    justify-content: flex-end;
   }
 }
 </style>

@@ -5,9 +5,7 @@
       返回题目
     </button>
 
-    <header class="edit-head">
-      <h1>编辑题目</h1>
-    </header>
+    <h1 class="sr-only">编辑题目</h1>
 
     <div v-if="loading" class="edit-panel">
       <el-skeleton :rows="8" animated />

@@ -2,6 +2,7 @@
 import { onBeforeUnmount, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import GlobalCommandPalette from '@/components/GlobalCommandPalette.vue'
+import AuthDialog from '@/components/AuthDialog.vue'
 
 const router = useRouter()
 const routeLoading = ref(false)
@@ -43,6 +44,7 @@ onBeforeUnmount(() => {
   ></div>
   <router-view />
   <GlobalCommandPalette />
+  <AuthDialog />
 </template>
 
 <style>
@@ -69,6 +71,18 @@ onBeforeUnmount(() => {
   opacity: 0;
   transform: scaleX(1);
   transition: transform 0.2s ease, opacity 0.25s ease 0.08s;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 @media (prefers-reduced-motion: reduce) {

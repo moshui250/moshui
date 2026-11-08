@@ -2,9 +2,7 @@
   <section class="contest-page">
     <div class="page-inner">
       <header class="page-head">
-        <div>
-          <h1>竞赛</h1>
-        </div>
+        <h1 class="sr-only">竞赛</h1>
         <span class="page-count">共 {{ total }} 场</span>
       </header>
 
@@ -757,6 +755,12 @@ h2 {
 
   .cell-action b {
     margin-top: 0;
+  }
+}
+
+@media (min-width: 761px) {
+  .page-head {
+    justify-content: flex-end;
   }
 }
 </style>

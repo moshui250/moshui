@@ -53,9 +53,7 @@
             </template>
           </el-dropdown>
         </template>
-        <router-link v-else class="login-link" :to="{ name: 'login', query: { redirect: $route.fullPath } }">
-          登录
-        </router-link>
+        <button v-else class="login-link" type="button" @click="openLogin">登录</button>
       </div>
     </div>
 
@@ -83,11 +81,17 @@ import { ElMessage } from 'element-plus'
 import { Search } from '@element-plus/icons-vue'
 import { getHealth } from '@/api/health'
 import { useUserStore } from '@/store/user'
+import { useAuthUiStore } from '@/store/auth-ui'
 import UserAvatar from '@/components/UserAvatar.vue'
 
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
+const authUi = useAuthUiStore()
+
+function openLogin() {
+  authUi.openAuth('login', route.name === 'home' ? '/question' : route.fullPath)
+}
 const health = ref(null)
 const menuOpen = ref(false)
 let timer = null
@@ -343,6 +347,7 @@ onBeforeUnmount(() => {
   font-size: 13px;
   font-weight: 500;
   text-decoration: none;
+  cursor: pointer;
 }
 
 .login-link:hover {

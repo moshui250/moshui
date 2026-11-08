@@ -194,9 +194,7 @@ onMounted(loadStats)
 <template>
   <div class="profile-page">
     <header class="page-head">
-      <div>
-        <h1 class="page-title">个人中心</h1>
-      </div>
+      <h1 class="sr-only">个人中心</h1>
       <el-button class="head-action" plain @click="router.push('/question')">
         去题库
         <el-icon><ArrowRight /></el-icon>
@@ -1149,6 +1147,12 @@ onMounted(loadStats)
 
   .slider-wrap {
     width: 100%;
+  }
+}
+
+@media (min-width: 761px) {
+  .page-head {
+    justify-content: flex-end;
   }
 }
 

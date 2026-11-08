@@ -205,9 +205,7 @@ onBeforeUnmount(() => {
 <template>
   <div class="dashboard-page">
     <header class="page-head">
-      <div class="head-copy">
-        <h1 class="page-title">学习看板</h1>
-      </div>
+      <h1 class="sr-only">学习看板</h1>
       <div class="head-actions">
         <span class="date-text">{{ today }}</span>
         <button class="btn-primary" type="button" @click="router.push('/question')">
@@ -1178,6 +1176,12 @@ onBeforeUnmount(() => {
     grid-template-columns: minmax(0, 1fr) 58px 92px;
     gap: 8px;
     padding: 10px 0;
+  }
+}
+
+@media (min-width: 761px) {
+  .page-head {
+    justify-content: flex-end;
   }
 }
 </style>

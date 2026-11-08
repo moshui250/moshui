@@ -216,11 +216,7 @@ onMounted(async () => {
 
 <template>
   <div class="catalog-page">
-    <header class="catalog-head">
-      <div class="head-copy">
-        <h1>题库</h1>
-      </div>
-    </header>
+    <h1 class="sr-only">题库</h1>
 
     <div class="catalog-layout">
       <aside class="filter-rail">

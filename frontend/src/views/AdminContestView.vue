@@ -4,7 +4,7 @@
       <header class="admin-head">
         <div>
           <router-link class="back-link" to="/contests">返回竞赛</router-link>
-          <h1>创建竞赛</h1>
+          <h1 class="sr-only">创建竞赛</h1>
         </div>
         <span class="admin-badge">管理员</span>
       </header>

@@ -202,9 +202,7 @@ onMounted(loadRows)
 <template>
   <div class="wrong-page">
     <header class="page-head">
-      <div class="head-copy">
-        <h1 class="page-title">错题本</h1>
-      </div>
+      <h1 class="sr-only">错题本</h1>
       <button class="btn-primary" type="button" @click="router.push('/question')">
         去题库练习
         <el-icon><ArrowRight /></el-icon>
@@ -996,6 +994,12 @@ onMounted(loadRows)
 
   .similar-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (min-width: 761px) {
+  .page-head {
+    justify-content: flex-end;
   }
 }
 </style>

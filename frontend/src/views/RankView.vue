@@ -79,9 +79,7 @@ onBeforeUnmount(() => {
 <template>
   <div class="rank-page">
     <header class="page-head">
-      <div>
-        <h1 class="page-title">排名</h1>
-      </div>
+      <h1 class="sr-only">排名</h1>
       <div class="refresh-block">
         <span>{{ refreshText }}</span>
         <el-button :icon="Refresh" :loading="loading" plain @click="loadRanking">刷新</el-button>
@@ -553,6 +551,12 @@ onBeforeUnmount(() => {
 
   .me-tag {
     padding: 1px 4px;
+  }
+}
+
+@media (min-width: 761px) {
+  .page-head {
+    justify-content: flex-end;
   }
 }
 </style>
