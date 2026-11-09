@@ -8,9 +8,11 @@ import { CanvasRenderer } from 'echarts/renderers'
 import { ArrowRight, InfoFilled } from '@element-plus/icons-vue'
 import { getProfileStat } from '@/api/profile'
 import { emptyProfileStat } from '@/data/demo'
-import { useSurfaceTheme } from '@/store/theme'
+import { useTheme } from '@/composables/useTheme'
+import { chartThemeName, registerChartThemes } from '@/utils/chartTheme'
 
 echarts.use([LineChart, GridComponent, TooltipComponent, CanvasRenderer])
+registerChartThemes(echarts)
 
 const router = useRouter()
 const stat = reactive({ ...emptyProfileStat, knowledgeStats: [], recentSubmits: [], weekly: [] })
@@ -69,7 +71,7 @@ const activeKnowledge = computed(() =>
 
 const weakPoints = computed(() => activeKnowledge.value.slice(0, 3))
 const weakest = computed(() => activeKnowledge.value[0] || null)
-const { themeKey } = useSurfaceTheme()
+const { isDark } = useTheme()
 
 const week = computed(() => (Array.isArray(stat.weekly) ? stat.weekly : []))
 const weekTotal = computed(() => week.value.reduce((sum, day) => sum + Number(day.submitCount || 0), 0))
@@ -127,11 +129,12 @@ async function loadStat() {
 
 function renderChart() {
   if (!chartRef.value) return
-  if (!chartInstance) {
-    chartInstance = echarts.init(chartRef.value)
+  const dark = isDark.value
+  if (chartInstance) {
+    chartInstance.dispose()
+    chartInstance = null
   }
-
-  const dark = themeKey.value === 'dark'
+  chartInstance = echarts.init(chartRef.value, chartThemeName(dark))
   const labels = week.value.map((day) => day.label)
   const submitData = week.value.map((day) => Number(day.submitCount || 0))
   const acData = week.value.map((day) => Number(day.acCount || 0))
@@ -199,7 +202,7 @@ function renderChart() {
 }
 
 watch(
-  () => themeKey.value,
+  isDark,
   () => renderChart()
 )
 

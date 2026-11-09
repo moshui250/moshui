@@ -9,7 +9,19 @@
     />
     <link rel="icon" type="image/svg+xml" sizes="any" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/app-icon-180.png" />
-    <meta name="theme-color" content="#ffffff" />
+    <meta name="theme-color" content="#f5f6f7" />
+    <script>
+      (function () {
+        try {
+          var saved = localStorage.getItem('dsh-theme')
+          var dark = saved === 'dark' || (saved !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+          document.documentElement.classList.toggle('dark', dark)
+          document.documentElement.style.colorScheme = dark ? 'dark' : 'light'
+        } catch (error) {
+          /* Theme preferences are optional; keep the light default. */
+        }
+      })()
+    </script>
     <title>CodeAgent OJ</title>
   </head>
   <body>

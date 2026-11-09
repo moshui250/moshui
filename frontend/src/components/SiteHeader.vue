@@ -30,34 +30,16 @@
         <button class="command-trigger" type="button" aria-label="全局搜索" title="全局搜索 (Ctrl/Cmd+K)" @click="openCommand">
           <el-icon><Search /></el-icon>
         </button>
-        <el-popover placement="bottom-end" :width="202" trigger="click" popper-class="surface-popover">
-          <template #reference>
-            <button class="surface-trigger" type="button" aria-label="切换深浅色主题" title="切换深浅色主题">
-              <el-icon><component :is="themeKey === 'dark' ? Sunny : Moon" /></el-icon>
-            </button>
-          </template>
-          <div class="surface-panel">
-            <div class="surface-head">
-              <span>页面主题</span>
-              <small>{{ activeTheme.label }}</small>
-            </div>
-            <div class="surface-options">
-              <button
-                v-for="item in themeOptions"
-                :key="item.key"
-                class="surface-option"
-                :class="{ 'is-active': themeKey === item.key }"
-                type="button"
-                :aria-label="item.label"
-                :title="item.label"
-                @click="setTheme(item.key)"
-              >
-                <span class="surface-swatch" :style="{ background: item.color }"></span>
-                <span>{{ item.label }}</span>
-              </button>
-            </div>
-          </div>
-        </el-popover>
+        <button
+          class="theme-toggle"
+          type="button"
+          :aria-label="isDark ? '切换到浅色模式' : '切换到深色模式'"
+          :aria-pressed="isDark"
+          :title="isDark ? '切换到浅色模式' : '切换到深色模式'"
+          @click="toggleTheme"
+        >
+          <el-icon><component :is="isDark ? Sunny : Moon" /></el-icon>
+        </button>
         <template v-if="userStore.user">
           <el-dropdown trigger="click" @command="handleCommand">
             <button class="user-pill" type="button">
@@ -102,14 +84,14 @@ import { ElMessage } from 'element-plus'
 import { Moon, Search, Sunny } from '@element-plus/icons-vue'
 import { useUserStore } from '@/store/user'
 import { useAuthUiStore } from '@/store/auth-ui'
-import { useSurfaceTheme } from '@/store/theme'
+import { useTheme } from '@/composables/useTheme'
 import UserAvatar from '@/components/UserAvatar.vue'
 
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
 const authUi = useAuthUiStore()
-const { options: themeOptions, themeKey, activeTheme, setTheme } = useSurfaceTheme()
+const { isDark, toggleTheme } = useTheme()
 
 function openLogin() {
   authUi.openAuth('login', route.name === 'home' ? '/question' : route.fullPath)
@@ -260,7 +242,7 @@ onMounted(() => {
   color: #1f3a5f;
 }
 
-.surface-trigger {
+.theme-toggle {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -273,10 +255,16 @@ onMounted(() => {
   cursor: pointer;
 }
 
-.surface-trigger:hover {
+.theme-toggle:hover {
   border-color: #e1e5ee;
   background: #f8fafc;
   color: #1f3a5f;
+}
+
+.theme-toggle:focus-visible {
+  outline: 2px solid var(--dsh-focus);
+  outline-offset: 2px;
+  border-color: var(--dsh-primary);
 }
 
 .surface-panel {

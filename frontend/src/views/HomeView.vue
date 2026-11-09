@@ -1,5 +1,5 @@
 <script setup>
-import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import * as echarts from 'echarts/core'
 import { BarChart } from 'echarts/charts'
@@ -18,12 +18,16 @@ import { getHealth } from '@/api/health'
 import { getHomeSummary } from '@/api/home'
 import { listKnowledgePoints } from '@/api/question'
 import { useUserStore } from '@/store/user'
+import { useTheme } from '@/composables/useTheme'
+import { chartThemeName, registerChartThemes } from '@/utils/chartTheme'
 import SiteHeader from '@/components/SiteHeader.vue'
 
 echarts.use([BarChart, GridComponent, LegendComponent, TooltipComponent, CanvasRenderer])
+registerChartThemes(echarts)
 
 const router = useRouter()
 const userStore = useUserStore()
+const { isDark } = useTheme()
 
 const chartRef = ref(null)
 const loading = ref(true)
@@ -272,10 +276,18 @@ async function loadKnowledgePoints() {
 
 function renderChart() {
   if (!chartRef.value) return
-  if (!chartInstance) {
-    chartInstance = echarts.init(chartRef.value)
+  if (chartInstance) {
+    chartInstance.dispose()
+    chartInstance = null
   }
+  chartInstance = echarts.init(chartRef.value, chartThemeName(isDark.value))
 
+  const dark = isDark.value
+  const axisLine = dark ? '#2b3441' : '#e2e8f0'
+  const axisText = dark ? '#8b949e' : '#94a3b8'
+  const splitLine = dark ? '#222c39' : '#f1f5f9'
+  const submitColor = dark ? '#a8bdd3' : '#1f3a5f'
+  const acColor = dark ? '#6fa98b' : '#2f7d5b'
   const weekly = summary.weekly || []
   const labels = weekly.map((item) => item.label || item.date)
   const submitData = weekly.map((item) => Number(item.submitCount || 0))
@@ -299,15 +311,15 @@ function renderChart() {
       type: 'category',
       data: labels,
       axisTick: { show: false },
-      axisLine: { lineStyle: { color: '#e2e8f0' } },
-      axisLabel: { color: '#94a3b8', fontSize: 11 }
+      axisLine: { lineStyle: { color: axisLine } },
+      axisLabel: { color: axisText, fontSize: 11 }
     },
     yAxis: {
       type: 'value',
       min: 0,
       minInterval: 1,
-      axisLabel: { color: '#94a3b8', fontSize: 11 },
-      splitLine: { lineStyle: { color: '#f1f5f9' } }
+      axisLabel: { color: axisText, fontSize: 11 },
+      splitLine: { lineStyle: { color: splitLine } }
     },
     series: [
       {
@@ -315,19 +327,21 @@ function renderChart() {
         type: 'bar',
         data: submitData,
         barWidth: 14,
-        itemStyle: { color: '#1f3a5f', borderRadius: [4, 4, 0, 0] }
+        itemStyle: { color: submitColor, borderRadius: [4, 4, 0, 0] }
       },
       {
         name: '通过',
         type: 'bar',
         data: acData,
         barWidth: 14,
-        itemStyle: { color: '#2f7d5b', borderRadius: [4, 4, 0, 0] }
+        itemStyle: { color: acColor, borderRadius: [4, 4, 0, 0] }
       }
     ]
   })
   chartInstance.resize()
 }
+
+watch(isDark, () => renderChart())
 
 function handleResize() {
   chartInstance?.resize()

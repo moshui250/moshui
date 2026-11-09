@@ -1,0 +1,72 @@
+:root {
+  color-scheme: light;
+
+  --dsh-bg: #f5f6f7;
+  --dsh-surface: #ffffff;
+  --dsh-surface-muted: #f8fafc;
+  --dsh-text: #111827;
+  --dsh-text-secondary: #4b5563;
+  --dsh-text-muted: #8b95a5;
+  --dsh-border: #e4e8ef;
+  --dsh-border-strong: #d3dbe5;
+  --dsh-input: #ffffff;
+  --dsh-primary: #1f3a5f;
+  --dsh-primary-foreground: #ffffff;
+  --dsh-success: #2f7d5b;
+  --dsh-warning: #b7791f;
+  --dsh-danger: #b42318;
+  --dsh-info: #3f7d9e;
+  --dsh-focus: rgba(31, 58, 95, 0.22);
+  --dsh-chart-1: #557596;
+  --dsh-chart-2: #2f7d5b;
+  --dsh-chart-3: #b08a5a;
+  --dsh-chart-4: #8f7aa6;
+  --dsh-chart-5: #5f9a9a;
+
+  /* Backwards-compatible aliases used by existing page styles. */
+  --page-bg: var(--dsh-bg);
+  --ca-bg: var(--dsh-bg);
+  --ca-surface: var(--dsh-surface);
+  --ca-ink: var(--dsh-text);
+  --ca-text: var(--dsh-text-secondary);
+  --ca-muted: var(--dsh-text-muted);
+  --ca-line: var(--dsh-border);
+  --ca-primary: var(--dsh-primary);
+  --ca-primary-soft: #eef2f6;
+}
+
+.dark {
+  color-scheme: dark;
+
+  --dsh-bg: #0d1117;
+  --dsh-surface: #151b24;
+  --dsh-surface-muted: #1b2430;
+  --dsh-text: #f0f6fc;
+  --dsh-text-secondary: #c9d1d9;
+  --dsh-text-muted: #8b949e;
+  --dsh-border: #2b3441;
+  --dsh-border-strong: #3b4655;
+  --dsh-input: #111722;
+  --dsh-primary: #dbe7f4;
+  --dsh-primary-foreground: #0d1117;
+  --dsh-success: #6fa98b;
+  --dsh-warning: #d0a04c;
+  --dsh-danger: #d27b73;
+  --dsh-info: #7eabc3;
+  --dsh-focus: rgba(219, 231, 244, 0.28);
+  --dsh-chart-1: #a8bdd3;
+  --dsh-chart-2: #6fa98b;
+  --dsh-chart-3: #c4a36c;
+  --dsh-chart-4: #ad98c2;
+  --dsh-chart-5: #7db3b3;
+
+  --page-bg: var(--dsh-bg);
+  --ca-bg: var(--dsh-bg);
+  --ca-surface: var(--dsh-surface);
+  --ca-ink: var(--dsh-text);
+  --ca-text: var(--dsh-text-secondary);
+  --ca-muted: var(--dsh-text-muted);
+  --ca-line: var(--dsh-border);
+  --ca-primary: var(--dsh-primary);
+  --ca-primary-soft: #1a2431;
+}
