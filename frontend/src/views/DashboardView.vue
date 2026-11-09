@@ -1,5 +1,5 @@
 <script setup>
-import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import * as echarts from 'echarts/core'
 import { LineChart } from 'echarts/charts'
@@ -8,11 +8,8 @@ import { CanvasRenderer } from 'echarts/renderers'
 import { ArrowRight, InfoFilled } from '@element-plus/icons-vue'
 import { getProfileStat } from '@/api/profile'
 import { emptyProfileStat } from '@/data/demo'
-import { useTheme } from '@/composables/useTheme'
-import { chartThemeName, registerChartThemes } from '@/utils/chartTheme'
 
 echarts.use([LineChart, GridComponent, TooltipComponent, CanvasRenderer])
-registerChartThemes(echarts)
 
 const router = useRouter()
 const stat = reactive({ ...emptyProfileStat, knowledgeStats: [], recentSubmits: [], weekly: [] })
@@ -71,7 +68,6 @@ const activeKnowledge = computed(() =>
 
 const weakPoints = computed(() => activeKnowledge.value.slice(0, 3))
 const weakest = computed(() => activeKnowledge.value[0] || null)
-const { isDark } = useTheme()
 
 const week = computed(() => (Array.isArray(stat.weekly) ? stat.weekly : []))
 const weekTotal = computed(() => week.value.reduce((sum, day) => sum + Number(day.submitCount || 0), 0))
@@ -129,31 +125,30 @@ async function loadStat() {
 
 function renderChart() {
   if (!chartRef.value) return
-  const dark = isDark.value
   if (chartInstance) {
     chartInstance.dispose()
     chartInstance = null
   }
-  chartInstance = echarts.init(chartRef.value, chartThemeName(dark))
+  chartInstance = echarts.init(chartRef.value)
   const labels = week.value.map((day) => day.label)
   const submitData = week.value.map((day) => Number(day.submitCount || 0))
   const acData = week.value.map((day) => Number(day.acCount || 0))
-  const gridColor = dark ? '#2b3441' : '#eef2f7'
-  const textColor = dark ? '#8b949e' : '#7c869c'
-  const submitColor = dark ? '#a8bdd3' : '#557596'
-  const acColor = dark ? '#6fa98b' : '#2f7d5b'
-  const submitFill = dark ? 'rgba(168, 189, 211, 0.20)' : 'rgba(85, 117, 150, 0.14)'
-  const acFill = dark ? 'rgba(111, 169, 139, 0.16)' : 'rgba(47, 125, 91, 0.10)'
+  const gridColor = '#eef2f7'
+  const textColor = '#7c869c'
+  const submitColor = '#557596'
+  const acColor = '#2f7d5b'
+  const submitFill = 'rgba(85, 117, 150, 0.14)'
+  const acFill = 'rgba(47, 125, 91, 0.10)'
 
   chartInstance.setOption({
     animationDuration: 460,
     grid: { left: 34, right: 18, top: 18, bottom: 28 },
     tooltip: {
       trigger: 'axis',
-      axisPointer: { type: 'line', lineStyle: { color: dark ? '#465262' : '#dbe2ec' } },
-      backgroundColor: dark ? '#1a212b' : '#fff',
-      borderColor: dark ? '#303946' : '#e4e8ef',
-      textStyle: { color: dark ? '#e6edf7' : '#111827', fontSize: 12 },
+      axisPointer: { type: 'line', lineStyle: { color: '#dbe2ec' } },
+      backgroundColor: '#fff',
+      borderColor: '#e4e8ef',
+      textStyle: { color: '#111827', fontSize: 12 },
       formatter: (params) => {
         const rows = params.map((item) => `${item.marker}${item.seriesName}：${item.value}`)
         return `${params[0]?.axisValue || ''}<br/>${rows.join('<br/>')}`
@@ -182,7 +177,7 @@ function renderChart() {
         symbolSize: 6,
         data: submitData,
         lineStyle: { width: 2.2, color: submitColor },
-        itemStyle: { color: submitColor, borderColor: dark ? '#0d1117' : '#fff', borderWidth: 2 },
+        itemStyle: { color: submitColor, borderColor: '#fff', borderWidth: 2 },
         areaStyle: { color: submitFill }
       },
       {
@@ -193,18 +188,13 @@ function renderChart() {
         symbolSize: 6,
         data: acData,
         lineStyle: { width: 2.2, color: acColor },
-        itemStyle: { color: acColor, borderColor: dark ? '#0d1117' : '#fff', borderWidth: 2 },
+        itemStyle: { color: acColor, borderColor: '#fff', borderWidth: 2 },
         areaStyle: { color: acFill }
       }
     ]
   })
   chartInstance.resize()
 }
-
-watch(
-  isDark,
-  () => renderChart()
-)
 
 function handleResize() {
   chartInstance?.resize()

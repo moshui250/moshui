@@ -1,7 +1,6 @@
 <script setup>
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import * as monaco from 'monaco-editor'
-import { useTheme } from '@/composables/useTheme'
 
 const props = defineProps({
   modelValue: {
@@ -24,7 +23,6 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue'])
 const container = ref(null)
-const { isDark } = useTheme()
 
 let editor = null
 let syncing = false
@@ -33,7 +31,7 @@ onMounted(() => {
   editor = monaco.editor.create(container.value, {
     value: props.modelValue,
     language: props.language,
-    theme: isDark.value ? 'vs-dark' : 'vs',
+    theme: 'vs',
     readOnly: props.readOnly,
     automaticLayout: true,
     minimap: { enabled: false },
@@ -78,11 +76,6 @@ watch(
 watch(
   () => props.readOnly,
   (readOnly) => editor?.updateOptions({ readOnly })
-)
-
-watch(
-  isDark,
-  (dark) => monaco.editor.setTheme(dark ? 'vs-dark' : 'vs')
 )
 
 onBeforeUnmount(() => {

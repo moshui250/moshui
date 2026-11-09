@@ -30,16 +30,6 @@
         <button class="command-trigger" type="button" aria-label="全局搜索" title="全局搜索 (Ctrl/Cmd+K)" @click="openCommand">
           <el-icon><Search /></el-icon>
         </button>
-        <button
-          class="theme-toggle"
-          type="button"
-          :aria-label="isDark ? '切换到浅色模式' : '切换到深色模式'"
-          :aria-pressed="isDark"
-          :title="isDark ? '切换到浅色模式' : '切换到深色模式'"
-          @click="toggleTheme"
-        >
-          <el-icon><component :is="isDark ? Sunny : Moon" /></el-icon>
-        </button>
         <template v-if="userStore.user">
           <el-dropdown trigger="click" @command="handleCommand">
             <button class="user-pill" type="button">
@@ -81,17 +71,15 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Moon, Search, Sunny } from '@element-plus/icons-vue'
+import { Search } from '@element-plus/icons-vue'
 import { useUserStore } from '@/store/user'
 import { useAuthUiStore } from '@/store/auth-ui'
-import { useTheme } from '@/composables/useTheme'
 import UserAvatar from '@/components/UserAvatar.vue'
 
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
 const authUi = useAuthUiStore()
-const { isDark, toggleTheme } = useTheme()
 
 function openLogin() {
   authUi.openAuth('login', route.name === 'home' ? '/question' : route.fullPath)
@@ -240,31 +228,6 @@ onMounted(() => {
   border-color: #e1e5ee;
   background: #f8fafc;
   color: #1f3a5f;
-}
-
-.theme-toggle {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 34px;
-  border: 1px solid transparent;
-  border-radius: 9px;
-  background: transparent;
-  color: #64748b;
-  cursor: pointer;
-}
-
-.theme-toggle:hover {
-  border-color: #e1e5ee;
-  background: #f8fafc;
-  color: #1f3a5f;
-}
-
-.theme-toggle:focus-visible {
-  outline: 2px solid var(--dsh-focus);
-  outline-offset: 2px;
-  border-color: var(--dsh-primary);
 }
 
 .surface-panel {

@@ -10,10 +10,8 @@ import router from './router'
 import { useUserStore } from './store/user'
 import { resetAuthExpired } from './utils/request'
 import reveal from './directives/reveal'
-import './styles/dsh-tokens.css'
 import './styles/main.css'
 import './styles/reveal.css'
-import './styles/theme.css'
 
 const app = createApp(App)
 const pinia = createPinia()
