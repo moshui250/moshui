@@ -5,8 +5,20 @@
       class="kg-canvas"
       :class="{ 'is-panning': panning }"
     >
+      <div class="kg-mode" role="tablist" aria-label="知识点视图">
+        <button
+          v-for="mode in [{ key: 'graph', label: '关系图' }, { key: 'chart', label: '学习曲线' }]"
+          :key="mode.key"
+          type="button"
+          role="tab"
+          :aria-selected="viewMode === mode.key"
+          :class="{ 'is-active': viewMode === mode.key }"
+          @click="switchView(mode.key)"
+        >{{ mode.label }}</button>
+      </div>
+
       <svg
-        v-if="!error"
+        v-if="!error && viewMode === 'graph'"
         ref="graphSvg"
         class="kg-svg"
         :viewBox="`0 0 ${canvasWidth} ${canvasHeight}`"
@@ -77,13 +89,58 @@
         </g>
       </svg>
 
+      <section v-if="!error && viewMode === 'chart'" class="kg-chart" aria-label="知识点学习曲线">
+        <header class="kg-chart-head">
+          <div>
+            <span class="kg-chart-kicker">学习曲线</span>
+            <h1>知识点练习分布</h1>
+            <p>{{ chartHasData ? '选择知识点查看练习与错误率，再回到对应题目。' : '按题库题量展示知识点分布；登录后切换为你的练习数据。' }}</p>
+          </div>
+          <div class="kg-chart-total">
+            <strong>{{ chartTotal }}</strong>
+            <span>{{ chartHasData ? '次练习' : '道题目' }}</span>
+          </div>
+        </header>
+
+        <div class="kg-chart-chips" role="tablist" aria-label="切换知识点">
+          <button
+            v-for="item in chartPoints"
+            :key="item.id"
+            type="button"
+            :class="{ 'is-active': Number(chartSelectedPoint?.id) === Number(item.id) }"
+            @click="selectChartPoint(item)"
+          >
+            {{ item.name }}
+            <span>{{ item.value }}</span>
+          </button>
+        </div>
+
+        <div class="kg-chart-main">
+          <div ref="chartRef" class="kg-chart-canvas"></div>
+          <aside v-if="chartSelectedPoint" class="kg-chart-side">
+            <span class="kg-chart-kicker">当前知识点</span>
+            <h2>{{ chartSelectedPoint.name }}</h2>
+            <p v-if="chartSelectedPoint.hasData">
+              练习 {{ chartSelectedPoint.submitCount }} 次 · 通过 {{ chartSelectedPoint.acCount }} 次
+              <br />错误率 {{ Math.round(chartSelectedPoint.errorRate * 100) }}%
+            </p>
+            <p v-else>{{ chartSelectedPoint.questionCount || 0 }} 道练习题，暂无练习记录。</p>
+            <p class="kg-chart-desc">{{ chartSelectedPoint.description || '把这一个知识点练稳，再串到下一题。' }}</p>
+            <button type="button" class="kg-chart-action" @click="practicePoint(chartSelectedPoint)">
+              去练习
+              <el-icon><ArrowRight /></el-icon>
+            </button>
+          </aside>
+        </div>
+      </section>
+
       <div v-if="error" class="kg-state">
         <p>{{ error }}</p>
       </div>
 
       <Transition name="kg-card">
         <aside
-          v-if="selectedPoint"
+          v-if="selectedPoint && viewMode === 'graph'"
           class="kg-card"
           @pointerdown.stop
           @wheel.stop
@@ -109,7 +166,9 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ArrowRight, Close } from '@element-plus/icons-vue'
+import * as echarts from 'echarts'
 import { listKnowledgePoints } from '@/api/question'
+import { getProfileStat } from '@/api/profile'
 
 const CONCEPTS = {
   array: ['遍历', '前缀和', '滑动窗口', '双指针'],
@@ -170,6 +229,11 @@ const hoveredId = ref('')
 const selectedId = ref('')
 const draggingId = ref('')
 const panning = ref(false)
+const viewMode = ref('graph')
+const chartRef = ref(null)
+const knowledgeStats = ref([])
+const chartSelectedId = ref('')
+let chartInstance = null
 
 const cam = ref({ x: 0, y: 0, scale: 1 })
 const reduced = ref(false)
@@ -199,6 +263,26 @@ const selectedPoint = computed(() => {
   return points.value.find((point) => Number(point.id) === id) || null
 })
 const cameraTransform = computed(() => `translate(${cam.value.x} ${cam.value.y}) scale(${cam.value.scale})`)
+
+const chartPoints = computed(() => points.value.map((point) => {
+  const stat = knowledgeStats.value.find((item) => Number(item.knowledgePointId) === Number(point.id))
+  const hasData = Boolean(stat?.hasData)
+  return {
+    ...point,
+    hasData,
+    submitCount: Number(stat?.submitCount || 0),
+    acCount: Number(stat?.acCount || 0),
+    errorRate: Number(stat?.errorRate || 0),
+    value: hasData ? Number(stat.submitCount) : Number(point.questionCount || 0)
+  }
+}))
+const chartHasData = computed(() => chartPoints.value.some((item) => item.hasData))
+const chartSelectedPoint = computed(() => (
+  chartPoints.value.find((item) => Number(item.id) === Number(chartSelectedId.value))
+  || chartPoints.value[0]
+  || null
+))
+const chartTotal = computed(() => chartPoints.value.reduce((sum, item) => sum + item.value, 0))
 
 const neighbors = computed(() => {
   const id = activeId.value
@@ -859,6 +943,110 @@ function goPractice() {
   router.push({ path: '/question', query: { kp: selectedPoint.value.id } })
 }
 
+function practicePoint(point) {
+  if (!point) return
+  router.push({ path: '/question', query: { kp: point.id } })
+}
+
+function selectChartPoint(point) {
+  chartSelectedId.value = point?.id ?? ''
+  renderChart()
+}
+
+function switchView(mode) {
+  if (viewMode.value === mode) return
+  viewMode.value = mode
+  if (mode === 'chart') {
+    if (!chartSelectedId.value && chartPoints.value.length) {
+      chartSelectedId.value = chartPoints.value[0].id
+    }
+    nextTick(renderChart)
+  } else {
+    nextTick(renderChart)
+  }
+}
+
+async function loadKnowledgeStats() {
+  try {
+    const data = await getProfileStat()
+    knowledgeStats.value = Array.isArray(data?.knowledgeStats) ? data.knowledgeStats : []
+  } catch {
+    knowledgeStats.value = []
+  }
+  if (viewMode.value === 'chart') nextTick(renderChart)
+}
+
+function renderChart() {
+  if (viewMode.value !== 'chart' || !chartRef.value || !chartPoints.value.length) return
+  if (!chartInstance) {
+    chartInstance = echarts.init(chartRef.value)
+  }
+  const data = chartPoints.value
+  const selectedId = Number(chartSelectedPoint.value?.id)
+  const seriesName = chartHasData.value ? '练习次数' : '题目数量'
+  chartInstance.setOption({
+    animationDuration: 280,
+    grid: { left: 18, right: 16, top: 24, bottom: 14, containLabel: true },
+    tooltip: {
+      trigger: 'axis',
+      backgroundColor: '#ffffff',
+      borderColor: '#e2e8f0',
+      borderWidth: 1,
+      textStyle: { color: '#334155', fontSize: 12 },
+      formatter: (params) => {
+        const item = data[params[0]?.dataIndex]
+        if (!item) return ''
+        const detail = item.hasData
+          ? `练习 ${item.submitCount} 次<br/>通过 ${item.acCount} 次 · 错误率 ${Math.round(item.errorRate * 100)}%`
+          : `${item.questionCount || 0} 道练习题`
+        return `<strong>${item.name}</strong><br/>${detail}`
+      }
+    },
+    xAxis: {
+      type: 'category',
+      data: data.map((item) => item.name),
+      axisLine: { lineStyle: { color: '#e2e8f0' } },
+      axisTick: { show: false },
+      axisLabel: {
+        color: '#7b8797',
+        fontSize: 11,
+        interval: 0,
+        rotate: data.length > 8 ? 26 : 0,
+        margin: 12
+      }
+    },
+    yAxis: {
+      type: 'value',
+      splitNumber: 4,
+      axisLabel: { color: '#94a3b8', fontSize: 10 },
+      splitLine: { lineStyle: { color: '#eef2f7', type: 'dashed' } }
+    },
+    series: [{
+      name: seriesName,
+      type: 'line',
+      smooth: 0.34,
+      symbol: 'circle',
+      symbolSize: 7,
+      showSymbol: true,
+      data: data.map((item) => ({
+        value: item.value,
+        itemStyle: Number(item.id) === selectedId
+          ? { color: '#b58552', borderColor: '#ffffff', borderWidth: 2 }
+          : { color: '#6d8cab', borderColor: '#ffffff', borderWidth: 2 }
+      })),
+      lineStyle: { width: 2.2, color: '#6d8cab' },
+      areaStyle: {
+        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+          { offset: 0, color: 'rgba(109, 140, 171, 0.30)' },
+          { offset: 1, color: 'rgba(109, 140, 171, 0.02)' }
+        ])
+      },
+      emphasis: { focus: 'series', scale: 1.25 }
+    }]
+  }, true)
+  chartInstance.resize()
+}
+
 function onKeydown(event) {
   if (event.key === 'Escape') closeCard()
 }
@@ -877,6 +1065,10 @@ function measure() {
 
 function handleResize() {
   if (!measure()) return
+  if (viewMode.value === 'chart') {
+    chartInstance?.resize()
+    return
+  }
   if (points.value.length && !error.value) {
     makeGraph(points.value, false)
   }
@@ -908,6 +1100,7 @@ async function load() {
       return
     }
     makeGraph(points.value)
+    loadKnowledgeStats()
   } catch (err) {
     error.value = err?.message || '知识点加载失败'
   }
@@ -949,6 +1142,8 @@ onBeforeUnmount(() => {
   window.removeEventListener('keydown', onKeydown)
   mediaQuery?.removeEventListener?.('change', onMotionChange)
   resizeObserver?.disconnect()
+  chartInstance?.dispose()
+  chartInstance = null
   document.body.style.overflow = previousBodyOverflow
 })
 </script>
@@ -1276,6 +1471,238 @@ onBeforeUnmount(() => {
 @keyframes kg-halo {
   0%, 100% { opacity: 0.1; transform: scale(1); }
   50% { opacity: 0.26; transform: scale(1.16); }
+}
+
+.kg-mode {
+  position: absolute;
+  top: 16px;
+  right: 24px;
+  z-index: 7;
+  display: inline-flex;
+  padding: 3px;
+  border: 1px solid #e3e8ef;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 6px 20px rgba(31, 58, 95, 0.06);
+  backdrop-filter: blur(8px);
+}
+
+.kg-mode button {
+  height: 30px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.kg-mode button.is-active {
+  background: #1f3a5f;
+  color: #fff;
+}
+
+.kg-chart {
+  position: absolute;
+  inset: 54px 24px 24px;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px 22px 16px;
+  overflow: hidden;
+  border: 1px solid #e3e8ef;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 18px 50px rgba(31, 58, 95, 0.08);
+}
+
+.kg-chart-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.kg-chart-kicker {
+  color: #8b98a8;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+}
+
+.kg-chart-head h1 {
+  margin: 5px 0 0;
+  color: #1f2937;
+  font-size: 22px;
+  font-weight: 680;
+  letter-spacing: -0.4px;
+}
+
+.kg-chart-head p {
+  margin: 6px 0 0;
+  color: #7b8797;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.kg-chart-total {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  padding-top: 2px;
+  white-space: nowrap;
+}
+
+.kg-chart-total strong {
+  color: #1f3a5f;
+  font-size: 30px;
+  font-weight: 720;
+  letter-spacing: -1px;
+}
+
+.kg-chart-total span {
+  color: #8b98a8;
+  font-size: 11px;
+}
+
+.kg-chart-chips {
+  display: flex;
+  gap: 7px;
+  overflow-x: auto;
+  padding-bottom: 3px;
+  scrollbar-width: thin;
+}
+
+.kg-chart-chips button {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 7px;
+  height: 30px;
+  padding: 0 10px;
+  border: 1px solid #e3e8ef;
+  border-radius: 7px;
+  background: #fff;
+  color: #64748b;
+  font-size: 11.5px;
+  cursor: pointer;
+}
+
+.kg-chart-chips button span {
+  color: #9aa6b5;
+  font-size: 10px;
+}
+
+.kg-chart-chips button.is-active {
+  border-color: #c9d6e5;
+  background: #eef3f8;
+  color: #1f3a5f;
+  font-weight: 650;
+}
+
+.kg-chart-main {
+  display: grid;
+  flex: 1;
+  grid-template-columns: minmax(0, 1fr) 238px;
+  gap: 18px;
+  min-height: 0;
+}
+
+.kg-chart-canvas {
+  width: 100%;
+  height: 100%;
+  min-height: 230px;
+}
+
+.kg-chart-side {
+  align-self: stretch;
+  min-height: 0;
+  padding: 16px;
+  border: 1px solid #edf1f6;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.kg-chart-side h2 {
+  margin: 6px 0 8px;
+  color: #1f2937;
+  font-size: 19px;
+  font-weight: 680;
+  letter-spacing: -0.3px;
+}
+
+.kg-chart-side p {
+  margin: 0;
+  color: #64748b;
+  font-size: 11.5px;
+  line-height: 1.75;
+}
+
+.kg-chart-desc {
+  margin-top: 10px !important;
+  color: #8b98a8 !important;
+}
+
+.kg-chart-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 32px;
+  margin-top: 14px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 7px;
+  background: #1f3a5f;
+  color: #fff;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.kg-chart-action:hover {
+  background: #172e4d;
+}
+
+@media (max-width: 760px) {
+  .kg-mode {
+    top: 12px;
+    right: 12px;
+  }
+
+  .kg-chart {
+    inset: 50px 12px 12px;
+    padding: 16px;
+    overflow-y: auto;
+  }
+
+  .kg-chart-head h1 {
+    font-size: 19px;
+  }
+
+  .kg-chart-head p {
+    max-width: 230px;
+    font-size: 11px;
+  }
+
+  .kg-chart-total strong {
+    font-size: 24px;
+  }
+
+  .kg-chart-main {
+    flex: none;
+    grid-template-columns: 1fr;
+  }
+
+  .kg-chart-canvas {
+    height: 250px;
+  }
+
+  .kg-chart-side {
+    padding: 13px;
+  }
 }
 
 @media (max-width: 640px) {

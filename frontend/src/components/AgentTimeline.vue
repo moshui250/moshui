@@ -21,10 +21,6 @@ const props = defineProps({
     type: Boolean,
     default: false
   },
-  canReveal: {
-    type: Boolean,
-    default: false
-  },
   error: {
     type: String,
     default: ''
@@ -34,8 +30,6 @@ const props = defineProps({
     default: false
   }
 })
-
-defineEmits(['reveal'])
 
 const timelineRef = ref(null)
 const showReasoning = ref(false)
@@ -104,7 +98,7 @@ watch(() => [props.events.length, props.answer, props.error], scrollToBottom, { 
           <el-icon><MagicStick /></el-icon>
           AI 调试
         </div>
-        <div class="panel-subtitle">工具调用会实时显示在时间线上，回答只依据检索结果</div>
+        <div class="panel-subtitle">先写下你的疑问，AI 会一步步引导，不直接给答案</div>
       </div>
       <el-tag :type="statusType" effect="light" round size="small">{{ statusText }}</el-tag>
     </div>
@@ -116,7 +110,7 @@ watch(() => [props.events.length, props.answer, props.error], scrollToBottom, { 
           <span>AI 正在读题、定位错误点…</span>
         </template>
         <template v-else>
-          提交失败后会自动触发调试，也可以点上方「AI 调试」。
+          在下方写下你的疑问或思路，AI 会结合判题结果一步步引导。
         </template>
       </div>
 
@@ -185,12 +179,6 @@ watch(() => [props.events.length, props.answer, props.error], scrollToBottom, { 
         class="agent-error"
       />
 
-      <div v-if="canReveal && !running && !error" class="reveal-row">
-        <el-button type="primary" plain @click="$emit('reveal')">
-          看参考代码
-        </el-button>
-        <span>会再请求一次 SOLUTION，内容直接来自题库题解。</span>
-      </div>
     </div>
   </section>
 </template>
@@ -399,20 +387,6 @@ watch(() => [props.events.length, props.answer, props.error], scrollToBottom, { 
 
 .agent-error {
   margin-top: 12px;
-}
-
-.reveal-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid #eef2f7;
-}
-
-.reveal-row span {
-  color: #94a3b8;
-  font-size: 11px;
 }
 
 .agent-panel.is-compact {

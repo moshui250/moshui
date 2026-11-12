@@ -79,8 +79,9 @@ const agentEvents = ref([])
 const agentAnswer = ref('')
 const agentError = ref('')
 const agentRunning = ref(false)
-const agentCanReveal = ref(false)
 const agentSessionId = ref(null)
+const agentQuestion = ref('')
+const agentInputRef = ref(null)
 const agentConfigVisible = ref(false)
 const customInstruction = ref(readCustomInstruction())
 
@@ -448,7 +449,6 @@ function runDemoJudge() {
     judging.value = false
     scrollToResult()
     ElMessage.info('判题接口尚未接入，当前展示演示结果')
-    startAgent('HINT')
   }, 900)
 }
 
@@ -574,7 +574,7 @@ async function submit() {
       return
     }
     if (status && status !== 'AC' && !contestId.value) {
-      startAgent('HINT')
+      openAgentComposer()
     }
   } catch (error) {
     if (error?.status === 404 || error?.status === 405 || error?.status === 501) {
@@ -658,7 +658,6 @@ function resetAgent() {
   agentEvents.value = []
   agentAnswer.value = ''
   agentError.value = ''
-  agentCanReveal.value = false
 }
 
 /**
@@ -720,7 +719,6 @@ function handleAgentEvent(event, runId) {
   }
 
   if (event.type === 'done') {
-    agentCanReveal.value = Boolean(data.canReveal)
     return
   }
 
@@ -730,13 +728,29 @@ function handleAgentEvent(event, runId) {
 }
 
 /**
- * 启动一次流式调试；HINT 失败后会自动调用，也可由按钮触发。
+ * 打开学生提问区；只聚焦输入框，不自动发起请求。
  *
- * @param {'HINT'|'SOLUTION'} mode 提示层级
+ * @returns {void}
+ */
+function openAgentComposer() {
+  if (!question.value || contestId.value) return
+  activePane.value = 'agent'
+  nextTick(() => agentInputRef.value?.focus?.())
+}
+
+/**
+ * 发送学生本轮的问题，AI 只做引导式回答。
+ *
  * @returns {Promise<void>} 流结束或取消后完成
  */
-async function startAgent(mode = 'HINT') {
+async function askAgent() {
+  const message = agentQuestion.value.trim()
   if (!question.value || agentRunning.value) return
+  if (!message) {
+    openAgentComposer()
+    ElMessage.warning('先写下你卡住的地方，再让 AI 帮你分析')
+    return
+  }
 
   resetAgent()
   activePane.value = 'agent'
@@ -744,12 +758,13 @@ async function startAgent(mode = 'HINT') {
   const controller = new AbortController()
   agentController = controller
   agentRunning.value = true
+  agentQuestion.value = ''
 
   const rawSubmitId = judgeResult.value?.submitId
   const payload = {
     questionId: question.value.id,
-    message: mode === 'SOLUTION' ? '请给我这道题的参考代码' : '请帮我定位这段代码的错误，并给出修改方向',
-    mode,
+    message,
+    mode: 'HINT',
     language: language.value,
     code: code.value,
     submitId: typeof rawSubmitId === 'number' ? rawSubmitId : null,
@@ -988,7 +1003,7 @@ onBeforeRouteLeave(() => {
                   :loading="agentRunning"
                   :disabled="!question || !!contestId"
                   :title="contestId ? '竞赛模式下不提供 AI 调试' : ''"
-                  @click="startAgent('HINT')"
+                  @click="openAgentComposer"
                 >
                   <el-icon><MagicStick /></el-icon>
                   AI 调试
@@ -1149,16 +1164,46 @@ onBeforeRouteLeave(() => {
               </div>
             </div>
 
-            <AgentTimeline
-              v-if="activePane === 'agent'"
-              compact
-              :events="agentEvents"
-              :answer="agentAnswer"
-              :running="agentRunning"
-              :can-reveal="agentCanReveal"
-              :error="agentError"
-              @reveal="startAgent('SOLUTION')"
-            />
+            <div v-if="activePane === 'agent'" class="agent-pane">
+              <div class="agent-composer">
+                <div class="agent-composer-head">
+                  <span>你在哪里卡住了？</span>
+                  <span class="agent-composer-hint">Ctrl + Enter 发送</span>
+                </div>
+                <el-input
+                  ref="agentInputRef"
+                  v-model="agentQuestion"
+                  type="textarea"
+                  :rows="2"
+                  maxlength="600"
+                  resize="none"
+                  placeholder="例如：为什么我把循环条件改成 i <= n 结果就不对了？"
+                  @keydown.ctrl.enter.prevent="askAgent"
+                  @keydown.meta.enter.prevent="askAgent"
+                />
+                <div class="agent-composer-actions">
+                  <span>先说说你的判断或已经试过什么，AI 会继续追问。</span>
+                  <el-button
+                    type="primary"
+                    size="small"
+                    :loading="agentRunning"
+                    :disabled="!agentQuestion.trim()"
+                    @click="askAgent"
+                  >
+                    发送问题
+                  </el-button>
+                </div>
+              </div>
+              <div class="agent-stream">
+                <AgentTimeline
+                  compact
+                  :events="agentEvents"
+                  :answer="agentAnswer"
+                  :running="agentRunning"
+                  :error="agentError"
+                />
+              </div>
+            </div>
           </div>
         </section>
       </div>
@@ -2156,6 +2201,63 @@ onBeforeRouteLeave(() => {
   font-size: 10.5px;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.agent-pane {
+  display: flex;
+  flex-direction: column;
+  min-height: 260px;
+}
+
+.agent-composer {
+  padding: 13px 16px 12px;
+  border-bottom: 1px solid #eef2f7;
+  background: #fbfcfe;
+}
+
+.agent-composer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+  color: #334155;
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.agent-composer-hint {
+  color: #94a3b8;
+  font-size: 10.5px;
+  font-weight: 500;
+}
+
+.agent-composer :deep(.el-textarea__inner) {
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 0 0 1px #e2e8f0 inset;
+  font-size: 12.5px;
+  line-height: 1.6;
+}
+
+.agent-composer-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 9px;
+}
+
+.agent-composer-actions > span {
+  color: #94a3b8;
+  font-size: 10.5px;
+  line-height: 1.5;
+}
+
+.agent-stream {
+  max-height: 420px;
+  overflow-y: auto;
 }
 
 .lower-body {

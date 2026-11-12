@@ -9,13 +9,11 @@ import com.codeagent.dto.AgentStreamRequest;
 import com.codeagent.entity.ChatMessage;
 import com.codeagent.entity.ChatSession;
 import com.codeagent.entity.KnowledgePoint;
-import com.codeagent.entity.QuestionSolution;
 import com.codeagent.exception.BizException;
 import com.codeagent.mapper.ChatMessageMapper;
 import com.codeagent.mapper.ChatSessionMapper;
 import com.codeagent.mapper.KnowledgePointMapper;
 import com.codeagent.mapper.QuestionMapper;
-import com.codeagent.mapper.QuestionSolutionMapper;
 import com.codeagent.service.AgentStreamService;
 import com.codeagent.vo.AgentHistoryVO;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -60,7 +58,6 @@ public class AgentStreamServiceImpl implements AgentStreamService {
     private final KnowledgePointMapper knowledgePointMapper;
     private final ChatSessionMapper chatSessionMapper;
     private final ChatMessageMapper chatMessageMapper;
-    private final QuestionSolutionMapper questionSolutionMapper;
     private final AgentTools agentTools;
     private final DeepSeekChatClientFactory chatClientFactory;
     private final ObjectMapper objectMapper;
@@ -70,7 +67,6 @@ public class AgentStreamServiceImpl implements AgentStreamService {
                                   KnowledgePointMapper knowledgePointMapper,
                                   ChatSessionMapper chatSessionMapper,
                                   ChatMessageMapper chatMessageMapper,
-                                  QuestionSolutionMapper questionSolutionMapper,
                                   AgentTools agentTools,
                                   DeepSeekChatClientFactory chatClientFactory,
                                   ObjectMapper objectMapper,
@@ -79,7 +75,6 @@ public class AgentStreamServiceImpl implements AgentStreamService {
         this.knowledgePointMapper = knowledgePointMapper;
         this.chatSessionMapper = chatSessionMapper;
         this.chatMessageMapper = chatMessageMapper;
-        this.questionSolutionMapper = questionSolutionMapper;
         this.agentTools = agentTools;
         this.chatClientFactory = chatClientFactory;
         this.objectMapper = objectMapper;
@@ -117,8 +112,7 @@ public class AgentStreamServiceImpl implements AgentStreamService {
             saveMessage(userId, request, session.getId(), userSeq, "user",
                     request.getMessage(), null, null, null, 1);
             ChatMessage assistant = saveMessage(userId, request, session.getId(),
-                    userSeq + TOOL_SEQ_GAP, "assistant", "", null, null, null,
-                    isSolution(request) ? 2 : 1);
+                    userSeq + TOOL_SEQ_GAP, "assistant", "", null, null, null, 1);
 
             boolean metaSent = send(emitter, "meta", Map.of(
                     "sessionId", session.getId(),
@@ -172,13 +166,6 @@ public class AgentStreamServiceImpl implements AgentStreamService {
         AtomicInteger toolSeq = new AtomicInteger(userSeq);
 
         try {
-            if (isSolution(request)) {
-                streamSolution(emitter, request, assistant, language, context, clientGone);
-                return;
-            }
-
-            send(emitter, "thinking", Map.of("delta", "正在定位错误并检索相关资料…"));
-
             context.setToolEventListener(new AgentRunContext.ToolEventListener() {
                 @Override
                 public void onToolCall(AgentRunContext.ToolCallRecord call) {
@@ -230,8 +217,7 @@ public class AgentStreamServiceImpl implements AgentStreamService {
             chatMessageMapper.updateContent(assistant.getId(), answer);
             send(emitter, "done", Map.of(
                     "messageId", assistant.getId(),
-                    "hintLevel", 1,
-                    "canReveal", true));
+                    "hintLevel", 1));
         } catch (BizException e) {
             fail(emitter, assistant, e.getErrorCode().getCode(), e.getMessage());
         } catch (Exception e) {
@@ -242,35 +228,6 @@ public class AgentStreamServiceImpl implements AgentStreamService {
             AgentRunContext.clear();
             emitter.complete();
         }
-    }
-
-    /**
-     * SOLUTION 模式：直接读取数据库题解，不经过模型。
-     */
-    private void streamSolution(SseEmitter emitter, AgentStreamRequest request,
-                                ChatMessage assistant, String language,
-                                AgentRunContext context, AtomicBoolean clientGone) {
-        send(emitter, "thinking", Map.of("delta", "正在读取参考代码…"));
-        QuestionSolution solution = questionSolutionMapper.selectLatest(request.getQuestionId(), language);
-        if (solution == null) {
-            throw new BizException(ErrorCode.NOT_FOUND, "暂无该语言的参考代码");
-        }
-        String explanation = solution.getExplanation() == null ? "" : solution.getExplanation().trim();
-        String code = solution.getContent() == null ? "" : solution.getContent();
-        String markdown = (explanation.isEmpty() ? "" : explanation + "\n\n")
-                + "```" + language.toLowerCase() + "\n" + code + "\n```";
-        for (int i = 0; i < markdown.length() && !clientGone.get(); i += 12) {
-            String delta = markdown.substring(i, Math.min(markdown.length(), i + 12));
-            if (!send(emitter, "delta", Map.of("delta", delta))) {
-                break;
-            }
-            sleepQuietly(12L);
-        }
-        chatMessageMapper.updateContent(assistant.getId(), markdown);
-        send(emitter, "done", Map.of(
-                "messageId", assistant.getId(),
-                "hintLevel", 2,
-                "canReveal", false));
     }
 
     /**
@@ -588,10 +545,6 @@ public class AgentStreamServiceImpl implements AgentStreamService {
         }
         send(emitter, "error", Map.of("code", code,
                 "message", message == null ? "Agent 调试失败" : message));
-    }
-
-    private boolean isSolution(AgentStreamRequest request) {
-        return "SOLUTION".equalsIgnoreCase(request.getMode());
     }
 
     private String normalizeLanguage(String language) {
