@@ -59,6 +59,7 @@ gojudge:
   output-limit: 1048576
   path: ${GOJUDGE_PATH:/usr/local/java15/bin:/usr/local/bin:/usr/bin:/bin}
   java-home: ${GOJUDGE_JAVA_HOME:/usr/local/java15}
+  library-path: ${GOJUDGE_LD_LIBRARY_PATH:/usr/local/java15/lib:/usr/local/java15/lib/server}
   java-xmx: ${GOJUDGE_JAVA_XMX:512m}
 
 # RAG 向量库与切块参数。Zilliz 凭据只从环境变量读取。

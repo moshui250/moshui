@@ -49,6 +49,9 @@ public class GoJudgeProperties {
     /** 沙箱内 JAVA_HOME；官方镜像可覆盖为 openjdk-17 路径。 */
     private String javaHome = "/usr/local/java15";
 
+    /** Java 动态库路径；精简 JRE 必须显式指向 libjli/libjvm 所在目录。 */
+    private String libraryPath = "/usr/local/java15/lib:/usr/local/java15/lib/server";
+
     /** Java 堆上限，只能使用 m/g 后缀。 */
     private String javaXmx = "512m";
 

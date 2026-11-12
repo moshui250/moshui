@@ -105,7 +105,8 @@ public class GoJudgeClient {
         command.put("env", List.of(
                 "PATH=" + properties.getPath(),
                 "LANG=C.UTF-8",
-                "JAVA_HOME=" + properties.getJavaHome()));
+                "JAVA_HOME=" + properties.getJavaHome(),
+                "LD_LIBRARY_PATH=" + properties.getLibraryPath()));
         command.put("files", List.of(
                 Map.of("content", stdin == null ? "" : stdin),
                 Map.of("name", "stdout", "max", properties.getOutputLimit()),

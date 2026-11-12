@@ -34,7 +34,10 @@ docker run -d --name codeagent-gojudge \
 GOJUDGE_BASE_URL=http://127.0.0.1:5050
 GOJUDGE_JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
 GOJUDGE_PATH=/usr/lib/jvm/java-17-openjdk-amd64/bin:/usr/local/bin:/usr/bin:/bin
+GOJUDGE_LD_LIBRARY_PATH=/usr/lib/jvm/java-17-openjdk-amd64/lib:/usr/lib/jvm/java-17-openjdk-amd64/lib/server
 ```
+
+使用精简 JRE（如本机 `/usr/local/java15`）时，必须让 `GOJUDGE_LD_LIBRARY_PATH` 同时包含 `lib` 和 `lib/server`，否则 Java 进程找不到 `libjli.so`。
 
 后端也在 Docker 网络内时，把 `GOJUDGE_BASE_URL` 改成 `http://go-judge:5050`，并把 `GOJUDGE_JAVA_HOME` / `GOJUDGE_PATH` 保持为镜像内路径。
 其余超时、内存、进程数、输出上限见 `application.yml` 的 `gojudge` 段。

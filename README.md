@@ -22,6 +22,7 @@ AI 原生的编程练习平台，前后端单仓库。
 | `GOJUDGE_BASE_URL` | go-judge 地址，默认 `http://127.0.0.1:5050` |
 | `GOJUDGE_JAVA_HOME` | 判题镜像内 JDK 路径，官方镜像为 `/usr/lib/jvm/java-17-openjdk-amd64` |
 | `GOJUDGE_PATH` | 判题镜像内工具链 PATH |
+| `GOJUDGE_LD_LIBRARY_PATH` | 精简 JRE 的动态库路径，默认 `/usr/local/java15/lib:/usr/local/java15/lib/server` |
 
 ## 启动
 
