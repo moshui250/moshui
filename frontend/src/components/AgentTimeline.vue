@@ -38,6 +38,32 @@ const props = defineProps({
 defineEmits(['reveal'])
 
 const timelineRef = ref(null)
+const showReasoning = ref(false)
+
+const REASONING_MARKER = /(?:^|\n)\s*(?:#{1,6}\s*)?(?:[一二三四五六七八九十]+[、.．]\s*)?【AI调试推理日志[^】]*】/
+
+function splitAnswer(text) {
+  if (!text) return { answer: '', reasoning: '' }
+  const sourceMatch = text.match(/(?:\n\s*)?📎 参考来源：[^\n]*$/s)
+  const sourceLine = sourceMatch ? sourceMatch[0].trim() : ''
+  let body = sourceMatch ? text.slice(0, -sourceMatch[0].length) : text
+  const marker = body.match(REASONING_MARKER)
+  if (!marker) {
+    return { answer: text, reasoning: '' }
+  }
+  const answer = body.slice(0, marker.index).trim()
+  const reasoning = body.slice((marker.index || 0) + marker[0].length).trim()
+  return {
+    answer: [answer, sourceLine].filter(Boolean).join('\n\n'),
+    reasoning
+  }
+}
+
+const parsedAnswer = computed(() => splitAnswer(props.answer))
+
+watch(() => props.answer, () => {
+  showReasoning.value = false
+})
 
 const statusText = computed(() => {
   if (props.error) return '调试失败'
@@ -132,8 +158,22 @@ watch(() => [props.events.length, props.answer, props.error], scrollToBottom, { 
 
       <div v-if="answer" class="answer-block">
         <div class="answer-label">助教回答</div>
-        <pre v-if="running" class="answer-text">{{ answer }}<span class="caret">▍</span></pre>
-        <MarkdownBody v-else :content="answer" class="answer-markdown" />
+        <pre v-if="running" class="answer-text">{{ parsedAnswer.answer }}<span class="caret">▍</span></pre>
+        <template v-else>
+          <MarkdownBody :content="parsedAnswer.answer" class="answer-markdown" />
+          <button
+            v-if="parsedAnswer.reasoning"
+            type="button"
+            class="reasoning-toggle"
+            @click="showReasoning = !showReasoning"
+          >
+            {{ showReasoning ? '收起推理日志' : '查看推理日志' }}
+          </button>
+          <div v-if="showReasoning && parsedAnswer.reasoning" class="reasoning-block">
+            <div class="reasoning-label">AI 调试推理日志</div>
+            <MarkdownBody :content="parsedAnswer.reasoning" />
+          </div>
+        </template>
       </div>
 
       <el-alert
@@ -389,5 +429,35 @@ watch(() => [props.events.length, props.answer, props.error], scrollToBottom, { 
 
 .agent-panel.is-compact .timeline-empty {
   padding: 26px 0;
+}
+
+.reasoning-toggle {
+  margin-top: 10px;
+  border: 0;
+  background: none;
+  padding: 0;
+  color: #64748b;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.reasoning-toggle:hover {
+  color: #1f3a5f;
+  text-decoration: underline;
+}
+
+.reasoning-block {
+  margin-top: 10px;
+  padding: 12px 14px;
+  border: 1px solid #e8edf3;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.reasoning-label {
+  margin-bottom: 6px;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 650;
 }
 </style>

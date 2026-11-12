@@ -196,6 +196,10 @@ public class AgentTools {
             }
 
             JudgeResultVO result = loadJudgeResult(context, submitId);
+            if (result != null) {
+                // 供流式 HINT 提示词把原始判题结果注入 <judge_log>。
+                context.setLastJudgeResult(result);
+            }
             String message = firstNonBlank(errorMessage,
                     result == null ? null : result.getCompileOutput(),
                     result == null ? null : result.getErrorMessage(),

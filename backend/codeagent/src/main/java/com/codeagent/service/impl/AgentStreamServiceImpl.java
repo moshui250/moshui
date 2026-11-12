@@ -1,5 +1,6 @@
 package com.codeagent.service.impl;
 
+import com.codeagent.ai.agent.AgentPrompts;
 import com.codeagent.ai.agent.AgentRunContext;
 import com.codeagent.ai.agent.AgentTools;
 import com.codeagent.ai.agent.DeepSeekChatClientFactory;
@@ -54,13 +55,6 @@ public class AgentStreamServiceImpl implements AgentStreamService {
     private static final int TOOL_SEQ_GAP = MAX_TOOL_EVENTS + 1;
 
     private static final Pattern CODE_BLOCK = Pattern.compile("(?s)```[^\\n]*\\n?(.*?)```");
-
-    private static final String HINT_SYSTEM = """
-            你是编程助教。只能依据 <context> 回答，context 没有的内容直接说“知识库暂未覆盖，建议先检查输入输出和边界条件”。
-            不要编造 API，不要编造语法，不要输出完整代码。回答用中文，不超过 200 字。
-            第一句必须指出具体行号和原因，格式如“第 7 行：循环上界写成 <=，导致数组下标越界”。
-            末尾另起一行写“📎 参考来源：<title>”。
-            """;
 
     private final QuestionMapper questionMapper;
     private final KnowledgePointMapper knowledgePointMapper;
@@ -209,15 +203,14 @@ public class AgentStreamServiceImpl implements AgentStreamService {
             });
 
             log.info("Agent 工具调用: locate_error");
-            agentTools.locateError(request.getQuestionId(), code, null, request.getSubmitId());
-            String query = request.getMessage() + " " + question.getTitle() + " "
-                    + (question.getKnowledgePointName() == null ? "" : question.getKnowledgePointName())
-                    + " 数组越界 边界条件";
-            log.info("Agent 工具调用: retrieve_knowledge");
+            String located = agentTools.locateError(
+                    request.getQuestionId(), code, null, request.getSubmitId());
+            String query = buildRetrievalQuery(question, located);
+            log.info("Agent 工具调用: retrieve_knowledge, query={}", query);
             agentTools.retrieveKnowledge(query, knowledgePointCode, 4);
 
             String prompt = buildHintPrompt(request, question, context);
-            ChatClient client = chatClientFactory.createForAnswer(HINT_SYSTEM);
+            ChatClient client = chatClientFactory.createForAnswer(AgentPrompts.HINT);
             StringBuilder raw = new StringBuilder();
             for (String chunk : client.prompt().user(prompt).stream().content().toIterable()) {
                 if (chunk == null || chunk.isEmpty() || clientGone.get()) {
@@ -281,24 +274,94 @@ public class AgentStreamServiceImpl implements AgentStreamService {
     }
 
     /**
+     * 用 locate_error 的真实错误类别和可疑行原因生成检索 query，
+     * 避免固定拼接“数组越界 边界条件”导致检索跑偏。
+     */
+    private String buildRetrievalQuery(com.codeagent.dto.QuestionDetailRow question,
+                                       String locatedJson) {
+        StringBuilder query = new StringBuilder();
+        query.append(safe(question.getTitle())).append(' ')
+                .append(safe(question.getKnowledgePointName()));
+        try {
+            JsonNode located = objectMapper.readTree(locatedJson);
+            String category = located.path("category").asText("");
+            switch (category) {
+                case "CE" -> query.append(" 编译错误 语法错误 变量声明");
+                case "RE" -> query.append(" 运行时错误 空指针 数组越界 变量未初始化");
+                case "TLE" -> query.append(" 时间复杂度 死循环 循环边界");
+                default -> query.append(" 逻辑错误 边界条件 输入读取");
+            }
+            JsonNode suspects = located.path("suspectLines");
+            int added = 0;
+            for (JsonNode suspect : suspects) {
+                String reason = suspect.path("reason").asText("");
+                if (!reason.isBlank() && added < 2) {
+                    query.append(' ').append(reason);
+                    added++;
+                }
+            }
+        } catch (Exception e) {
+            log.debug("解析 locate_error 结果失败，使用通用检索词: {}", e.getMessage());
+            query.append(" 错误定位 输入读取 边界条件");
+        }
+        return truncate(query.toString(), 300);
+    }
+
+    /**
      * 构造 HINT 模式的上下文提示词。
+     *
+     * <p>两项工具已由服务端预先执行，这里把原始输入、原始输出、判题日志、题目信息
+     * 和源代码分块注入，供模型校验而不是再次调用工具。</p>
      */
     private String buildHintPrompt(AgentStreamRequest request,
                                    com.codeagent.dto.QuestionDetailRow question,
                                    AgentRunContext context) {
-        StringBuilder toolContext = new StringBuilder();
+        StringBuilder tools = new StringBuilder();
         for (AgentRunContext.ToolCallRecord call : context.getToolCalls()) {
-            toolContext.append("[").append(call.getName()).append("] ")
-                    .append(call.getSummary() == null ? "" : call.getSummary())
-                    .append("\n")
-                    .append(truncate(call.getOutput(), 3000))
-                    .append("\n---\n");
+            tools.append("<tool name=\"").append(call.getName()).append("\">\n")
+                    .append("<input>").append(truncate(call.getInput(), 1200)).append("</input>\n")
+                    .append("<output>").append(truncate(call.getOutput(), 5000)).append("</output>\n")
+                    .append("</tool>\n");
         }
-        return "<context>\n" + toolContext + "</context>\n"
-                + "题目标题：" + question.getTitle() + "\n"
+        String judgeLog = judgeLog(context);
+        return "<system_tool_data>\n"
+                + "<already_executed_tools>locate_error, retrieve_knowledge</already_executed_tools>\n"
+                + tools
+                + "<judge_log>" + judgeLog + "</judge_log>\n"
+                + "<question_info>\n"
+                + "标题：" + safe(question.getTitle()) + "\n"
+                + "描述：" + truncate(question.getDescription(), 3000) + "\n"
+                + "输入格式：" + truncate(question.getInputDesc(), 1200) + "\n"
+                + "输出格式：" + truncate(question.getOutputDesc(), 1200) + "\n"
                 + "知识点：" + safe(question.getKnowledgePointName()) + "\n"
-                + "用户问题：" + request.getMessage() + "\n"
-                + "用户代码：\n" + truncate(request.getCode(), 4000) + "\n";
+                + "</question_info>\n"
+                + "<user_question>" + safe(request.getMessage()) + "</user_question>\n"
+                + "<source_code language=\"" + safe(languageOf(context)) + "\">\n"
+                + truncate(request.getCode(), 6000) + "\n</source_code>\n"
+                + "</system_tool_data>\n";
+    }
+
+    /**
+     * 序列化本轮判题结果作为判题日志；定位工具未拿到结果时给出明确说明。
+     */
+    private String judgeLog(AgentRunContext context) {
+        if (context.getLastJudgeResult() != null) {
+            try {
+                return truncate(objectMapper.writeValueAsString(context.getLastJudgeResult()), 5000);
+            } catch (Exception e) {
+                log.debug("判题日志序列化失败: {}", e.getMessage());
+            }
+        }
+        for (AgentRunContext.ToolCallRecord call : context.getToolCalls()) {
+            if ("locate_error".equals(call.getName())) {
+                return truncate(call.getOutput(), 5000);
+            }
+        }
+        return "暂无判题结果；locate_error 未返回失败用例。";
+    }
+
+    private String languageOf(AgentRunContext context) {
+        return context.getLanguage() == null ? "" : context.getLanguage();
     }
 
     /**
@@ -385,8 +448,10 @@ public class AgentStreamServiceImpl implements AgentStreamService {
             answer = "第 1 行：暂未定位到明确错误行，建议先检查输入边界和数组下标。";
         }
         String body = answer.replaceAll("(?m)^📎 参考来源：.*$", "").trim();
-        String suffix = "\n📎 参考来源：" + sourceText(context);
-        int bodyLimit = Math.max(80, 200 - suffix.length());
+        String source = sourceText(context);
+        String suffix = source.isBlank() ? "" : "\n\n📎 参考来源：" + source;
+        // 固定基座要求输出“助教回答 + 推理日志”两大块，上限需容纳完整推理。
+        int bodyLimit = Math.max(600, 6000 - suffix.length());
         if (body.length() > bodyLimit) {
             body = body.substring(0, bodyLimit - 1) + "…";
         }
@@ -399,7 +464,7 @@ public class AgentStreamServiceImpl implements AgentStreamService {
     private String sourceText(AgentRunContext context) {
         List<String> titles = context.getSourceTitles();
         if (titles.isEmpty()) {
-            return "知识库";
+            return "";
         }
         String priority = null;
         for (String title : titles) {
