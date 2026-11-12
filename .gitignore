@@ -16,3 +16,7 @@ frontend/dist/
 frontend/.vite/
 frontend-campusmarket-backup-20261102/
 *.log
+# local judge/runtime artifacts
+.tmp/
+.backup/
+backend/codeagent/deploy/go-judge/go-judge

@@ -1,8 +1,8 @@
 package com.codeagent.service.impl;
 
-import com.codeagent.ai.PistonCircuitBreaker;
-import com.codeagent.ai.PistonClient;
-import com.codeagent.ai.PistonExecuteResponse;
+import com.codeagent.ai.GoJudgeCircuitBreaker;
+import com.codeagent.ai.GoJudgeClient;
+import com.codeagent.ai.GoJudgeExecuteResponse;
 import com.codeagent.common.ErrorCode;
 import com.codeagent.common.PageResult;
 import com.codeagent.dto.JudgeCaseResult;
@@ -44,7 +44,7 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.Semaphore;
 
 /**
- * 异步判题核心实现：落库、线程池、逐用例调用 Piston、状态归并和错题记录。
+ * 异步判题核心实现：落库、线程池、逐用例调用 go-judge、状态归并和错题记录。
  */
 @Slf4j
 @Service
@@ -72,8 +72,8 @@ public class JudgeServiceImpl implements JudgeService {
     private final ContestMapper contestMapper;
     private final QuestionTestCaseMapper testCaseMapper;
     private final SubmitRecordMapper submitRecordMapper;
-    private final PistonClient pistonClient;
-    private final PistonCircuitBreaker pistonCircuitBreaker;
+    private final GoJudgeClient goJudgeClient;
+    private final GoJudgeCircuitBreaker goJudgeCircuitBreaker;
     private final WrongBookService wrongBookService;
     private final ProfileStatService profileStatService;
     private final ContestService contestService;
@@ -103,7 +103,7 @@ public class JudgeServiceImpl implements JudgeService {
             throw new BizException(ErrorCode.UNAUTHORIZED);
         }
         rateLimiter.check(userId);
-        pistonCircuitBreaker.ensureAvailable();
+        goJudgeCircuitBreaker.ensureAvailable();
 
         if (questionId == null) {
             throw new BizException(ErrorCode.PARAM_ERROR, "题目 ID 不能为空");
@@ -165,7 +165,7 @@ public class JudgeServiceImpl implements JudgeService {
         }
         rateLimitService.check("judge:run-sample:" + userId, 10, 60_000L,
                 "运行样例过于频繁，请稍后再试");
-        pistonCircuitBreaker.ensureAvailable();
+        goJudgeCircuitBreaker.ensureAvailable();
 
         if (questionId == null) {
             throw new BizException(ErrorCode.PARAM_ERROR, "题目 ID 不能为空");
@@ -355,11 +355,11 @@ public class JudgeServiceImpl implements JudgeService {
         String compileOutput = null;
         String errorMessage = null;
 
-        List<Future<PistonCall>> calls = new ArrayList<>(cases.size());
+        List<Future<GoJudgeCall>> calls = new ArrayList<>(cases.size());
         for (QuestionTestCase testCase : cases) {
             try {
                 calls.add(judgeCaseExecutor.submit(
-                        () -> callPiston(record.getLanguage(), record.getCode(), testCase.getInputData())));
+                        () -> callGoJudge(record.getLanguage(), record.getCode(), testCase.getInputData())));
             } catch (RejectedExecutionException e) {
                 record.setStatus(SE);
                 record.setPassedCount(0);
@@ -374,7 +374,7 @@ public class JudgeServiceImpl implements JudgeService {
             QuestionTestCase testCase = cases.get(i);
             boolean sample = Integer.valueOf(1).equals(testCase.getIsSample());
 
-            PistonCall call;
+            GoJudgeCall call;
             try {
                 call = calls.get(i).get();
             } catch (InterruptedException e) {
@@ -404,9 +404,9 @@ public class JudgeServiceImpl implements JudgeService {
                 return record;
             }
 
-            PistonExecuteResponse response = call.response;
-            long elapsed = call.elapsed;
-            PistonExecuteResponse.Stage compile = response == null ? null : response.compile();
+            GoJudgeExecuteResponse response = call.response;
+            long elapsed = response != null && response.timeMs() > 0 ? response.timeMs() : call.elapsed;
+            GoJudgeExecuteResponse.Stage compile = response == null ? null : response.compile();
             if (compile != null && compile.code() != null && compile.code() != 0) {
                 String compileText = stageText(compile);
                 JudgeCaseResult item = baseCase(i + 1, testCase, sample);
@@ -426,15 +426,16 @@ public class JudgeServiceImpl implements JudgeService {
                 break;
             }
 
-            PistonExecuteResponse.Stage run = response == null ? null : response.run();
+            GoJudgeExecuteResponse.Stage run = response == null ? null : response.run();
             String stdout = run == null ? "" : nullToEmpty(run.stdout());
             String stderr = run == null ? "" : nullToEmpty(run.stderr());
             String expected = normalizeOutput(testCase.getExpectedOutput());
             String actual = normalizeOutput(stdout);
-            boolean passed = run != null && actual.equals(expected);
+            String judgeStatus = response == null || response.status() == null ? "" : response.status();
+            boolean passed = run != null && "Accepted".equalsIgnoreCase(judgeStatus) && actual.equals(expected);
             int exitCode = run == null || run.code() == null ? -1 : run.code();
             String signal = run == null ? null : run.signal();
-            String caseStatus = classify(exitCode, signal, passed);
+            String caseStatus = classify(exitCode, signal, passed, judgeStatus);
 
             if (AC.equals(caseStatus)) {
                 passedCount++;
@@ -464,7 +465,8 @@ public class JudgeServiceImpl implements JudgeService {
             if (!AC.equals(caseStatus) && errorMessage == null) {
                 errorMessage = errorText(caseStatus, i + 1);
             }
-            if (TLE.equals(caseStatus) || MLE.equals(caseStatus) || RE.equals(caseStatus)) {
+            if (TLE.equals(caseStatus) || MLE.equals(caseStatus) || RE.equals(caseStatus)
+                    || SE.equals(caseStatus)) {
                 break;
             }
         }
@@ -480,14 +482,14 @@ public class JudgeServiceImpl implements JudgeService {
     }
 
     /**
-     * 调用一次 Piston，并记录本次调用耗时；异常不抛出，转为可读错误交给调用方归并。
+     * 调用一次 go-judge，并记录本次调用耗时；异常不抛出，转为可读错误交给调用方归并。
      *
      * @param language 语言代码
      * @param code     完整源码
      * @param input    用例输入
-     * @return Piston 响应或错误
+     * @return go-judge 响应或错误
      */
-    private PistonCall callPiston(String language, String code, String input) {
+    private GoJudgeCall callGoJudge(String language, String code, String input) {
         long startedAt = System.currentTimeMillis();
         boolean javaSlot = false;
         try {
@@ -495,13 +497,13 @@ public class JudgeServiceImpl implements JudgeService {
                 javaJudgeSlots.acquire();
                 javaSlot = true;
             }
-            PistonExecuteResponse response = pistonClient.execute(language, code, input);
-            return new PistonCall(response, null, Math.max(System.currentTimeMillis() - startedAt, 0L));
+            GoJudgeExecuteResponse response = goJudgeClient.execute(language, code, input);
+            return new GoJudgeCall(response, null, Math.max(System.currentTimeMillis() - startedAt, 0L));
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            return new PistonCall(null, "判题请求被中断", Math.max(System.currentTimeMillis() - startedAt, 0L));
+            return new GoJudgeCall(null, "判题请求被中断", Math.max(System.currentTimeMillis() - startedAt, 0L));
         } catch (BizException e) {
-            return new PistonCall(null, e.getMessage(), Math.max(System.currentTimeMillis() - startedAt, 0L));
+            return new GoJudgeCall(null, e.getMessage(), Math.max(System.currentTimeMillis() - startedAt, 0L));
         } finally {
             if (javaSlot) {
                 javaJudgeSlots.release();
@@ -510,14 +512,14 @@ public class JudgeServiceImpl implements JudgeService {
     }
 
     /**
-     * 单个用例的 Piston 调用结果。
+     * 单个用例的 go-judge 调用结果。
      */
-    private static final class PistonCall {
-        private final PistonExecuteResponse response;
+    private static final class GoJudgeCall {
+        private final GoJudgeExecuteResponse response;
         private final String error;
         private final long elapsed;
 
-        private PistonCall(PistonExecuteResponse response, String error, long elapsed) {
+        private GoJudgeCall(GoJudgeExecuteResponse response, String error, long elapsed) {
             this.response = response;
             this.error = error;
             this.elapsed = elapsed;
@@ -550,16 +552,24 @@ public class JudgeServiceImpl implements JudgeService {
      * @param passed   标准输出是否与期望一致
      * @return AC/WA/TLE/MLE/RE 之一
      */
-    private String classify(int exitCode, String signal, boolean passed) {
-        // Piston 在运行超时时返回 124；不能用整个请求耗时判断，
-        // 否则编译较慢但运行正常的用例会被误判为 TLE。
-        if (exitCode == 124) {
+    private String classify(int exitCode, String signal, boolean passed, String judgeStatus) {
+        if ("Time Limit Exceeded".equalsIgnoreCase(judgeStatus)) {
             return TLE;
         }
-        if (exitCode == 137 || "SIGKILL".equalsIgnoreCase(signal)) {
+        if ("Memory Limit Exceeded".equalsIgnoreCase(judgeStatus)) {
             return MLE;
         }
-        if (exitCode != 0 || (signal != null && !signal.isBlank())) {
+        if ("Output Limit Exceeded".equalsIgnoreCase(judgeStatus)) {
+            return RE;
+        }
+        if ("Internal Error".equalsIgnoreCase(judgeStatus)
+                || "File Error".equalsIgnoreCase(judgeStatus)
+                || "Dangerous Syscall".equalsIgnoreCase(judgeStatus)) {
+            return SE;
+        }
+        if (exitCode != 0 || (signal != null && !signal.isBlank())
+                || "Signalled".equalsIgnoreCase(judgeStatus)
+                || "Nonzero Exit Status".equalsIgnoreCase(judgeStatus)) {
             return RE;
         }
         return passed ? AC : WA;
@@ -584,6 +594,7 @@ public class JudgeServiceImpl implements JudgeService {
      */
     private int priority(String status) {
         return switch (status) {
+            case SE -> 7;
             case CE -> 6;
             case RE -> 5;
             case TLE -> 4;
@@ -604,6 +615,7 @@ public class JudgeServiceImpl implements JudgeService {
     private String errorText(String status, int index) {
         return switch (status) {
             case CE -> "编译错误";
+            case SE -> "判题服务返回异常";
             case TLE -> "第 " + index + " 个用例运行超时";
             case MLE -> "第 " + index + " 个用例内存超限";
             case RE -> "第 " + index + " 个用例运行错误";
@@ -658,10 +670,10 @@ public class JudgeServiceImpl implements JudgeService {
      * @param stage 编译阶段结果
      * @return 可直接写入 compile_output 的文本
      */
-    private String stageText(PistonExecuteResponse.Stage stage) {
+    private String stageText(GoJudgeExecuteResponse.Stage stage) {
         String text = nullToEmpty(stage.stdout()) + nullToEmpty(stage.stderr());
         if (text.isBlank()) {
-            text = "编译失败（Piston 未返回错误输出）";
+            text = "编译失败（go-judge 未返回错误输出）";
         }
         return text.length() > MAX_COMPILE_OUTPUT ? text.substring(0, MAX_COMPILE_OUTPUT) : text;
     }

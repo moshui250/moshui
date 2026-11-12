@@ -7,7 +7,7 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import java.util.concurrent.ThreadPoolExecutor;
 
 /**
- * 判题线程池配置。判题任务会阻塞等待 Piston，因此和 Web 请求线程隔离。
+ * 判题线程池配置。判题任务会阻塞等待 go-judge，因此和 Web 请求线程隔离。
  */
 @Configuration
 public class JudgeExecutorConfig {
@@ -34,7 +34,7 @@ public class JudgeExecutorConfig {
 
     /**
      * 单个提交内部并行跑多个用例的线程池。
-     * Piston 每次调用都会重新编译，串行执行会把编译时间乘以用例数。
+     * go-judge 每次调用都会重新编译，串行执行会把编译时间乘以用例数。
      *
      * @return 用例执行线程池
      */

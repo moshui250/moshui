@@ -46,24 +46,20 @@ jwt:
   secret: ${JWT_SECRET}
   expire-seconds: 7200
 
-# Piston 判题服务。公共 API 自 2026-02-15 起仅允许白名单访问，
-# 本地联调可通过 PISTON_BASE_URL 指向自建 Piston 或兼容服务。
-# 版本号来自 GET /api/v2/piston/runtimes 的真实结果，启动时会再次校准并打印日志。
-piston:
-  base-url: ${PISTON_BASE_URL:http://127.0.0.1:2000}
-  api-path: ${PISTON_API_PATH:/api/v2}
+# go-judge 判题服务。默认连接本机 5050，部署方式见 deploy/go-judge/README.md。
+# 沙箱内需要同时存在 g++、javac/java；工具链路径通过 GOJUDGE_PATH 覆盖。
+gojudge:
+  base-url: ${GOJUDGE_BASE_URL:http://127.0.0.1:5050}
   connect-timeout-ms: 5000
   read-timeout-ms: 35000
   run-timeout-ms: 3000
   compile-timeout-ms: 10000
   memory-limit: 1073741824
-  languages:
-    cpp:
-      name: c++
-      version: 10.2.0
-    java:
-      name: java
-      version: 15.0.2
+  proc-limit: 64
+  output-limit: 1048576
+  path: ${GOJUDGE_PATH:/usr/local/java15/bin:/usr/local/bin:/usr/bin:/bin}
+  java-home: ${GOJUDGE_JAVA_HOME:/usr/local/java15}
+  java-xmx: ${GOJUDGE_JAVA_XMX:512m}
 
 # RAG 向量库与切块参数。Zilliz 凭据只从环境变量读取。
 # 未配置 ZILLIZ_URI 时不会创建 VectorStore，普通接口仍可启动。

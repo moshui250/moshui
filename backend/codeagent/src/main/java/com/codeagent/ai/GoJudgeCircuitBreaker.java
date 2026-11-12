@@ -9,11 +9,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * Piston 熔断器：连续 3 次调用失败后打开 60 秒，期间直接拒绝提交，避免线程池被拖垮。
+ * go-judge 熔断器：连续 3 次调用失败后打开 60 秒，期间直接拒绝提交，避免线程池被拖垮。
  */
 @Slf4j
 @Component
-public class PistonCircuitBreaker {
+public class GoJudgeCircuitBreaker {
 
     private static final int FAILURE_THRESHOLD = 3;
     private static final long OPEN_MILLIS = 60_000L;
@@ -22,7 +22,7 @@ public class PistonCircuitBreaker {
     private final AtomicLong openUntil = new AtomicLong(0L);
 
     /**
-     * 若熔断器处于打开状态，直接抛出 50301；到期后自动半开。
+     * 熔断窗口内直接拒绝；到期后进入半开探测。
      */
     public void ensureAvailable() {
         long until = openUntil.get();
@@ -34,11 +34,11 @@ public class PistonCircuitBreaker {
         }
         openUntil.compareAndSet(until, 0L);
         consecutiveFailures.set(0);
-        log.info("Piston 熔断窗口结束，恢复探测");
+        log.info("go-judge 熔断窗口结束，恢复探测");
     }
 
     /**
-     * 一次 Piston 调用成功后清零失败计数。
+     * 一次调用成功后清零失败计数。
      */
     public void recordSuccess() {
         consecutiveFailures.set(0);
@@ -46,14 +46,14 @@ public class PistonCircuitBreaker {
     }
 
     /**
-     * 一次 Piston 调用失败后累计；达到阈值时打开 60 秒。
+     * 一次调用失败后累计；达到阈值时打开 60 秒。
      */
     public void recordFailure() {
         int failures = consecutiveFailures.incrementAndGet();
         if (failures >= FAILURE_THRESHOLD) {
             openUntil.set(System.currentTimeMillis() + OPEN_MILLIS);
             consecutiveFailures.set(0);
-            log.error("Piston 连续 {} 次失败，熔断 {} 秒", FAILURE_THRESHOLD, OPEN_MILLIS / 1000);
+            log.error("go-judge 连续 {} 次失败，熔断 {} 秒", FAILURE_THRESHOLD, OPEN_MILLIS / 1000);
         }
     }
 
