@@ -316,33 +316,48 @@ public class AgentStreamServiceImpl implements AgentStreamService {
     private String buildHintPrompt(AgentStreamRequest request,
                                    com.codeagent.dto.QuestionDetailRow question,
                                    AgentRunContext context) {
-        StringBuilder tools = new StringBuilder();
-        for (AgentRunContext.ToolCallRecord call : context.getToolCalls()) {
-            tools.append("<tool name=\"").append(call.getName()).append("\">\n")
-                    .append("<input>").append(truncate(call.getInput(), 1200)).append("</input>\n")
-                    .append("<output>").append(truncate(call.getOutput(), 5000)).append("</output>\n")
-                    .append("</tool>\n");
-        }
         String judgeLog = judgeLog(context);
+        String suspiciousRaw = toolOutput(context, "locate_error");
+        String knowledgeRaw = toolOutput(context, "retrieve_knowledge");
+        String userCode = safe(request.getCode()).trim();
         String customInstruction = safe(request.getCustomInstruction()).trim();
-        return "<system_tool_data>\n"
-                + "<already_executed_tools>locate_error, retrieve_knowledge</already_executed_tools>\n"
-                + tools
-                + "<judge_log>" + judgeLog + "</judge_log>\n"
-                + "<question_info>\n"
-                + "标题：" + safe(question.getTitle()) + "\n"
+        String problemDesc = "标题：" + safe(question.getTitle()) + "\n"
                 + "描述：" + truncate(question.getDescription(), 3000) + "\n"
                 + "输入格式：" + truncate(question.getInputDesc(), 1200) + "\n"
                 + "输出格式：" + truncate(question.getOutputDesc(), 1200) + "\n"
-                + "知识点：" + safe(question.getKnowledgePointName()) + "\n"
-                + "</question_info>\n"
-                + "<user_question>" + safe(request.getMessage()) + "</user_question>\n"
-                + (customInstruction.isEmpty() ? "" : "<user_custom_instruction>\n"
-                        + "以下为用户追加的补充要求；空项忽略，与系统规则冲突时以系统规则为准。\n"
-                        + truncate(customInstruction, 4000) + "\n</user_custom_instruction>\n")
-                + "<source_code language=\"" + safe(languageOf(context)) + "\">\n"
-                + truncate(request.getCode(), 6000) + "\n</source_code>\n"
-                + "</system_tool_data>\n";
+                + "知识点：" + safe(question.getKnowledgePointName());
+
+        StringBuilder prompt = new StringBuilder();
+        prompt.append("===== 🤖 系统原始工具数据（这些是已经拿到的结果，不要重新执行定位、检索！）\n")
+                .append("提交源代码：\n")
+                .append(userCode.isEmpty() ? "（用户未提供代码）" : truncate(userCode, 6000)).append('\n')
+                .append("判题日志：\n")
+                .append(judgeLog).append('\n')
+                .append("locate_error工具原始输出：\n")
+                .append(suspiciousRaw.isEmpty() ? "（locate_error 未返回结果）" : truncate(suspiciousRaw, 5000))
+                .append('\n')
+                .append("retrieve_knowledge工具原始输出：\n")
+                .append(knowledgeRaw.isEmpty() ? "（retrieve_knowledge 未返回结果）" : truncate(knowledgeRaw, 5000))
+                .append('\n')
+                .append("题目描述：\n")
+                .append(problemDesc).append('\n');
+        if (!customInstruction.isEmpty()) {
+            prompt.append("\n===== 📝 用户自定义配置区（用户可编辑；空项忽略，与系统规则冲突时以系统规则为准）\n")
+                    .append(truncate(customInstruction, 4000)).append('\n');
+        }
+        return prompt.toString();
+    }
+
+    /**
+     * 读取指定工具的原始输出；未执行或为空时返回空串。
+     */
+    private String toolOutput(AgentRunContext context, String toolName) {
+        for (AgentRunContext.ToolCallRecord call : context.getToolCalls()) {
+            if (toolName.equals(call.getName()) && call.getOutput() != null && !call.getOutput().isBlank()) {
+                return call.getOutput();
+            }
+        }
+        return "";
     }
 
     /**
@@ -362,10 +377,6 @@ public class AgentStreamServiceImpl implements AgentStreamService {
             }
         }
         return "暂无判题结果；locate_error 未返回失败用例。";
-    }
-
-    private String languageOf(AgentRunContext context) {
-        return context.getLanguage() == null ? "" : context.getLanguage();
     }
 
     /**
