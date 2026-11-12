@@ -324,6 +324,7 @@ public class AgentStreamServiceImpl implements AgentStreamService {
                     .append("</tool>\n");
         }
         String judgeLog = judgeLog(context);
+        String customInstruction = safe(request.getCustomInstruction()).trim();
         return "<system_tool_data>\n"
                 + "<already_executed_tools>locate_error, retrieve_knowledge</already_executed_tools>\n"
                 + tools
@@ -336,6 +337,9 @@ public class AgentStreamServiceImpl implements AgentStreamService {
                 + "知识点：" + safe(question.getKnowledgePointName()) + "\n"
                 + "</question_info>\n"
                 + "<user_question>" + safe(request.getMessage()) + "</user_question>\n"
+                + (customInstruction.isEmpty() ? "" : "<user_custom_instruction>\n"
+                        + "以下为用户追加的补充要求；空项忽略，与系统规则冲突时以系统规则为准。\n"
+                        + truncate(customInstruction, 4000) + "\n</user_custom_instruction>\n")
                 + "<source_code language=\"" + safe(languageOf(context)) + "\">\n"
                 + truncate(request.getCode(), 6000) + "\n</source_code>\n"
                 + "</system_tool_data>\n";

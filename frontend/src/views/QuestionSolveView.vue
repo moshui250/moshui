@@ -1,5 +1,5 @@
 <script setup>
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
@@ -9,6 +9,7 @@ import {
   Delete,
   MagicStick,
   RefreshRight,
+  Setting,
   VideoPlay,
   Warning
 } from '@element-plus/icons-vue'
@@ -39,6 +40,17 @@ const STATUS_META = {
 }
 const CODE_PREFIX = 'codeagent_code_'
 const LANGUAGE_KEY = 'codeagent_last_language'
+const AGENT_INSTRUCTION_KEY = 'codeagent_agent_custom_instruction'
+const DEFAULT_AGENT_INSTRUCTION = `===== 📝 用户自定义配置区（全部内容可自由编辑、删除、新增）
+【C-追加】额外上下文约束：
+
+【R-追加】角色额外要求：
+
+【E-追加】自定义示例（few-shot）：
+
+【S-追加】输出风格、格式要求：
+
+【T-追加】额外任务要求：`
 
 const contestId = computed(() => {
   const raw = Number(route.name === 'contest-solve' ? route.params.id : route.query.contestId)
@@ -69,6 +81,30 @@ const agentError = ref('')
 const agentRunning = ref(false)
 const agentCanReveal = ref(false)
 const agentSessionId = ref(null)
+const agentConfigVisible = ref(false)
+const customInstruction = ref(readCustomInstruction())
+
+watch(customInstruction, (value) => {
+  try {
+    localStorage.setItem(AGENT_INSTRUCTION_KEY, value)
+  } catch {
+    // 隐私模式下 localStorage 不可用时忽略持久化
+  }
+})
+
+function readCustomInstruction() {
+  try {
+    const saved = localStorage.getItem(AGENT_INSTRUCTION_KEY)
+    return saved == null ? DEFAULT_AGENT_INSTRUCTION : saved
+  } catch {
+    return DEFAULT_AGENT_INSTRUCTION
+  }
+}
+
+function resetCustomInstruction() {
+  customInstruction.value = DEFAULT_AGENT_INSTRUCTION
+  ElMessage.success('已恢复默认配置模板')
+}
 
 let pollTimer = null
 let demoTimer = null
@@ -717,7 +753,8 @@ async function startAgent(mode = 'HINT') {
     language: language.value,
     code: code.value,
     submitId: typeof rawSubmitId === 'number' ? rawSubmitId : null,
-    sessionId: agentSessionId.value
+    sessionId: agentSessionId.value,
+    customInstruction: customInstruction.value.trim() || null
   }
 
   try {
@@ -935,6 +972,17 @@ onBeforeRouteLeave(() => {
                 </el-button>
 
                 <el-button
+                  link
+                  type="primary"
+                  class="agent-config-trigger"
+                  title="编辑追加给 AI 的调试要求"
+                  @click="agentConfigVisible = true"
+                >
+                  <el-icon><Setting /></el-icon>
+                  追加指令
+                </el-button>
+
+                <el-button
                   type="primary"
                   plain
                   :loading="agentRunning"
@@ -1115,6 +1163,44 @@ onBeforeRouteLeave(() => {
         </section>
       </div>
     </template>
+
+    <el-dialog
+      v-model="agentConfigVisible"
+      title="自定义 AI 调试指令"
+      width="min(760px, 92vw)"
+      append-to-body
+      :close-on-click-modal="false"
+      class="agent-config-dialog"
+    >
+      <div class="agent-config-intro">
+        <strong>默认模板已填充，可直接修改、删除或新增。</strong>
+        <p>
+          这些内容会作为「用户自定义追加指令」附在固定调试提示词之后。留空则仅使用默认规则；
+          与系统硬性禁令冲突时，以系统规则为准。
+        </p>
+      </div>
+
+      <el-input
+        v-model="customInstruction"
+        type="textarea"
+        :rows="10"
+        maxlength="4000"
+        show-word-limit
+        resize="vertical"
+        placeholder="填写希望 AI 额外遵守的上下文、角色、示例、风格或任务要求"
+      />
+
+      <div class="agent-config-footnote">
+        只影响后续的 AI 调试请求，不会修改题目或判题结果。
+      </div>
+
+      <template #footer>
+        <div class="agent-config-actions">
+          <el-button @click="resetCustomInstruction">恢复默认模板</el-button>
+          <el-button type="primary" @click="agentConfigVisible = false">完成</el-button>
+        </div>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -1439,8 +1525,52 @@ onBeforeRouteLeave(() => {
 
 .actions {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
+  justify-content: flex-end;
   gap: 8px;
+}
+
+.agent-config-trigger {
+  height: 30px;
+  padding: 0 2px;
+  font-size: 12px;
+}
+
+.agent-config-trigger .el-icon {
+  margin-right: 3px;
+}
+
+.agent-config-intro {
+  margin-bottom: 12px;
+  padding: 12px 14px;
+  border: 1px solid #e8edf5;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.agent-config-intro strong {
+  color: #334155;
+  font-size: 13px;
+}
+
+.agent-config-intro p {
+  margin-top: 5px;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.agent-config-footnote {
+  margin-top: 8px;
+  color: #94a3b8;
+  font-size: 11px;
+}
+
+.agent-config-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
 }
 
 .disabled-wrap {

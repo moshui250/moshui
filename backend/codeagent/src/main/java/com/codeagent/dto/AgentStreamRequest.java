@@ -45,6 +45,12 @@ public class AgentStreamRequest {
     private String code;
 
     /**
+     * 用户追加的自定义调试要求，可不传。
+     */
+    @Size(max = 4000, message = "自定义调试要求不能超过 4000 字")
+    private String customInstruction;
+
+    /**
      * 可选提交记录 ID，用于复用最近一次判题结果。
      */
     @Positive(message = "提交记录 ID 必须为正数")
