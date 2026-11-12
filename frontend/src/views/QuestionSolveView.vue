@@ -9,7 +9,6 @@ import {
   Delete,
   MagicStick,
   RefreshRight,
-  Setting,
   VideoPlay,
   Warning
 } from '@element-plus/icons-vue'
@@ -41,16 +40,6 @@ const STATUS_META = {
 const CODE_PREFIX = 'codeagent_code_'
 const LANGUAGE_KEY = 'codeagent_last_language'
 const AGENT_INSTRUCTION_KEY = 'codeagent_agent_custom_instruction'
-const DEFAULT_AGENT_INSTRUCTION = `===== 📝 用户自定义配置区（全部内容可自由编辑、删除、新增）
-【C-追加】额外上下文约束：
-
-【R-追加】角色额外要求：
-
-【E-追加】自定义示例（few-shot）：
-
-【S-追加】输出风格、格式要求：
-
-【T-追加】额外任务要求：`
 
 const contestId = computed(() => {
   const raw = Number(route.name === 'contest-solve' ? route.params.id : route.query.contestId)
@@ -82,8 +71,8 @@ const agentRunning = ref(false)
 const agentSessionId = ref(null)
 const agentQuestion = ref('')
 const agentInputRef = ref(null)
-const agentConfigVisible = ref(false)
 const customInstruction = ref(readCustomInstruction())
+const customInstructionOpen = ref(Boolean(customInstruction.value))
 
 watch(customInstruction, (value) => {
   try {
@@ -95,16 +84,13 @@ watch(customInstruction, (value) => {
 
 function readCustomInstruction() {
   try {
-    const saved = localStorage.getItem(AGENT_INSTRUCTION_KEY)
-    return saved == null ? DEFAULT_AGENT_INSTRUCTION : saved
+    const saved = localStorage.getItem(AGENT_INSTRUCTION_KEY) || ''
+    // 旧版本曾写入整套 C/R/E/S/T 模板，升级后不再展示这段冗长内容。
+    if (saved.includes('【C-追加】') || saved.startsWith('=====')) return ''
+    return saved
   } catch {
-    return DEFAULT_AGENT_INSTRUCTION
+    return ''
   }
-}
-
-function resetCustomInstruction() {
-  customInstruction.value = DEFAULT_AGENT_INSTRUCTION
-  ElMessage.success('已恢复默认配置模板')
 }
 
 let pollTimer = null
@@ -987,17 +973,6 @@ onBeforeRouteLeave(() => {
                 </el-button>
 
                 <el-button
-                  link
-                  type="primary"
-                  class="agent-config-trigger"
-                  title="编辑追加给 AI 的调试要求"
-                  @click="agentConfigVisible = true"
-                >
-                  <el-icon><Setting /></el-icon>
-                  追加指令
-                </el-button>
-
-                <el-button
                   type="primary"
                   plain
                   :loading="agentRunning"
@@ -1181,6 +1156,28 @@ onBeforeRouteLeave(() => {
                   @keydown.ctrl.enter.prevent="askAgent"
                   @keydown.meta.enter.prevent="askAgent"
                 />
+                <div class="agent-extra">
+                  <button
+                    type="button"
+                    class="agent-extra-toggle"
+                    :aria-expanded="customInstructionOpen"
+                    @click="customInstructionOpen = !customInstructionOpen"
+                  >
+                    {{ customInstructionOpen ? '收起补充要求' : '补充要求（可选）' }}
+                  </button>
+                  <span v-if="!customInstructionOpen">只在需要时填写，例如：别直接给答案</span>
+                </div>
+                <div v-if="customInstructionOpen" class="agent-extra-field">
+                  <el-input
+                    v-model="customInstruction"
+                    type="textarea"
+                    :rows="2"
+                    maxlength="500"
+                    resize="none"
+                    placeholder="例如：只看第 9 行 / 先别直接给答案 / 用 C++ 术语解释"
+                  />
+                  <p>不填也可以，AI 会按默认的引导方式回答。</p>
+                </div>
                 <div class="agent-composer-actions">
                   <span>先说说你的判断或已经试过什么，AI 会继续追问。</span>
                   <el-button
@@ -1209,31 +1206,6 @@ onBeforeRouteLeave(() => {
       </div>
     </template>
 
-    <el-dialog
-      v-model="agentConfigVisible"
-      title="自定义 AI 调试指令"
-      width="min(760px, 92vw)"
-      append-to-body
-      :close-on-click-modal="false"
-      class="agent-config-dialog"
-    >
-      <el-input
-        v-model="customInstruction"
-        type="textarea"
-        :rows="10"
-        maxlength="4000"
-        show-word-limit
-        resize="vertical"
-        placeholder="填写希望 AI 额外遵守的上下文、角色、示例、风格或任务要求"
-      />
-
-      <template #footer>
-        <div class="agent-config-actions">
-          <el-button @click="resetCustomInstruction">恢复默认模板</el-button>
-          <el-button type="primary" @click="agentConfigVisible = false">完成</el-button>
-        </div>
-      </template>
-    </el-dialog>
   </div>
 </template>
 
@@ -1562,22 +1534,6 @@ onBeforeRouteLeave(() => {
   align-items: center;
   justify-content: flex-end;
   gap: 8px;
-}
-
-.agent-config-trigger {
-  height: 30px;
-  padding: 0 2px;
-  font-size: 12px;
-}
-
-.agent-config-trigger .el-icon {
-  margin-right: 3px;
-}
-
-.agent-config-actions {
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
 }
 
 .disabled-wrap {
@@ -2239,6 +2195,52 @@ onBeforeRouteLeave(() => {
   box-shadow: 0 0 0 1px #e2e8f0 inset;
   font-size: 12.5px;
   line-height: 1.6;
+}
+
+.agent-extra {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 7px;
+}
+
+.agent-extra-toggle {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #1f3a5f;
+  font-size: 11.5px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.agent-extra-toggle:hover {
+  text-decoration: underline;
+}
+
+.agent-extra > span {
+  color: #94a3b8;
+  font-size: 10.5px;
+}
+
+.agent-extra-field {
+  margin-top: 6px;
+}
+
+.agent-extra-field :deep(.el-textarea__inner) {
+  padding: 8px 10px;
+  border-radius: 7px;
+  background: #fff;
+  box-shadow: 0 0 0 1px #e2e8f0 inset;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.agent-extra-field p {
+  margin: 4px 0 0;
+  color: #94a3b8;
+  font-size: 10px;
+  line-height: 1.5;
 }
 
 .agent-composer-actions {
