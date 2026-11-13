@@ -12,7 +12,7 @@ public enum ErrorCode {
     SUCCESS(0, "成功", HttpStatus.OK),
     PARAM_ERROR(40001, "参数校验失败", HttpStatus.BAD_REQUEST),
     UNAUTHORIZED(40100, "未登录或 token 已失效", HttpStatus.UNAUTHORIZED),
-    LOGIN_FAILED(40101, "用户名或密码错误", HttpStatus.UNAUTHORIZED),
+    LOGIN_FAILED(40101, "账号或密码错误", HttpStatus.UNAUTHORIZED),
     FORBIDDEN(40300, "无权访问该资源", HttpStatus.FORBIDDEN),
     NOT_FOUND(40400, "资源不存在", HttpStatus.NOT_FOUND),
     USERNAME_EXISTS(40901, "用户名已存在", HttpStatus.CONFLICT),

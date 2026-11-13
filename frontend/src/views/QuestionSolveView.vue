@@ -16,6 +16,7 @@ import AgentTimeline from '@/components/AgentTimeline.vue'
 import CodeEditor from '@/components/CodeEditor.vue'
 import MarkdownBody from '@/components/MarkdownBody.vue'
 import { streamAgent } from '@/api/agent'
+import { getContest } from '@/api/contest'
 import { getJudgeResult, getQuestion, runSampleCode, submitCode } from '@/api/question'
 
 const route = useRoute()
@@ -313,6 +314,19 @@ async function loadQuestion() {
   agentSessionId.value = null
   activePane.value = 'result'
   try {
+    if (contestId.value) {
+      const contest = await getContest(contestId.value)
+      if (!contest?.registered || contest.status !== 'RUNNING') {
+        const message = contest?.status === 'UPCOMING'
+          ? '竞赛尚未开始，开始后才能进入题目'
+          : contest?.status === 'ENDED'
+            ? '竞赛已结束'
+            : '请先报名竞赛'
+        ElMessage.warning(message)
+        await router.replace({ name: 'contest-detail', params: { id: contestId.value } })
+        return
+      }
+    }
     const data = await getQuestion(questionId.value)
     if (!data) throw new Error('题目不存在')
     question.value = data
@@ -846,7 +860,7 @@ onBeforeRouteLeave(() => {
           </div>
           <div class="head-title-line">
             <h1>{{ question.title }}</h1>
-            <el-tag :type="difficulty.type" effect="light" round size="small">
+            <el-tag v-if="!contestId" :type="difficulty.type" effect="light" round size="small">
               {{ difficulty.label }}
             </el-tag>
           </div>
@@ -976,8 +990,8 @@ onBeforeRouteLeave(() => {
                   type="primary"
                   plain
                   :loading="agentRunning"
-                  :disabled="!question || !!contestId"
-                  :title="contestId ? '竞赛模式下不提供 AI 调试' : ''"
+                  :disabled="!question || !!contestId || judging"
+                  :title="contestId ? '竞赛模式下不提供 AI 调试' : judging ? '判题结束后再使用 AI 调试' : ''"
                   @click="openAgentComposer"
                 >
                   <el-icon><MagicStick /></el-icon>

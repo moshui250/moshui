@@ -39,6 +39,7 @@
 
     <el-form
       ref="formRef"
+      :key="authUi.mode"
       :model="form"
       :rules="rules"
       label-position="top"
@@ -87,7 +88,7 @@
 </template>
 
 <script setup>
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, nextTick, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { ArrowRight } from '@element-plus/icons-vue'
@@ -148,13 +149,25 @@ watch(
 
 watch(
   () => authUi.mode,
-  () => formRef.value?.clearValidate()
+  async () => {
+    await nextTick()
+    formRef.value?.clearValidate()
+  }
 )
 
-function switchMode(mode) {
-  authUi.mode = mode
+function resetForm() {
+  form.username = ''
+  form.nickname = ''
+  form.password = ''
   form.confirmPassword = ''
   formRef.value?.clearValidate()
+}
+
+function switchMode(mode) {
+  if (mode === authUi.mode) return
+  authUi.mode = mode
+  // 登录与注册是两套账号场景，切换时不能沿用上一套表单内容。
+  resetForm()
 }
 
 function safeRedirect() {
@@ -193,14 +206,15 @@ async function submit() {
     const target = safeRedirect()
     if (target !== route.fullPath) router.push(target)
   } catch (error) {
-    if (error?.message && !error?.code) ElMessage.error(error.message)
+    // loginApi/registerApi 使用 silent 请求，错误提示必须由弹窗自己给出。
+    ElMessage.error(error?.message || (authUi.mode === 'register' ? '注册失败，请稍后重试' : '账号或密码错误'))
   } finally {
     loading.value = false
   }
 }
 
 function handleClosed() {
-  formRef.value?.clearValidate()
+  resetForm()
 }
 </script>
 

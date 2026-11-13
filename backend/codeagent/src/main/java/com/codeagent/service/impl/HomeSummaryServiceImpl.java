@@ -1,5 +1,6 @@
 package com.codeagent.service.impl;
 
+import com.codeagent.common.UserContext;
 import com.codeagent.dto.HomeDailyRow;
 import com.codeagent.dto.HomeTotalsRow;
 import com.codeagent.mapper.HomeMapper;
@@ -53,8 +54,11 @@ public class HomeSummaryServiceImpl implements HomeSummaryService {
         vo.setKnowledgePoints(value(totals == null ? null : totals.getKnowledgePoints()));
         vo.setHasData(total > 0);
 
+        Long userId = UserContext.getUserId();
         LocalDate monday = LocalDate.now(ZONE).with(DayOfWeek.MONDAY);
-        List<HomeDailyRow> rows = homeMapper.selectWeek(monday, monday.plusDays(7));
+        List<HomeDailyRow> rows = userId == null
+                ? homeMapper.selectWeek(monday, monday.plusDays(7))
+                : homeMapper.selectWeekByUser(userId, monday, monday.plusDays(7));
         Map<LocalDate, HomeDailyRow> byDay = new HashMap<>();
         if (rows != null) {
             for (HomeDailyRow row : rows) {

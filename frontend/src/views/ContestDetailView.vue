@@ -70,7 +70,7 @@
               v-for="problem in contest.problems"
               :key="problem.label"
               class="problem-row"
-              :class="{ locked: contest.status === 'ENDED' || !contest.registered }"
+              :class="{ locked: !canEnterProblems }"
             >
               <span class="problem-label">{{ problem.label }}</span>
               <div class="problem-main">
@@ -84,12 +84,12 @@
               <button
                 type="button"
                 class="problem-action"
-                :disabled="contest.status === 'ENDED' || !contest.registered"
-                @mouseenter="prefetchSolve"
-                @focus="prefetchSolve"
+                :disabled="!canEnterProblems"
+                @mouseenter="canEnterProblems && prefetchSolve()"
+                @focus="canEnterProblems && prefetchSolve()"
                 @click="goSolve(problem)"
               >
-                {{ contest.status === 'ENDED' ? '已结束' : contest.registered ? '去做题' : '报名后解锁' }}
+                {{ contest.status === 'ENDED' ? '已结束' : !contest.registered ? '报名后解锁' : contest.status === 'UPCOMING' ? '开始后解锁' : '去做题' }}
                 <span aria-hidden="true">→</span>
               </button>
             </div>
@@ -211,6 +211,10 @@ const totalScore = computed(() => {
   return contest.value.problems.reduce((sum, item) => sum + Number(item.score || 0), 0)
 })
 
+const canEnterProblems = computed(() =>
+  Boolean(contest.value?.registered && contest.value?.status === 'RUNNING')
+)
+
 const countdownLabel = computed(() => {
   if (!contest.value) return ''
   if (contest.value.status === 'RUNNING') return '距结束'
@@ -292,7 +296,7 @@ async function handleRegister() {
     contest.value.registered = true
     contest.value.participantCount = data.participantCount
     rankTotal.value = Number(data.participantCount || 0)
-    ElMessage.success('报名成功，题单已解锁')
+    ElMessage.success(contest.value.status === 'UPCOMING' ? '报名成功，竞赛开始后解锁题单' : '报名成功，题单已解锁')
   } catch {
     ElMessage.error('报名失败，请稍后再试')
   } finally {
@@ -328,7 +332,14 @@ function changeRankPage(value) {
 }
 
 function goSolve(problem) {
-  if (!contest.value?.registered || contest.value.status === 'ENDED') return
+  if (!canEnterProblems.value) {
+    if (!contest.value?.registered) {
+      ElMessage.warning('请先报名后再进入题目')
+    } else {
+      ElMessage.warning(contest.value?.status === 'UPCOMING' ? '竞赛尚未开始，开始后才能进入题目' : '竞赛已结束')
+    }
+    return
+  }
   router.push({
     name: 'contest-solve',
     params: { id: contest.value.id, questionId: problem.questionId }

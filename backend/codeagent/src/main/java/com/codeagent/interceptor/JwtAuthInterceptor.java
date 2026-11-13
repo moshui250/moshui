@@ -37,6 +37,10 @@ public class JwtAuthInterceptor implements HandlerInterceptor {
 
         String authorization = request.getHeader("Authorization");
         if (authorization == null || !authorization.startsWith(BEARER_PREFIX)) {
+            // 首页统计允许游客访问；带 token 时仍会解析出当前用户，用于展示个人本周数据。
+            if ("/api/home/summary".equals(request.getRequestURI())) {
+                return true;
+            }
             return unauthorized(response);
         }
 

@@ -45,4 +45,26 @@ public interface HomeMapper {
             """)
     List<HomeDailyRow> selectWeek(@Param("start") LocalDate start,
                                   @Param("end") LocalDate end);
+
+    /**
+     * 查询指定用户在某周内每天提交和通过数量。
+     *
+     * @param userId 当前登录用户 ID
+     * @param start  区间开始日期（含）
+     * @param end    区间结束日期（不含）
+     * @return 按日期升序的每日统计
+     */
+    @Select("""
+            SELECT DATE(create_time) AS day,
+                   COUNT(*) AS submit_count,
+                   CAST(SUM(CASE WHEN status = 'AC' THEN 1 ELSE 0 END) AS SIGNED) AS ac_count
+            FROM submit_record
+            WHERE user_id = #{userId}
+              AND create_time >= #{start} AND create_time < #{end}
+            GROUP BY DATE(create_time)
+            ORDER BY day
+            """)
+    List<HomeDailyRow> selectWeekByUser(@Param("userId") Long userId,
+                                        @Param("start") LocalDate start,
+                                        @Param("end") LocalDate end);
 }
