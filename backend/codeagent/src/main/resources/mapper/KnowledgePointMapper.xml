@@ -5,9 +5,10 @@
 
     <select id="selectListWithQuestionCount" resultType="com.codeagent.vo.KnowledgePointVO">
         SELECT kp.id, kp.code, kp.name, kp.description,
-               COUNT(q.id) AS question_count
+               COUNT(DISTINCT q.id) AS question_count
         FROM knowledge_point kp
-        LEFT JOIN question q ON q.knowledge_point_id = kp.id
+        LEFT JOIN question_knowledge_point qkp ON qkp.knowledge_point_id = kp.id
+        LEFT JOIN question q ON q.id = qkp.question_id
             AND q.type = 'PUBLIC'
             AND q.deleted = 0
         GROUP BY kp.id, kp.code, kp.name, kp.description, kp.sort

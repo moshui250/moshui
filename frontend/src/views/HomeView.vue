@@ -1,5 +1,5 @@
 <script setup>
-import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import * as echarts from 'echarts/core'
 import { BarChart } from 'echarts/charts'
@@ -133,6 +133,13 @@ const passRateText = computed(() => {
 
 const weeklyTotal = computed(() =>
   (summary.weekly || []).reduce((sum, item) => sum + Number(item.submitCount || 0), 0)
+)
+
+const loggedIn = computed(() => userStore.isLoggedIn)
+
+watch(
+  () => userStore.isLoggedIn,
+  () => loadSummary()
 )
 
 function statDisplay(key) {
@@ -272,6 +279,10 @@ async function loadKnowledgePoints() {
 
 function renderChart() {
   if (!chartRef.value) return
+  if (!loggedIn.value) {
+    chartInstance?.clear()
+    return
+  }
   if (chartInstance) {
     chartInstance.dispose()
     chartInstance = null
@@ -511,24 +522,32 @@ onBeforeUnmount(() => {
       </section>
 
       <section class="insight-grid">
-        <article v-reveal class="panel chart-panel">
+        <article v-reveal class="panel chart-panel" :class="{ 'is-guest': !loggedIn }">
           <div class="panel-head">
             <div>
               <h2>本周练习</h2>
             </div>
             <div class="chart-total">
-              <strong>{{ summary.hasData ? weeklyTotal : '—' }}</strong>
+              <strong>{{ loggedIn && summary.hasData ? weeklyTotal : '—' }}</strong>
               <span>次提交</span>
             </div>
           </div>
 
-          <div v-if="loading" class="chart-state">正在读取本周数据…</div>
+          <div v-if="!loggedIn" class="chart-state">
+            <strong>登录后查看本周练习</strong>
+          </div>
+          <div v-else-if="loading" class="chart-state">正在读取本周数据…</div>
           <div v-else-if="!summary.hasData" class="chart-state">
             <strong>这一周还没有提交</strong>
           </div>
-          <div ref="chartRef" class="chart-canvas" :class="{ 'is-empty': !summary.hasData || loading }"></div>
+          <div
+            v-show="loggedIn"
+            ref="chartRef"
+            class="chart-canvas"
+            :class="{ 'is-empty': !summary.hasData || loading }"
+          ></div>
 
-          <div class="chart-foot">
+          <div v-if="loggedIn" class="chart-foot">
             <div class="legend">
               <span><i class="legend-dot submit"></i>提交</span>
               <span><i class="legend-dot ac"></i>通过</span>
@@ -1305,6 +1324,18 @@ onBeforeUnmount(() => {
 .chart-panel {
   position: relative;
   padding: 22px 22px 16px;
+}
+
+.chart-panel.is-guest {
+  align-self: start;
+  padding-bottom: 22px;
+}
+
+.chart-panel.is-guest .chart-state {
+  position: static;
+  width: auto;
+  padding: 48px 0;
+  transform: none;
 }
 
 .panel-head {

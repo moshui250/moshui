@@ -56,8 +56,9 @@ public class HomeSummaryServiceImpl implements HomeSummaryService {
 
         Long userId = UserContext.getUserId();
         LocalDate monday = LocalDate.now(ZONE).with(DayOfWeek.MONDAY);
+        // 未登录时不展示任何人的练习记录；首页仍保留全站题目/提交总览。
         List<HomeDailyRow> rows = userId == null
-                ? homeMapper.selectWeek(monday, monday.plusDays(7))
+                ? List.of()
                 : homeMapper.selectWeekByUser(userId, monday, monday.plusDays(7));
         Map<LocalDate, HomeDailyRow> byDay = new HashMap<>();
         if (rows != null) {

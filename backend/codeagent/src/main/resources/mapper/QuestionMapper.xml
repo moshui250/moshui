@@ -39,7 +39,16 @@
             AND q.difficulty = #{difficulty}
         </if>
         <if test="keyword != null and keyword != ''">
-            AND q.title LIKE CONCAT('%', #{keyword}, '%')
+            AND (q.title LIKE CONCAT('%', #{keyword}, '%')
+                 OR q.description LIKE CONCAT('%', #{keyword}, '%')
+                 OR EXISTS (
+                     SELECT 1
+                     FROM question_knowledge_point qkp_kw
+                     JOIN knowledge_point kp_kw ON kp_kw.id = qkp_kw.knowledge_point_id
+                     WHERE qkp_kw.question_id = q.id
+                       AND (kp_kw.name LIKE CONCAT('%', #{keyword}, '%')
+                            OR kp_kw.description LIKE CONCAT('%', #{keyword}, '%'))
+                 ))
         </if>
     </sql>
 
