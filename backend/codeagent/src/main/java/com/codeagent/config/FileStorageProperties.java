@@ -16,4 +16,9 @@ public class FileStorageProperties {
      * 图片存储根目录，默认 /data/upload；生产环境可通过 FILE_UPLOAD_DIR 覆盖。
      */
     private String uploadDir = "/data/upload";
+
+    /**
+     * 图片对外访问前缀，例如 https://cdn.example.com；留空时返回站内相对路径。
+     */
+    private String publicBaseUrl = "";
 }

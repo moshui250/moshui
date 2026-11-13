@@ -80,6 +80,7 @@ rag:
 # 图片上传与视觉识别。上传目录在 Windows 下会解析为当前盘符的 \data\upload。
 file:
   upload-dir: ${FILE_UPLOAD_DIR:/data/upload}
+  public-base-url: ${FILE_PUBLIC_BASE_URL:}
 
 # DashScope OpenAI 兼容视觉端点；密钥只从环境变量读取。
 dashscope:

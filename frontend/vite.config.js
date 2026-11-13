@@ -27,6 +27,11 @@ export default defineConfig({
         target: 'http://localhost:8080',
         changeOrigin: true
         // 后端接口本身带 /api 前缀，这里不能 rewrite
+      },
+      // 上传后的图片由后端 /uploads/** 提供，开发环境也要代理。
+      '/uploads': {
+        target: 'http://localhost:8080',
+        changeOrigin: true
       }
     }
   },
