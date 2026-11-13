@@ -962,8 +962,14 @@ function switchView(mode) {
     }
     nextTick(renderChart)
   } else {
-    nextTick(renderChart)
+    disposeChart()
   }
+}
+
+function disposeChart() {
+  if (!chartInstance) return
+  chartInstance.dispose()
+  chartInstance = null
 }
 
 async function loadKnowledgeStats() {
@@ -978,6 +984,10 @@ async function loadKnowledgeStats() {
 
 function renderChart() {
   if (viewMode.value !== 'chart' || !chartRef.value || !chartPoints.value.length) return
+  // 切换视图会销毁并重建 DOM；旧实例仍绑在已卸载节点上，直接 setOption 会得到空白画布。
+  if (chartInstance && chartInstance.getDom() !== chartRef.value) {
+    disposeChart()
+  }
   if (!chartInstance) {
     chartInstance = echarts.init(chartRef.value)
   }
@@ -1142,8 +1152,7 @@ onBeforeUnmount(() => {
   window.removeEventListener('keydown', onKeydown)
   mediaQuery?.removeEventListener?.('change', onMotionChange)
   resizeObserver?.disconnect()
-  chartInstance?.dispose()
-  chartInstance = null
+  disposeChart()
   document.body.style.overflow = previousBodyOverflow
 })
 </script>

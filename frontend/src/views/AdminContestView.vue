@@ -295,12 +295,17 @@ onMounted(loadOptions)
 
 <style scoped>
 .admin-page {
-  padding: 42px 0 30px;
+  padding: 40px 0 56px;
+}
+
+.page-inner {
+  width: min(1240px, calc(100% - 48px));
+  margin: 0 auto;
 }
 
 .admin-head {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: space-between;
   gap: 24px;
   margin-bottom: 26px;
@@ -308,7 +313,7 @@ onMounted(loadOptions)
 
 .back-link {
   display: inline-flex;
-  margin-bottom: 18px;
+  margin-bottom: 10px;
   color: #64748b;
   font-size: 12px;
   text-decoration: none;
@@ -317,8 +322,9 @@ onMounted(loadOptions)
 .admin-head h1 {
   margin: 0;
   color: #111827;
-  font-size: 36px;
-  letter-spacing: -1px;
+  font-size: 30px;
+  line-height: 1.2;
+  letter-spacing: -0.6px;
 }
 
 .admin-head p {
@@ -338,40 +344,42 @@ onMounted(loadOptions)
 
 .admin-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 300px;
-  gap: 18px;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 24px;
   align-items: start;
 }
 
 .admin-main {
   display: grid;
-  gap: 18px;
+  gap: 20px;
 }
 
 .panel,
 .side-card {
   border: 1px solid #e4e7ec;
-  border-radius: 10px;
+  border-radius: 12px;
   background: #fff;
 }
 
 .panel {
-  padding: 22px 24px;
+  padding: 24px 26px;
 }
 
 .panel-head {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: 16px;
   margin-bottom: 18px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #eef2f7;
 }
 
 .panel-head h2,
 .side-card h3 {
   margin: 0;
   color: #111827;
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 650;
 }
 
@@ -386,7 +394,7 @@ onMounted(loadOptions)
 .form-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 14px;
+  gap: 16px;
 }
 
 .field {
@@ -411,8 +419,8 @@ onMounted(loadOptions)
 }
 
 .search {
-  max-width: 380px;
-  margin-bottom: 12px;
+  max-width: 420px;
+  margin-bottom: 14px;
 }
 
 .question-picker {
@@ -488,13 +496,13 @@ onMounted(loadOptions)
 
 .admin-side {
   display: grid;
-  gap: 16px;
+  gap: 18px;
   position: sticky;
   top: 88px;
 }
 
 .side-card {
-  padding: 20px;
+  padding: 22px;
 }
 
 .side-total {
@@ -542,13 +550,17 @@ onMounted(loadOptions)
 
   .admin-side {
     position: static;
-    grid-row: 1;
+    grid-row: auto;
   }
 }
 
 @media (max-width: 640px) {
   .admin-page {
-    padding-top: 26px;
+    padding: 26px 0 40px;
+  }
+
+  .page-inner {
+    width: calc(100% - 32px);
   }
 
   .admin-head {
@@ -556,7 +568,7 @@ onMounted(loadOptions)
   }
 
   .admin-head h1 {
-    font-size: 30px;
+    font-size: 26px;
   }
 
   .panel {

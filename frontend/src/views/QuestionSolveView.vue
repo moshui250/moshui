@@ -40,7 +40,6 @@ const STATUS_META = {
 }
 const CODE_PREFIX = 'codeagent_code_'
 const LANGUAGE_KEY = 'codeagent_last_language'
-const AGENT_INSTRUCTION_KEY = 'codeagent_agent_custom_instruction'
 
 const contestId = computed(() => {
   const raw = Number(route.name === 'contest-solve' ? route.params.id : route.query.contestId)
@@ -72,27 +71,6 @@ const agentRunning = ref(false)
 const agentSessionId = ref(null)
 const agentQuestion = ref('')
 const agentInputRef = ref(null)
-const customInstruction = ref(readCustomInstruction())
-const customInstructionOpen = ref(Boolean(customInstruction.value))
-
-watch(customInstruction, (value) => {
-  try {
-    localStorage.setItem(AGENT_INSTRUCTION_KEY, value)
-  } catch {
-    // 隐私模式下 localStorage 不可用时忽略持久化
-  }
-})
-
-function readCustomInstruction() {
-  try {
-    const saved = localStorage.getItem(AGENT_INSTRUCTION_KEY) || ''
-    // 旧版本曾写入整套 C/R/E/S/T 模板，升级后不再展示这段冗长内容。
-    if (saved.includes('【C-追加】') || saved.startsWith('=====')) return ''
-    return saved
-  } catch {
-    return ''
-  }
-}
 
 let pollTimer = null
 let demoTimer = null
@@ -768,8 +746,7 @@ async function askAgent() {
     language: language.value,
     code: code.value,
     submitId: typeof rawSubmitId === 'number' ? rawSubmitId : null,
-    sessionId: agentSessionId.value,
-    customInstruction: customInstruction.value.trim() || null
+    sessionId: agentSessionId.value
   }
 
   try {
@@ -1170,28 +1147,6 @@ onBeforeRouteLeave(() => {
                   @keydown.ctrl.enter.prevent="askAgent"
                   @keydown.meta.enter.prevent="askAgent"
                 />
-                <div class="agent-extra">
-                  <button
-                    type="button"
-                    class="agent-extra-toggle"
-                    :aria-expanded="customInstructionOpen"
-                    @click="customInstructionOpen = !customInstructionOpen"
-                  >
-                    {{ customInstructionOpen ? '收起补充要求' : '补充要求（可选）' }}
-                  </button>
-                  <span v-if="!customInstructionOpen">只在需要时填写，例如：别直接给答案</span>
-                </div>
-                <div v-if="customInstructionOpen" class="agent-extra-field">
-                  <el-input
-                    v-model="customInstruction"
-                    type="textarea"
-                    :rows="2"
-                    maxlength="500"
-                    resize="none"
-                    placeholder="例如：只看第 9 行 / 先别直接给答案 / 用 C++ 术语解释"
-                  />
-                  <p>不填也可以，AI 会按默认的引导方式回答。</p>
-                </div>
                 <div class="agent-composer-actions">
                   <span>先说说你的判断或已经试过什么，AI 会继续追问。</span>
                   <el-button
@@ -2209,52 +2164,6 @@ onBeforeRouteLeave(() => {
   box-shadow: 0 0 0 1px #e2e8f0 inset;
   font-size: 12.5px;
   line-height: 1.6;
-}
-
-.agent-extra {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 7px;
-}
-
-.agent-extra-toggle {
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: #1f3a5f;
-  font-size: 11.5px;
-  font-weight: 650;
-  cursor: pointer;
-}
-
-.agent-extra-toggle:hover {
-  text-decoration: underline;
-}
-
-.agent-extra > span {
-  color: #94a3b8;
-  font-size: 10.5px;
-}
-
-.agent-extra-field {
-  margin-top: 6px;
-}
-
-.agent-extra-field :deep(.el-textarea__inner) {
-  padding: 8px 10px;
-  border-radius: 7px;
-  background: #fff;
-  box-shadow: 0 0 0 1px #e2e8f0 inset;
-  font-size: 12px;
-  line-height: 1.55;
-}
-
-.agent-extra-field p {
-  margin: 4px 0 0;
-  color: #94a3b8;
-  font-size: 10px;
-  line-height: 1.5;
 }
 
 .agent-composer-actions {
