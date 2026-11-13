@@ -1,18 +1,10 @@
 <script setup>
 import { computed, nextTick, ref, watch } from 'vue'
 import MarkdownBody from '@/components/MarkdownBody.vue'
-import {
-  CircleCheck,
-  MagicStick,
-  Warning
-} from '@element-plus/icons-vue'
+import { MagicStick } from '@element-plus/icons-vue'
 import ThinkingDots from '@/components/ThinkingDots.vue'
 
 const props = defineProps({
-  events: {
-    type: Array,
-    default: () => []
-  },
   answer: {
     type: String,
     default: ''
@@ -68,12 +60,6 @@ const statusType = computed(() => {
   return 'info'
 })
 
-function formatArgs(value) {
-  if (value == null || value === '') return ''
-  const text = typeof value === 'string' ? value : JSON.stringify(value)
-  return text.length > 140 ? `${text.slice(0, 140)}…` : text
-}
-
 function scrollToBottom() {
   nextTick(() => {
     if (timelineRef.value) {
@@ -82,7 +68,7 @@ function scrollToBottom() {
   })
 }
 
-watch(() => [props.events.length, props.answer, props.error], scrollToBottom, { deep: true })
+watch(() => [props.answer, props.error], scrollToBottom, { deep: true })
 </script>
 
 <template>
@@ -99,7 +85,7 @@ watch(() => [props.events.length, props.answer, props.error], scrollToBottom, { 
     </div>
 
     <div ref="timelineRef" class="timeline">
-      <div v-if="!events.length && !answer && !error" class="timeline-empty">
+      <div v-if="!answer && !error" class="timeline-empty">
         <template v-if="running">
           <ThinkingDots />
           <span>AI 正在读题、定位错误点…</span>
@@ -107,42 +93,6 @@ watch(() => [props.events.length, props.answer, props.error], scrollToBottom, { 
         <template v-else>
           写下你的疑问或思路，AI 会结合判题结果一步步引导。
         </template>
-      </div>
-
-      <div v-for="(item, index) in events" :key="item.id || index" class="timeline-item" :class="`is-${item.type}`">
-        <div class="timeline-icon">
-          <ThinkingDots v-if="item.type === 'thinking' || item.type === 'tool_call'" />
-          <el-icon v-else-if="item.type === 'tool_result'"><CircleCheck /></el-icon>
-          <el-icon v-else><Warning /></el-icon>
-        </div>
-
-        <div class="timeline-body">
-          <template v-if="item.type === 'thinking'">
-            <p class="thinking-text">{{ item.message }}</p>
-          </template>
-
-          <template v-else-if="item.type === 'tool_call'">
-            <div class="tool-title">
-              <span class="tool-name">{{ item.name }}</span>
-              <span class="tool-state">执行中</span>
-            </div>
-            <p v-if="formatArgs(item.args)" class="tool-args">{{ formatArgs(item.args) }}</p>
-          </template>
-
-          <template v-else-if="item.type === 'tool_result'">
-            <div class="tool-title">
-              <span class="tool-name">{{ item.name }}</span>
-              <span class="tool-state is-done">完成</span>
-              <span v-if="item.latencyMs != null" class="tool-latency">{{ item.latencyMs }} ms</span>
-            </div>
-            <p v-if="formatArgs(item.args)" class="tool-args">{{ formatArgs(item.args) }}</p>
-            <p class="tool-summary">{{ item.summary || '工具执行完成' }}</p>
-          </template>
-
-          <template v-else-if="item.type === 'error'">
-            <p class="error-text">{{ item.message }}</p>
-          </template>
-        </div>
       </div>
 
       <div v-if="answer" class="answer-block">
@@ -216,103 +166,6 @@ watch(() => [props.events.length, props.answer, props.error], scrollToBottom, { 
 .timeline-empty .thinking-dots {
   flex: 0 0 auto;
   color: #3d5a78;
-}
-
-.timeline-item {
-  display: flex;
-  gap: 9px;
-  padding: 5px 0;
-}
-
-.timeline-icon {
-  display: grid;
-  place-items: center;
-  width: 22px;
-  height: 22px;
-  flex-shrink: 0;
-  margin-top: 1px;
-  border-radius: 50%;
-  background: #f1f5f9;
-  color: #64748b;
-  font-size: 13px;
-}
-
-.timeline-item.is-tool_call .timeline-icon,
-.timeline-item.is-thinking .timeline-icon {
-  background: #eef2f6;
-  color: #3d5a78;
-}
-
-.timeline-item.is-tool_result .timeline-icon {
-  background: #edf5f1;
-  color: #2f7d5b;
-}
-
-.timeline-item.is-error .timeline-icon {
-  background: #f7efee;
-  color: #b42318;
-}
-
-.timeline-body {
-  min-width: 0;
-  flex: 1;
-}
-
-.thinking-text {
-  margin: 2px 0;
-  color: #94a3b8;
-  font-size: 12px;
-  line-height: 1.65;
-}
-
-.tool-title {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 7px;
-}
-
-.tool-name {
-  color: #334155;
-  font-family: 'JetBrains Mono', Consolas, monospace;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.tool-state {
-  color: #94a3b8;
-  font-size: 10.5px;
-}
-
-.tool-state.is-done {
-  color: #2f7d5b;
-}
-
-.tool-latency {
-  color: #94a3b8;
-  font-size: 10.5px;
-}
-
-.tool-args,
-.tool-summary {
-  margin: 3px 0 0;
-  color: #64748b;
-  font-size: 11.5px;
-  line-height: 1.6;
-  word-break: break-word;
-}
-
-.tool-args {
-  color: #94a3b8;
-  font-family: 'JetBrains Mono', Consolas, monospace;
-  font-size: 10.5px;
-}
-
-.error-text {
-  margin: 2px 0;
-  color: #b91c1c;
-  font-size: 12px;
-  line-height: 1.65;
 }
 
 .answer-block {

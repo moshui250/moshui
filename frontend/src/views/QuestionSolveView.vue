@@ -64,7 +64,6 @@ const sampleOnly = ref(false)
 const activePane = ref('result')
 let passNoticeShown = false
 
-const agentEvents = ref([])
 const agentAnswer = ref('')
 const agentError = ref('')
 const agentRunning = ref(false)
@@ -633,7 +632,6 @@ function resetAgent() {
     agentController.abort()
     agentController = null
   }
-  agentEvents.value = []
   agentAnswer.value = ''
   agentError.value = ''
 }
@@ -654,40 +652,8 @@ function handleAgentEvent(event, runId) {
     return
   }
 
-  if (event.type === 'thinking') {
-    agentEvents.value.push({
-      id: `thinking-${agentEvents.value.length}`,
-      type: 'thinking',
-      message: data.delta || '正在分析…'
-    })
-    return
-  }
-
-  if (event.type === 'tool_call') {
-    agentEvents.value.push({
-      id: data.id || `tool-call-${agentEvents.value.length}`,
-      type: 'tool_call',
-      name: data.name || 'tool',
-      args: data.args
-    })
-    return
-  }
-
-  if (event.type === 'tool_result') {
-    const item = agentEvents.value.find((entry) => entry.id === data.id)
-    if (item) {
-      item.type = 'tool_result'
-      item.summary = data.summary || '工具执行完成'
-      item.latencyMs = data.latencyMs
-    } else {
-      agentEvents.value.push({
-        id: data.id || `tool-result-${agentEvents.value.length}`,
-        type: 'tool_result',
-        name: data.name || 'tool',
-        summary: data.summary || '工具执行完成',
-        latencyMs: data.latencyMs
-      })
-    }
+  if (event.type === 'thinking' || event.type === 'tool_call' || event.type === 'tool_result') {
+    // 工具调用与中间推理只用于服务端生成，不展示给学生。
     return
   }
 
@@ -1163,7 +1129,6 @@ onBeforeRouteLeave(() => {
               <div class="agent-stream">
                 <AgentTimeline
                   compact
-                  :events="agentEvents"
                   :answer="agentAnswer"
                   :running="agentRunning"
                   :error="agentError"
