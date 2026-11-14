@@ -1135,23 +1135,21 @@ onBeforeRouteLeave(() => {
                       <div class="agent-help">
                         <div class="agent-help-title">怎么用这个 AI 调试</div>
                         <p class="agent-help-lead">
-                          系统已经带入题目、代码和判题结果。你不用写完整提示，只要补上
-                          CREST-CoT 里它还不知道的部分：
+                          题目、代码和判题结果已经带进来了，不用重复粘贴。你只要说清楚下面四件事：
                         </p>
                         <ul class="agent-help-list">
-                          <li><b>C 课程内容</b>：卡在哪道题、哪一行、哪个用例。</li>
-                          <li><b>R 角色</b>：系统固定为助教，只给提示，不给完整代码。</li>
-                          <li><b>E 思维链</b>：你观察到什么、试过什么，卡在词法、语法、语义、优化还是实现。</li>
-                          <li><b>S 学生特征</b>：你的基础、哪里容易错，不必怕说“不会”。</li>
-                          <li><b>T 任务约束</b>：你想要提示、验证步骤，还是复盘。</li>
+                          <li><b>1. 卡在哪</b>：哪道题、哪个样例、哪一行？你看到了什么现象？</li>
+                          <li><b>2. 你怎么想</b>：你怀疑哪一步错了？不确定也没关系，说猜测就行。</li>
+                          <li><b>3. 试过什么</b>：改过哪里？改完是变好、变坏，还是没变化？</li>
+                          <li><b>4. 想让我怎么帮</b>：要一个提示、一个验证步骤，还是帮你复盘思路？</li>
                         </ul>
                         <div class="agent-help-example">
                           <span>可以这样问</span>
-                          “样例 2 输出不对，我猜是循环边界；改成 i &lt; n 后结果更小。
-                          请只给我一个验证步骤，不要代码。”
+                          “样例 2 输出不对。我猜循环少跑了一次；把 i &lt;= n 改成 i &lt; n 后结果更小了。
+                          先别给我代码，告诉我怎么验证循环边界。”
                         </div>
                         <p class="agent-help-foot">
-                          AI 会按“先对焦 → 拆开看 → 你来判断 → 最小验证”回答。
+                          回答会分四步：先确认问题 → 拆开一个小点 → 问你一个判断 → 给你一个马上能试的验证动作。
                         </p>
                       </div>
                     </el-popover>
@@ -2276,6 +2274,8 @@ onBeforeRouteLeave(() => {
 }
 
 :global(.agent-help-popper) {
+  box-sizing: border-box;
+  max-width: calc(100vw - 32px);
   padding: 12px 14px;
 }
 
