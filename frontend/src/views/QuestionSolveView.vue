@@ -978,7 +978,7 @@ onBeforeRouteLeave(() => {
               </button>
 
               <span class="lower-tip">
-                {{ activePane === 'result' ? (sampleOnly ? '仅运行样例，不写入提交记录' : '按用例逐项比对，失败时显示期望与实际输出') : '工具调用会实时显示在时间线上' }}
+                {{ activePane === 'result' ? (sampleOnly ? '仅运行样例，不写入提交记录' : '按用例逐项比对，失败时显示期望与实际输出') : 'AI 会结合判题结果，按层追问' }}
               </span>
             </div>
 
