@@ -79,7 +79,7 @@ watch(() => [props.answer, props.error], scrollToBottom, { deep: true })
           <el-icon><MagicStick /></el-icon>
           AI 调试
         </div>
-        <div class="panel-subtitle">先写下你的疑问，AI 会一步步引导，不直接给答案</div>
+        <div class="panel-subtitle">先写清卡点，AI 会按层追问，不直接给答案</div>
       </div>
       <el-tag :type="statusType" effect="light" round size="small">{{ statusText }}</el-tag>
     </div>
@@ -91,7 +91,7 @@ watch(() => [props.answer, props.error], scrollToBottom, { deep: true })
           <span>AI 正在读题、定位错误点…</span>
         </template>
         <template v-else>
-          写下你的疑问或思路，AI 会结合判题结果一步步引导。
+          写下卡点、你的判断和试过什么，AI 会结合判题结果按层追问。
         </template>
       </div>
 

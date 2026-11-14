@@ -1109,21 +1109,62 @@ onBeforeRouteLeave(() => {
                   :rows="2"
                   maxlength="600"
                   resize="none"
-                  placeholder="例如：为什么我把循环条件改成 i <= n 结果就不对了？"
+                  placeholder="例如：样例 2 输出不对，我猜是循环边界，改成 i &lt; n 后结果更小…"
                   @keydown.ctrl.enter.prevent="askAgent"
                   @keydown.meta.enter.prevent="askAgent"
                 />
                 <div class="agent-composer-actions">
-                  <span>先说说你的判断或已经试过什么，AI 会继续追问。</span>
-                  <el-button
-                    type="primary"
-                    size="small"
-                    :loading="agentRunning"
-                    :disabled="!agentQuestion.trim()"
-                    @click="askAgent"
-                  >
-                    发送问题
-                  </el-button>
+                  <span>先说卡点、你的判断和试过什么；AI 会一次拆一层。</span>
+                  <div class="agent-send-group">
+                    <el-popover
+                      placement="top-end"
+                      :width="360"
+                      trigger="click"
+                      popper-class="agent-help-popper"
+                    >
+                      <template #reference>
+                        <button
+                          type="button"
+                          class="agent-help-trigger"
+                          aria-label="怎么用这个 AI 调试"
+                          title="怎么用这个 AI 调试"
+                        >
+                          ?
+                        </button>
+                      </template>
+                      <div class="agent-help">
+                        <div class="agent-help-title">怎么用这个 AI 调试</div>
+                        <p class="agent-help-lead">
+                          系统已经带入题目、代码和判题结果。你不用写完整提示，只要补上
+                          CREST-CoT 里它还不知道的部分：
+                        </p>
+                        <ul class="agent-help-list">
+                          <li><b>C 课程内容</b>：卡在哪道题、哪一行、哪个用例。</li>
+                          <li><b>R 角色</b>：系统固定为助教，只给提示，不给完整代码。</li>
+                          <li><b>E 思维链</b>：你观察到什么、试过什么，卡在词法、语法、语义、优化还是实现。</li>
+                          <li><b>S 学生特征</b>：你的基础、哪里容易错，不必怕说“不会”。</li>
+                          <li><b>T 任务约束</b>：你想要提示、验证步骤，还是复盘。</li>
+                        </ul>
+                        <div class="agent-help-example">
+                          <span>可以这样问</span>
+                          “样例 2 输出不对，我猜是循环边界；改成 i &lt; n 后结果更小。
+                          请只给我一个验证步骤，不要代码。”
+                        </div>
+                        <p class="agent-help-foot">
+                          AI 会按“先对焦 → 拆开看 → 你来判断 → 最小验证”回答。
+                        </p>
+                      </div>
+                    </el-popover>
+                    <el-button
+                      type="primary"
+                      size="small"
+                      :loading="agentRunning"
+                      :disabled="!agentQuestion.trim()"
+                      @click="askAgent"
+                    >
+                      发送问题
+                    </el-button>
+                  </div>
                 </div>
               </div>
               <div class="agent-stream">
@@ -2143,6 +2184,99 @@ onBeforeRouteLeave(() => {
   color: #94a3b8;
   font-size: 10.5px;
   line-height: 1.5;
+}
+
+.agent-send-group {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.agent-help-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid #cbd5e1;
+  border-radius: 50%;
+  background: #fff;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  transition: border-color 0.18s ease, color 0.18s ease, background 0.18s ease;
+}
+
+.agent-help-trigger:hover,
+.agent-help-trigger:focus-visible {
+  border-color: #3d5a78;
+  background: #f4f7fb;
+  color: #3d5a78;
+  outline: none;
+}
+
+.agent-help {
+  color: #334155;
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+.agent-help-title {
+  margin-bottom: 6px;
+  color: #1f3a5f;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.agent-help-lead {
+  margin: 0 0 9px;
+  color: #475569;
+}
+
+.agent-help-list {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.agent-help-list li {
+  margin: 4px 0;
+}
+
+.agent-help-list b {
+  color: #334155;
+}
+
+.agent-help-example {
+  margin-top: 10px;
+  padding: 9px 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #475569;
+  line-height: 1.6;
+}
+
+.agent-help-example span {
+  display: block;
+  margin-bottom: 2px;
+  color: #3d5a78;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.agent-help-foot {
+  margin: 9px 0 0;
+  color: #64748b;
+  font-size: 11px;
+}
+
+:global(.agent-help-popper) {
+  padding: 12px 14px;
 }
 
 .agent-stream {

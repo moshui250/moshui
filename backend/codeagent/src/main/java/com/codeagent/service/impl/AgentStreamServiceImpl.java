@@ -417,13 +417,27 @@ public class AgentStreamServiceImpl implements AgentStreamService {
     private String finalizeHint(String raw, AgentRunContext context) {
         String answer = sanitizeHint(raw);
         if (answer.isBlank()) {
-            answer = "第 1 行：暂未定位到明确错误行，建议先检查输入边界和数组下标。";
+            answer = """
+                    **先对焦**
+                    这轮还没有拿到可用的判题信息，先不猜具体错误行。
+
+                    **拆开看**
+                    - 语义层：确认题目输入、输出和边界条件。
+                    - 逻辑层：用一个最小样例手算一遍预期过程。
+                    - 实现层：先检查数组下标、循环边界和变量初始化。
+
+                    **你来判断**
+                    你觉得哪一个最小样例最能暴露问题？
+
+                    **最小验证**
+                    先运行题目样例，把输入、期望输出和实际输出发回来。
+                    """.trim();
         }
         String body = answer.replaceAll("(?m)^📎 参考来源：.*$", "").trim();
         String source = sourceText(context);
         String suffix = source.isBlank() ? "" : "\n\n📎 参考来源：" + source;
-        // 固定基座要求输出“助教回答 + 推理日志”两大块，上限需容纳完整推理。
-        int bodyLimit = Math.max(600, 6000 - suffix.length());
+        // CREST-CoT 的四块回答需要留出展开空间，但不保留旧版推理日志。
+        int bodyLimit = Math.max(600, 5000 - suffix.length());
         if (body.length() > bodyLimit) {
             body = body.substring(0, bodyLimit - 1) + "…";
         }
