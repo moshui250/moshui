@@ -3,6 +3,7 @@ package com.codeagent.service.impl;
 import com.codeagent.ai.agent.AgentRunContext;
 import com.codeagent.ai.agent.DeepSeekChatClientFactory;
 import com.codeagent.common.ErrorCode;
+import com.codeagent.common.QuestionAccess;
 import com.codeagent.dto.AgentRunRequest;
 import com.codeagent.dto.QuestionDetailRow;
 import com.codeagent.entity.ChatMessage;
@@ -54,7 +55,7 @@ public class AgentServiceImpl implements AgentService {
         if (question == null) {
             throw new BizException(ErrorCode.NOT_FOUND, "题目不存在");
         }
-        if ("PERSONAL".equals(question.getType()) && !userId.equals(question.getUserId())) {
+        if (!QuestionAccess.canUseAi(question, userId)) {
             throw new BizException(ErrorCode.FORBIDDEN, "无权访问该资源");
         }
 

@@ -6,6 +6,7 @@ import com.codeagent.ai.rag.RagChunk;
 import com.codeagent.ai.rag.RagChunker;
 import com.codeagent.ai.rag.RagSourceDocument;
 import com.codeagent.common.ErrorCode;
+import com.codeagent.common.QuestionAccess;
 import com.codeagent.common.UserContext;
 import com.codeagent.dto.AiExplainRequest;
 import com.codeagent.dto.QuestionDetailRow;
@@ -89,8 +90,7 @@ public class AiExplainServiceImpl implements AiExplainService {
         if (question == null) {
             throw new BizException(ErrorCode.NOT_FOUND, "题目不存在");
         }
-        if (PERSONAL.equalsIgnoreCase(question.getType())
-                && !userId.equals(question.getUserId())) {
+        if (!QuestionAccess.canUseAi(question, userId)) {
             throw new BizException(ErrorCode.FORBIDDEN);
         }
 

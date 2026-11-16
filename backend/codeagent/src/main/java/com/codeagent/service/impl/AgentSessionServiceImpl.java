@@ -1,6 +1,7 @@
 package com.codeagent.service.impl;
 
 import com.codeagent.common.ErrorCode;
+import com.codeagent.common.QuestionAccess;
 import com.codeagent.dto.QuestionDetailRow;
 import com.codeagent.entity.ChatSession;
 import com.codeagent.exception.BizException;
@@ -45,7 +46,7 @@ public class AgentSessionServiceImpl implements AgentSessionService {
         if (question == null) {
             throw new BizException(ErrorCode.NOT_FOUND, "题目不存在");
         }
-        if ("PERSONAL".equals(question.getType()) && !userId.equals(question.getUserId())) {
+        if (!QuestionAccess.canUseAi(question, userId)) {
             throw new BizException(ErrorCode.FORBIDDEN);
         }
 
