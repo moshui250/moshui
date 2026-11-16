@@ -3,6 +3,11 @@ backend/*
 !backend/codeagent/
 !backend/codeagent/**
 
+# secrets and local env
+.env
+.env.*
+!.env.example
+
 # dependencies / build
 .m2repo/
 .orderverify/
