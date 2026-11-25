@@ -129,15 +129,9 @@ const routes = [
   },
   {
     path: '/',
-    component: () => import('@/layouts/MainLayout.vue'),
-    children: [
-      {
-        path: '',
-        name: 'home',
-        component: () => import('@/views/HomeView.vue'),
-        meta: { title: '首页', public: true, layout: 'home' }
-      },
-    ]
+    name: 'home',
+    component: () => import('@/views/HomeView.vue'),
+    meta: { title: '首页', public: true, layout: 'home' }
   },
   {
     path: '/admin',

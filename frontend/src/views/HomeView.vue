@@ -5,15 +5,7 @@ import * as echarts from 'echarts/core'
 import { BarChart } from 'echarts/charts'
 import { GridComponent, LegendComponent, TooltipComponent } from 'echarts/components'
 import { CanvasRenderer } from 'echarts/renderers'
-import {
-  ArrowRight,
-  Collection,
-  DataAnalysis,
-  MagicStick,
-  Picture,
-  Reading,
-  Trophy
-} from '@element-plus/icons-vue'
+import { ArrowRight, MagicStick } from '@element-plus/icons-vue'
 import { getHealth } from '@/api/health'
 import { getHomeSummary } from '@/api/home'
 import { listKnowledgePoints } from '@/api/question'
@@ -90,14 +82,6 @@ let tiltEnabled = false
 let tiltPointer = { x: 0, y: 0 }
 
 
-const navItems = [
-  { label: '题库', path: '/question', icon: Reading },
-  { label: '竞赛', path: '/contests', icon: Trophy },
-  { label: '错题本', path: '/wrong-book', icon: Collection },
-  { label: '数据看板', path: '/dashboard', icon: DataAnalysis },
-  { label: '图片录题', path: '/question/import', icon: Picture }
-]
-
 const steps = [
   {
     index: '01',
@@ -115,8 +99,6 @@ const steps = [
     body: 'AI 先定位错误行和原因，再给分层提示。'
   }
 ]
-
-const initial = computed(() => (userStore.displayName || 'U').slice(0, 1).toUpperCase())
 
 const healthOk = computed(() => health.status === 'UP' && health.db === 'UP')
 const healthText = computed(() => {
@@ -623,96 +605,6 @@ onBeforeUnmount(() => {
   color: var(--h-ink);
 }
 
-.site-head {
-  position: sticky;
-  top: 0;
-  z-index: 20;
-  display: flex;
-  align-items: center;
-  gap: 32px;
-  min-height: 72px;
-  padding: 0 max(24px, calc((100vw - 1200px) / 2));
-  border-bottom: 1px solid rgba(226, 232, 240, 0.9);
-  background: rgba(247, 248, 252, 0.94);
-  backdrop-filter: blur(12px);
-}
-
-.brand {
-  display: inline-flex;
-  flex-shrink: 0;
-  align-items: center;
-  gap: 10px;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: inherit;
-  cursor: pointer;
-  text-align: left;
-}
-
-.brand-mark {
-  display: grid;
-  place-items: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  background: var(--h-primary);
-  color: #fff;
-  font-family: 'JetBrains Mono', Consolas, monospace;
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: -1px;
-}
-
-.brand-name {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-
-.brand-name strong {
-  font-size: 16px;
-  font-weight: 750;
-  letter-spacing: -0.3px;
-}
-
-.brand-name small {
-  color: #94a3b8;
-  font-size: 9.5px;
-  font-weight: 600;
-  letter-spacing: 0.8px;
-}
-
-.site-nav {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-}
-
-.nav-link {
-  height: 34px;
-  padding: 0 12px;
-  border: 0;
-  border-radius: 8px;
-  background: transparent;
-  color: #64748b;
-  font-size: 13px;
-  cursor: pointer;
-}
-
-.nav-link:hover {
-  background: #eef2f6;
-  color: var(--h-primary);
-}
-
-.head-actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-left: auto;
-}
-
-.health-pill,
 .foot-status {
   display: inline-flex;
   align-items: center;
@@ -722,7 +614,6 @@ onBeforeUnmount(() => {
   white-space: nowrap;
 }
 
-.health-pill i,
 .foot-status i {
   width: 6px;
   height: 6px;
@@ -731,64 +622,9 @@ onBeforeUnmount(() => {
   box-shadow: 0 0 0 3px rgba(47, 125, 91, 0.10);
 }
 
-.health-pill.warn i,
 .foot-status.warn i {
   background: #a16207;
   box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.12);
-}
-
-.login-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  height: 34px;
-  padding: 0 13px;
-  border: 1px solid #c8d2dc;
-  border-radius: 8px;
-  background: #fff;
-  color: var(--h-primary);
-  font-size: 12.5px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.login-link svg {
-  width: 14px;
-  height: 14px;
-}
-
-.user-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  height: 34px;
-  padding: 0 10px 0 3px;
-  border: 1px solid var(--h-line);
-  border-radius: 999px;
-  background: #fff;
-  color: var(--h-ink);
-  cursor: pointer;
-}
-
-.avatar {
-  display: grid;
-  place-items: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  background: var(--h-primary-soft);
-  color: var(--h-primary);
-  font-size: 11px;
-  font-weight: 700;
-}
-
-.user-name {
-  max-width: 110px;
-  overflow: hidden;
-  font-size: 12px;
-  font-weight: 600;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .page {
@@ -802,22 +638,6 @@ onBeforeUnmount(() => {
   grid-template-columns: minmax(0, 1.05fr) minmax(420px, 0.95fr);
   gap: 64px;
   align-items: center;
-}
-
-.eyebrow {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: #3d5a78;
-  font-size: 10px;
-  font-weight: 750;
-  letter-spacing: 1.7px;
-}
-
-.eyebrow span {
-  width: 18px;
-  height: 1px;
-  background: currentColor;
 }
 
 .hero h1 {
@@ -865,12 +685,6 @@ onBeforeUnmount(() => {
 .hero h1 .mark {
   color: var(--h-primary);
   white-space: nowrap;
-}
-
-.eyebrow,
-.panel-kicker,
-.closing-kicker {
-  display: none;
 }
 
 .lede {
@@ -1345,13 +1159,6 @@ onBeforeUnmount(() => {
   gap: 18px;
 }
 
-.panel-kicker {
-  color: #93a5b8;
-  font-size: 9px;
-  font-weight: 750;
-  letter-spacing: 1.4px;
-}
-
 .panel-head h2 {
   margin-top: 6px;
   color: var(--h-ink);
@@ -1576,21 +1383,14 @@ onBeforeUnmount(() => {
   color: #fff;
 }
 
-.closing-kicker {
-  color: #6e8299;
-  font-size: 9px;
-  font-weight: 750;
-  letter-spacing: 1.6px;
-}
-
 .closing h2 {
-  margin-top: 8px;
+  margin-top: 0;
   font-size: 22px;
   font-weight: 700;
   letter-spacing: -0.6px;
 }
 
-.closing p:not(.closing-kicker) {
+.closing p {
   max-width: 470px;
   margin-top: 7px;
   color: #94a3b8;
@@ -1663,10 +1463,6 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 1000px) {
-  .site-nav {
-    display: none;
-  }
-
   .hero {
     grid-template-columns: 1fr;
     gap: 40px;
@@ -1687,20 +1483,6 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 700px) {
-  .site-head {
-    gap: 12px;
-    min-height: 64px;
-    padding: 0 18px;
-  }
-
-  .health-pill {
-    display: none;
-  }
-
-  .brand-name small {
-    display: none;
-  }
-
   .page {
     width: calc(100% - 36px);
     padding-top: 42px;
