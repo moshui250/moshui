@@ -1,5 +1,5 @@
 <script setup>
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
@@ -1134,13 +1134,6 @@ onBeforeRouteLeave(() => {
   padding: 34px 20px;
 }
 
-.solve-head {
-  display: flex;
-  align-items: flex-start;
-  gap: 16px;
-  margin-bottom: 16px;
-}
-
 .back-link {
   display: inline-flex;
   align-items: center;
@@ -1171,14 +1164,6 @@ onBeforeRouteLeave(() => {
   line-height: 1.35;
 }
 
-.meta-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  margin-top: 9px;
-}
-
 .meta-chip {
   padding: 2px 8px;
   border: 1px solid #e6ebf4;
@@ -1195,14 +1180,6 @@ onBeforeRouteLeave(() => {
   color: #2f7d5b;
   font-size: 11.5px;
   font-weight: 500;
-}
-
-.statement-link {
-  flex-shrink: 0;
-  margin-top: 3px;
-  margin-left: auto;
-  color: #64748b;
-  font-size: 12px;
 }
 
 .solve-grid {
@@ -1322,57 +1299,6 @@ onBeforeRouteLeave(() => {
   line-height: 1.6;
 }
 
-.sample-list {
-  display: grid;
-  gap: 9px;
-}
-
-.sample-card {
-  overflow: hidden;
-  border: 1px solid #e8edf5;
-  border-radius: 8px;
-  background: #fbfcfe;
-}
-
-.sample-label {
-  padding: 6px 10px;
-  border-bottom: 1px solid #eef2f7;
-  color: #7c869c;
-  font-size: 10px;
-  font-weight: 600;
-}
-
-.sample-line {
-  padding: 8px 10px;
-}
-
-.sample-line + .sample-line {
-  border-top: 1px solid #eef2f7;
-}
-
-.sample-line > span {
-  display: block;
-  margin-bottom: 4px;
-  color: #9aa4b6;
-  font-size: 10px;
-}
-
-.sample-line pre {
-  max-height: 120px;
-  margin: 0;
-  overflow: auto;
-  color: #334155;
-  font-family: 'JetBrains Mono', Consolas, 'Courier New', monospace;
-  font-size: 11px;
-  line-height: 1.65;
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
-.sample-empty {
-  font-size: 12px;
-}
-
 .workspace {
   display: grid;
   gap: 16px;
@@ -1392,15 +1318,6 @@ onBeforeRouteLeave(() => {
   padding: 0 14px;
   border-bottom: 1px solid #eef2f7;
   background: #fbfcfe;
-}
-
-.editor-label {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  color: #334155;
-  font-size: 12.5px;
-  font-weight: 600;
 }
 
 .editor-dot {
@@ -1440,32 +1357,6 @@ onBeforeRouteLeave(() => {
   align-items: center;
   justify-content: flex-end;
   gap: 8px;
-}
-
-.disabled-wrap {
-  display: inline-flex;
-}
-
-.soon {
-  margin-left: 4px;
-  padding: 1px 4px;
-  border-radius: 3px;
-  background: #f1f5f9;
-  color: #94a3b8;
-  font-size: 9px;
-}
-
-.judge-panel {
-  overflow: hidden;
-}
-
-.judge-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 16px 18px;
-  border-bottom: 1px solid #eef2f7;
 }
 
 .judging-state {
@@ -1702,13 +1593,6 @@ onBeforeRouteLeave(() => {
 }
 
 @media (max-width: 640px) {
-  .solve-head {
-    flex-wrap: wrap;
-  }
-
-  .statement-link {
-    display: none;
-  }
 
   .action-bar {
     align-items: flex-start;

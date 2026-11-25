@@ -1,4 +1,4 @@
-export const TOKEN_KEY = 'codeagent_token'
+const TOKEN_KEY = 'codeagent_token'
 
 export function getToken() {
   return localStorage.getItem(TOKEN_KEY) || ''

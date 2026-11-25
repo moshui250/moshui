@@ -30,10 +30,6 @@
   font-weight: 700;
 }
 
-.footer-meta {
-  letter-spacing: 0.04em;
-}
-
 @media (max-width: 720px) {
   .footer-inner {
     width: calc(100% - 32px);

@@ -169,22 +169,6 @@ onMounted(() => {
   box-shadow: none;
 }
 
-.brand-copy {
-  display: flex;
-  flex-direction: column;
-  line-height: 1.1;
-}
-
-.brand-copy strong {
-  color: #111827;
-  font-size: 16px;
-  letter-spacing: -0.3px;
-}
-
-.brand-copy em {
-  display: none;
-}
-
 .site-nav {
   display: flex;
   align-items: center;
@@ -228,97 +212,6 @@ onMounted(() => {
   border-color: #e1e5ee;
   background: #f8fafc;
   color: #1f3a5f;
-}
-
-.surface-panel {
-  padding: 2px;
-}
-
-.surface-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 2px 4px 8px;
-  color: #111827;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.surface-head small {
-  color: #8b95a5;
-  font-size: 11px;
-  font-weight: 500;
-}
-
-.surface-options {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 4px;
-}
-
-.surface-option {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  min-height: 34px;
-  padding: 5px 7px;
-  border: 1px solid transparent;
-  border-radius: 8px;
-  background: transparent;
-  color: #4b5563;
-  font-size: 11.5px;
-  text-align: left;
-  cursor: pointer;
-}
-
-.surface-option:hover {
-  background: #f7f8fa;
-}
-
-.surface-option.is-active {
-  border-color: #cfd8e4;
-  background: #f7f9fb;
-  color: #111827;
-}
-
-.surface-swatch {
-  width: 18px;
-  height: 18px;
-  flex: 0 0 18px;
-  border: 1px solid rgba(15, 23, 42, 0.12);
-  border-radius: 6px;
-}
-
-:global(.surface-popover.el-popover) {
-  padding: 10px;
-  border-color: #e4e8ef;
-  border-radius: 12px;
-  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.10);
-}
-
-.health {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  color: #6b7280;
-  font-size: 11.5px;
-  white-space: nowrap;
-}
-
-.health i {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #cbd5e1;
-}
-
-.health.is-up i {
-  background: #2f7d5b;
-  box-shadow: 0 0 0 4px rgba(47, 125, 91, 0.10);
-}
-
-.health.is-warn i {
-  background: #a16207;
 }
 
 .user-pill {
@@ -482,10 +375,6 @@ onMounted(() => {
     order: 2;
     margin-left: auto;
     flex-shrink: 0;
-  }
-
-  .health {
-    display: none;
   }
 }
 </style>

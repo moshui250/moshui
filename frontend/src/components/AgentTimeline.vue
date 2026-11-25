@@ -163,11 +163,6 @@ watch(() => [props.answer, props.error], scrollToBottom, { deep: true })
   line-height: 1.7;
 }
 
-.timeline-empty .thinking-dots {
-  flex: 0 0 auto;
-  color: #3d5a78;
-}
-
 .answer-block {
   margin-top: 12px;
   padding: 13px 14px;

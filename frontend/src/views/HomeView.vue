@@ -1076,14 +1076,6 @@ onBeforeUnmount(() => {
   letter-spacing: -0.8px;
 }
 
-.section-note {
-  max-width: 330px;
-  color: #94a3b8;
-  font-size: 11.5px;
-  line-height: 1.7;
-  text-align: right;
-}
-
 .step-list {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -1165,13 +1157,6 @@ onBeforeUnmount(() => {
   font-size: 17px;
   font-weight: 700;
   letter-spacing: -0.4px;
-}
-
-.panel-desc {
-  margin-top: 5px;
-  color: #94a3b8;
-  font-size: 10.5px;
-  line-height: 1.5;
 }
 
 .chart-total {
@@ -1525,10 +1510,6 @@ onBeforeUnmount(() => {
     align-items: flex-start;
     flex-direction: column;
     gap: 10px;
-  }
-
-  .section-note {
-    text-align: left;
   }
 
   .closing {

@@ -383,31 +383,6 @@ onMounted(loadRows)
   padding-bottom: 26px;
 }
 
-.page-eyebrow {
-  display: none;
-  color: #3d5a78;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-}
-
-.page-title {
-  margin: 8px 0 10px;
-  color: #0f172a;
-  font-size: 36px;
-  font-weight: 700;
-  letter-spacing: -0.03em;
-  line-height: 1.12;
-}
-
-.page-subtitle {
-  max-width: 620px;
-  margin: 0;
-  color: #64748b;
-  font-size: 13.5px;
-  line-height: 1.8;
-}
-
 .btn-primary,
 .btn-small,
 .btn-text {
@@ -547,11 +522,6 @@ onMounted(loadRows)
 .filter-tab.active span {
   background: #dfe6ed;
   color: #1f3a5f;
-}
-
-.sort-hint {
-  color: #a0a9ba;
-  font-size: 11px;
 }
 
 .error-banner {
@@ -797,12 +767,6 @@ onMounted(loadRows)
   font-weight: 600;
 }
 
-.similar-sub {
-  margin-left: 7px;
-  color: #a0a9ba;
-  font-size: 10px;
-}
-
 .similar-count {
   color: #a0a9ba;
   font-size: 10px;
@@ -946,14 +910,6 @@ onMounted(loadRows)
     padding-bottom: 20px;
   }
 
-  .page-title {
-    font-size: 36px;
-  }
-
-  .page-subtitle {
-    font-size: 12.5px;
-  }
-
   .review-strip {
     gap: 14px;
     padding: 15px 16px;
@@ -973,10 +929,6 @@ onMounted(loadRows)
 
   .filter-bar {
     margin-top: 18px;
-  }
-
-  .sort-hint {
-    display: none;
   }
 
   .card-top {

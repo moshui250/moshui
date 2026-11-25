@@ -1,18 +1,4 @@
-import request from '@/utils/request'
 import { getToken } from '@/utils/auth-token'
-
-/**
- * 读取某道题的 Agent 历史，按会话分组。
- *
- * @param {number|string} questionId 题目 ID
- * @returns {Promise<{sessions: Array}>} 历史会话
- */
-export function getAgentHistory(questionId) {
-  return request.get('/agent/history', {
-    params: { questionId },
-    silent: true
-  })
-}
 
 /**
  * 用 fetch + ReadableStream 消费 SSE。

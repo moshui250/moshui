@@ -572,14 +572,6 @@ onBeforeUnmount(revokePreview)
   margin-bottom: 28px;
 }
 
-.eyebrow {
-  display: none;
-  color: #1f3a5f;
-  font-size: 10px;
-  font-weight: 750;
-  letter-spacing: 0.18em;
-}
-
 .import-head h1 {
   margin: 8px 0 6px;
   color: #101426;
@@ -1135,10 +1127,6 @@ onBeforeUnmount(revokePreview)
   color: #334155;
   font-size: 12px;
   line-height: 1.8;
-}
-
-.full-width {
-  width: 100%;
 }
 
 .difficulty-group :deep(.el-radio-button__inner) {

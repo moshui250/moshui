@@ -181,19 +181,6 @@ onMounted(load)
   cursor: pointer;
 }
 
-.edit-head h1 {
-  margin: 0;
-  color: #111827;
-  font-size: 34px;
-  letter-spacing: -1px;
-}
-
-.edit-head p {
-  margin: 8px 0 22px;
-  color: #6b7280;
-  font-size: 13px;
-}
-
 .edit-panel {
   padding: 26px;
   border: 1px solid #e4e7ec;

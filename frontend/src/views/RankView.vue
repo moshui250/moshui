@@ -211,21 +211,6 @@ onBeforeUnmount(() => {
   margin-bottom: 22px;
 }
 
-.page-title {
-  color: #111827;
-  font-size: 36px;
-  font-weight: 700;
-  letter-spacing: -1.2px;
-  line-height: 1.2;
-}
-
-.page-subtitle {
-  margin-top: 8px;
-  color: #6b7280;
-  font-size: 13px;
-  line-height: 1.7;
-}
-
 .refresh-block {
   display: flex;
   align-items: center;
@@ -494,10 +479,6 @@ onBeforeUnmount(() => {
     align-items: flex-start;
     flex-direction: column;
     gap: 12px;
-  }
-
-  .page-title {
-    font-size: 30px;
   }
 
   .refresh-block {

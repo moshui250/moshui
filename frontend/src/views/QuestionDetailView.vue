@@ -262,15 +262,6 @@ onMounted(loadQuestion)
   border-bottom: 1px solid #e6e9f1;
 }
 
-.eyebrow {
-  display: none;
-  margin-bottom: 9px;
-  color: #1f3a5f;
-  font-size: 10px;
-  font-weight: 750;
-  letter-spacing: 2px;
-}
-
 .title-block h1 {
   color: #0f172a;
   font-size: 34px;
@@ -347,16 +338,6 @@ onMounted(loadQuestion)
   background: #fff;
 }
 
-.statement-kicker {
-  margin-bottom: 18px;
-  padding-bottom: 14px;
-  border-bottom: 1px solid #eef2f7;
-  color: #94a3b8;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 1.8px;
-}
-
 .side-column {
   position: sticky;
   top: 88px;
@@ -379,12 +360,6 @@ onMounted(loadQuestion)
   color: #0f172a;
   font-size: 13px;
   font-weight: 700;
-}
-
-.side-sub {
-  margin-top: 4px;
-  color: #94a3b8;
-  font-size: 10.5px;
 }
 
 .side-head {
