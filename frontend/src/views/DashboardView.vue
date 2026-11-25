@@ -7,7 +7,7 @@ import { GridComponent, TooltipComponent } from 'echarts/components'
 import { CanvasRenderer } from 'echarts/renderers'
 import { ArrowRight, InfoFilled } from '@element-plus/icons-vue'
 import { getProfileStat } from '@/api/profile'
-import { emptyProfileStat } from '@/data/demo'
+import { emptyProfileStat } from '@/data/profile-defaults'
 
 echarts.use([LineChart, GridComponent, TooltipComponent, CanvasRenderer])
 

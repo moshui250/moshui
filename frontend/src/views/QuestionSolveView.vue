@@ -59,7 +59,6 @@ const baselineCode = ref('')
 const judging = ref(false)
 const judgeResult = ref(null)
 const judgeError = ref('')
-const usingDemoJudge = ref(false)
 const sampleOnly = ref(false)
 const activePane = ref('result')
 let passNoticeShown = false
@@ -71,8 +70,6 @@ const agentSessionId = ref(null)
 const agentQuestion = ref('')
 const agentInputRef = ref(null)
 
-let pollTimer = null
-let demoTimer = null
 let saveTimer = null
 let disposed = false
 let switchingLanguage = false
@@ -380,55 +377,6 @@ function caseInput(item) {
   return item?.input ?? item?.inputData ?? ''
 }
 
-/**
- * 构造判题接口未接入时的演示结果，首条失败用例使用样例的期望输出。
- * @returns {object} 与真实判题结果结构一致的演示对象
- */
-function buildDemoResult() {
-  const first = samples.value[0] || { input: '5\n1 2 3 4 5', output: '15' }
-  const expected = first.output || '15'
-  return {
-    submitId: 'DEMO',
-    status: 'WA',
-    passedCount: 3,
-    totalCount: 4,
-    runTimeMs: 118,
-    errorMessage: '第 1 个用例输出不符',
-    caseResults: [
-      {
-        index: 1,
-        sample: true,
-        passed: false,
-        input: first.input,
-        expected,
-        actual: '14',
-        stderr: ''
-      },
-      { index: 2, sample: true, passed: true },
-      { index: 3, sample: false, passed: true },
-      { index: 4, sample: false, passed: true }
-    ],
-    agentSuggest: false
-  }
-}
-
-function runDemoJudge() {
-  usingDemoJudge.value = true
-  sampleOnly.value = false
-  activePane.value = 'result'
-  judging.value = true
-  judgeError.value = ''
-  judgeResult.value = null
-  window.clearTimeout(demoTimer)
-  demoTimer = window.setTimeout(() => {
-    if (disposed) return
-    judgeResult.value = buildDemoResult()
-    judging.value = false
-    scrollToResult()
-    ElMessage.info('判题接口尚未接入，当前展示演示结果')
-  }, 900)
-}
-
 function sleep(ms) {
   return new Promise((resolve) => window.setTimeout(resolve, ms))
 }
@@ -457,7 +405,7 @@ async function pollJudge(submitId) {
       if (error?.status === 40100) return
       if (error?.status === 404) {
         judging.value = false
-        judgeError.value = '判题结果接口尚未接入（S7）'
+        judgeError.value = '判题结果不存在，请重新提交'
         return
       }
       // 单次网络抖动不终止轮询，继续等待下一次结果。
@@ -471,14 +419,11 @@ async function pollJudge(submitId) {
 }
 
 function clearTimers() {
-  window.clearTimeout(pollTimer)
-  window.clearTimeout(demoTimer)
   window.clearTimeout(saveTimer)
 }
 
 /**
  * 提交当前代码：显示判题骨架屏，调用提交接口并轮询结果。
- * S7 判题接口尚未接入时，使用明确标注的本地演示结果。
  * @returns {Promise<void>} 提交和结果加载结束后完成
  */
 function goBack() {
@@ -530,7 +475,6 @@ async function submit() {
   judging.value = true
   judgeResult.value = null
   judgeError.value = ''
-  usingDemoJudge.value = false
   sampleOnly.value = false
   activePane.value = 'result'
 
@@ -546,7 +490,7 @@ async function submit() {
     if (!submitId) throw new Error('判题服务未返回 submitId')
     await pollJudge(submitId)
     const status = String(judgeResult.value?.status || '').toUpperCase()
-    if (status === 'AC' && !sampleOnly.value && !usingDemoJudge.value) {
+    if (status === 'AC' && !sampleOnly.value) {
       await showPassNotice()
       return
     }
@@ -554,10 +498,6 @@ async function submit() {
       openAgentComposer()
     }
   } catch (error) {
-    if (error?.status === 404 || error?.status === 405 || error?.status === 501) {
-      runDemoJudge()
-      return
-    }
     judging.value = false
     judgeError.value = error?.message || '提交失败，请稍后重试'
     ElMessage.error(judgeError.value)
@@ -567,7 +507,6 @@ async function submit() {
 function resetJudge() {
   judgeResult.value = null
   judgeError.value = ''
-  usingDemoJudge.value = false
   sampleOnly.value = false
 }
 
@@ -601,7 +540,6 @@ async function runSample() {
   judging.value = true
   judgeResult.value = null
   judgeError.value = ''
-  usingDemoJudge.value = false
   sampleOnly.value = true
   activePane.value = 'result'
 
@@ -1002,14 +940,9 @@ onBeforeRouteLeave(() => {
               </div>
 
               <div v-else-if="judgeResult" class="judge-result">
-                <div v-if="sampleOnly" class="demo-banner sample-banner">
+                <div v-if="sampleOnly" class="sample-banner">
                   <el-icon><Warning /></el-icon>
                   <span>仅运行样例（含自定义），不会写入提交记录，也不会自动触发 AI 调试。</span>
-                </div>
-
-                <div v-if="usingDemoJudge" class="demo-banner">
-                  <el-icon><Warning /></el-icon>
-                  <span>判题接口尚未接入，以下是界面演示结果，不会写入提交记录。</span>
                 </div>
 
                 <div class="result-summary">

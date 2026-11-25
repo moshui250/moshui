@@ -40,7 +40,7 @@ export function getJudgeResult(submitId) {
 }
 
 /**
- * 只运行样例，不写提交记录。后端 S7 接入后启用。
+ * 只运行样例，不写提交记录。
  *
  * @param {{ questionId: number, language: string, code: string }} data 运行参数
  * @returns {Promise<object>} 样例运行结果
